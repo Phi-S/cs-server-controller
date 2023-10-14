@@ -13,7 +13,7 @@ public class AppOptions
     [Required] public required string STEAM_USERNAME { get; init; }
     [Required] public required string STEAM_PASSWORD { get; init; }
 
-    public string DATA_FOLDER => "data";
+    public string DATA_FOLDER => "/data";
     public string SERVER_FOLDER => Path.Combine(DATA_FOLDER, "server");
     public string STEAMCMD_FOLDER => Path.Combine(DATA_FOLDER, "steamcmd");
     public readonly string STEAMCMD_SH_NAME = "steamcmd.sh";

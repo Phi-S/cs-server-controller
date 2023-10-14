@@ -4,7 +4,7 @@ namespace ServerServiceLib;
 
 public record StartParameters(
     string ServerName,
-    string? ServerPw,
+    string? ServerPw = null,
     int MaxPlayer = 10,
     string StartMap = "de_anubis",
     int GameMode = 1,
@@ -18,12 +18,13 @@ public record StartParameters(
         sb.AppendJoin(seperatorChar,
             "-dedicated",
             "-console",
-            $"-port 27015",
+            "-port 27015",
+            $"+hostname {ServerName}",
             $"-maxplayers_override {MaxPlayer}",
             $"+game_type {GameType}",
             $"+game_mode {GameMode}",
             $"+map {StartMap}",
-            $"+sv_password {ServerPw}",
+            string.IsNullOrWhiteSpace(ServerPw) ? "" : $"+sv_password {ServerPw}",
             $"{AdditionalStartParameters}");
 
         return sb.ToString();

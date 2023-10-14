@@ -16,6 +16,7 @@
     <ItemGroup>
       <ProjectReference Include="..\AppOptionsLib\AppOptionsLib.csproj" />
       <ProjectReference Include="..\ExceptionsLib\ExceptionsLib.csproj" />
+      <ProjectReference Include="..\ResultLib\ResultLib.csproj" />
       <ProjectReference Include="..\StatusServiceLib\StatusServiceLib.csproj" />
     </ItemGroup>
 

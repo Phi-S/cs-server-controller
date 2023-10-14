@@ -2,6 +2,7 @@
 using System.Text;
 using ExceptionsLib;
 using Microsoft.Extensions.Logging;
+using ResultLib;
 
 namespace ServerServiceLib;
 
@@ -13,9 +14,9 @@ public partial class ServerService
     private const int GET_RESULT_TIMEOUT_MS = 10000;
 
     private readonly SemaphoreSlim _executeCommandLock = new(1);
-    private volatile bool _currentlyExecutingCommand = false;
+    private volatile bool _currentlyExecutingCommand;
 
-    public async Task<string?> ExecuteCommand(string command, bool withResult = false)
+    public async Task<Result<string>> ExecuteCommand(string command)
     {
         var commandId = Guid.NewGuid();
         var resultReceived = false;
@@ -50,40 +51,42 @@ public partial class ServerService
             await _executeCommandLock.WaitAsync();
             if (_currentlyExecutingCommand)
             {
-                throw new ServerIsBusyException(ServerBusyAction.EXECUTING_COMMAND);
+                var e = new ServerIsBusyException(ServerBusyAction.EXECUTING_COMMAND);
+                logger.LogError(e, "Failed to execute command {Command}", command);
+                return e;
             }
 
             if (statusService.ServerStarted == false)
             {
-                throw new ServerNotStartedException();
+                return new ServerNotStartedException();
             }
 
             if (statusService.ServerUpdatingOrInstalling)
             {
-                throw new ServerIsBusyException(ServerBusyAction.UPDATING_OR_INSTALLING);
+                var e = new ServerIsBusyException(ServerBusyAction.UPDATING_OR_INSTALLING);
+                logger.LogError(e, "Failed to execute command {Command}", command);
+                return e;
             }
 
             if (statusService.ServerStopping)
             {
-                throw new ServerIsBusyException(ServerBusyAction.STOPPING);
+                var e = new ServerIsBusyException(ServerBusyAction.STOPPING);
+                logger.LogError(e, "Failed to execute command {Command}", command);
+                return e;
             }
 
+            _executeCommandLock.Release();
+
+            _currentlyExecutingCommand = true;
             logger.LogInformation("Executing command [{CommandId}] | {Command}", commandId, command);
 
-            command =
+            var finalCommand =
                 $"echo {START_PREFIX}{commandId}{Environment.NewLine}" +
                 $"{command}{Environment.NewLine}" +
                 $"echo {END_PREFIX}{commandId}";
 
-            // If no result is required, just fire and forget
-            if (withResult == false)
-            {
-                WriteLine(command);
-                return null;
-            }
-
             ServerOutputEvent += CaptureCommandResult;
-            WriteLine(command);
+            WriteLine(finalCommand);
             var sw = Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds <= GET_RESULT_TIMEOUT_MS)
             {
@@ -94,17 +97,18 @@ public partial class ServerService
                 }
             }
 
-            if (resultReceived == false)
+            if (resultReceived)
             {
-                throw new ServerCommandExecutionFailedException("Failed to receive result in time");
+                return result.ToString();
             }
 
-            return result.ToString();
+            logger.LogError("Failed to execute command {Command}. Failed to receive result in time", command);
+            return Result<string>.Fail($"Failed to execute command {command}. Failed to receive result in time");
         }
         finally
         {
             ServerOutputEvent -= CaptureCommandResult;
-            _executeCommandLock.Release();
+            _currentlyExecutingCommand = false;
         }
     }
 }

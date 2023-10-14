@@ -1,5 +1,6 @@
 using AppOptionsLib;
 using EventsServiceLib;
+using Instance.Endpoints;
 using Instance.Middleware;
 using Microsoft.Extensions.Options;
 using Serilog;
@@ -66,15 +67,7 @@ try
     app.UseSwagger();
     app.UseSwaggerUI();
 
-    app.MapGet("/weatherforecast", () => { return "forecast"; })
-        .WithOpenApi();
-
-    app.MapGet("/weatherforecast_ex", () =>
-        {
-            throw new Exception("testasdfasdf");
-            return "forecast";
-        })
-        .WithOpenApi();
+    app.MapServerEndpoints();
 
     await app.StartAsync();
     Log.Logger.Information("Server is running under: {Addresses}", string.Join(",", app.Urls));

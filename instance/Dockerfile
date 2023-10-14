@@ -14,8 +14,21 @@ RUN dotnet publish "Instance/Instance.csproj" \
 FROM mcr.microsoft.com/dotnet/runtime-deps:8.0.0-rc.2-bookworm-slim-amd64 as runtime
 WORKDIR /app
 COPY --from=publish /publish .
-RUN chmod +x *
+RUN set -x \
+	# Install, update & upgrade packages
+	&& apt-get update \
+	&& apt-get install -y --no-install-recommends --no-install-suggests \
+		python3=3.11.2-1+b1 \
+		lib32z1=1:1.2.13.dfsg-1 \
+	&& rm -rf /var/lib/apt/lists/* 
 
+RUN groupadd -g 1001 user
+RUN useradd -m user -g 1001 -u 1001
+RUN mkdir /data
+RUN chown -R 1001:1001 /data
+RUN chmod -R 755 /data
+
+USER user
 ENV ASPNETCORE_URLS=http://+:11111
 CMD ["./Instance"]
 

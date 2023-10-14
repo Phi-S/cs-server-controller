@@ -2,14 +2,17 @@
 
 public partial class ServerService
 {
-    private volatile List<string> _maps = new();
+    private readonly List<string> _maps = new();
     private readonly object _mapsLock = new();
 
-    private List<string> GetAllMaps(string serverFolder, bool refreshCache = false)
+    public List<string> GetAllMaps(string serverFolder, bool refreshCache = false)
     {
-        if (refreshCache == false && _maps.Count != 0)
+        lock (_maps)
         {
-            return _maps.ToList();
+            if (refreshCache == false && _maps.Count != 0)
+            {
+                return _maps.ToList();
+            }
         }
 
         var mapFolderPath = Path.Combine(serverFolder, "game", "csgo", "maps");
@@ -22,6 +25,18 @@ public partial class ServerService
             {
                 maps.Add(Path.GetFileNameWithoutExtension(mapName));
             }
+        }
+
+        if (refreshCache == false)
+        {
+            return maps;
+        }
+
+
+        lock (_maps)
+        {
+            _maps.Clear();
+            _maps.AddRange(maps);
         }
 
         return maps;

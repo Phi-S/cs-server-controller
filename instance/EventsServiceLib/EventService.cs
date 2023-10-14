@@ -45,7 +45,7 @@ public sealed class EventService
         {
             if (!string.IsNullOrWhiteSpace(output))
             {
-                _logger.LogInformation("CSGO: {InstanceLog}", output);
+                _logger.LogInformation("CS: {InstanceLog}", output);
             }
         }
         catch (Exception e)
@@ -245,7 +245,6 @@ public sealed class EventService
     }
 
     #endregion StartingServerFailed
-
 
     #region StoppingServer
 

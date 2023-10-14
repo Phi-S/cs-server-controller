@@ -8,6 +8,7 @@ using ICSharpCode.SharpZipLib.GZip;
 using ICSharpCode.SharpZipLib.Tar;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ResultLib;
 using StatusServiceLib;
 
 namespace UpdateOrInstallServiceLib;
@@ -22,24 +23,38 @@ public class UpdateOrInstallService(
     #region Properties
 
     private volatile CancellationTokenSource _cancellationTokenSource = new();
+    private readonly SemaphoreSlim _updateOrInstallLock = new(1);
 
     #endregion
 
-    public void StartUpdateOrInstall(Func<Task>? afterUpdateOrInstallSuccessfulAction)
+    public Result StartUpdateOrInstall(Func<Task>? afterUpdateOrInstallSuccessfulAction = null)
     {
-        if (statusService.ServerUpdatingOrInstalling)
+        try
         {
-            throw new Exception("Failed to start UpdateOrInstall Server. UpdateOrInstall is still running");
-        }
+            _updateOrInstallLock.Wait();
+            if (statusService.ServerUpdatingOrInstalling)
+            {
+                logger.LogWarning(
+                    "Failed to start updating or installing. Another update or install process is still running");
+                return Result.Fail(
+                    "Failed to start updating or installing. Another update or install process is still running");
+            }
 
-        var _ = UpdateOrInstallServer(
-            options.Value.STEAMCMD_FOLDER,
-            options.Value.STEAMCMD_SH_PATH,
-            options.Value.STEAMCMD_PYTHON_SCRIPT_PATH,
-            options.Value.SERVER_FOLDER,
-            options.Value.STEAM_USERNAME,
-            options.Value.STEAM_PASSWORD,
-            afterUpdateOrInstallSuccessfulAction);
+            _ = UpdateOrInstallServer(
+                options.Value.STEAMCMD_FOLDER,
+                options.Value.STEAMCMD_SH_PATH,
+                options.Value.STEAMCMD_PYTHON_SCRIPT_PATH,
+                options.Value.SERVER_FOLDER,
+                options.Value.STEAM_USERNAME,
+                options.Value.STEAM_PASSWORD,
+                afterUpdateOrInstallSuccessfulAction);
+
+            return Result.Ok();
+        }
+        finally
+        {
+            _updateOrInstallLock.Release();
+        }
     }
 
     private async Task UpdateOrInstallServer(
@@ -71,10 +86,10 @@ public class UpdateOrInstallService(
             }
 
             logger.LogInformation("Installing steamcmd");
-            if (!CheckIfSteamcmdIsInstalled(
+            if (CheckIfSteamcmdIsInstalled(
                     steamcmdFolder,
                     steamcmdShFileLocation,
-                    pythonScriptLocation))
+                    pythonScriptLocation) == false)
             {
                 await InstallSteamcmd(steamcmdFolder, steamcmdShFileLocation, pythonScriptLocation);
                 logger.LogInformation("steamcmd installed successfully");

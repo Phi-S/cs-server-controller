@@ -10,7 +10,6 @@ using Serilog.Templates.Themes;
 using ServerServiceLib;
 using StatusServiceLib;
 using UpdateOrInstallServiceLib;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 var expressionTemplate = new ExpressionTemplate(
     "[{@t:yyyy-MM-dd HH:mm:ss.fff zzz} | {@l:u3}]" +

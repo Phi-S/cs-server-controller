@@ -186,7 +186,7 @@ public partial class ServerService(
         const string steamclientSoName = "steamclient.so";
         var steamClientDestFolder = Path.Combine(homeFolder, ".steam", "sdk64");
         var steamClientDestPath = Path.Combine(steamClientDestFolder, steamclientSoName);
-        
+
         var file = new FileInfo(steamClientDestPath);
         if (file.LinkTarget != null)
         {
@@ -201,7 +201,7 @@ public partial class ServerService(
         }
 
         Directory.CreateDirectory(steamClientDestFolder);
-        File.CreateSymbolicLink( steamClientDestPath, steamClientSrcPath);
+        File.CreateSymbolicLink(steamClientDestPath, steamClientSrcPath);
         return Result.Ok();
     }
 
@@ -237,6 +237,7 @@ public partial class ServerService(
         }
 
         ServerOutputEvent += ServerOutputToEventServiceNewOutput;
+        AddEventDetection();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
         return process;
@@ -348,6 +349,7 @@ public partial class ServerService(
                 eventService.OnServerExited();
             }
 
+            RemoveEventDetection();
             ServerOutputEvent -= ServerOutputToEventServiceNewOutput;
         }
         catch (Exception e)
@@ -362,7 +364,7 @@ public partial class ServerService(
         {
             return Result.Ok();
         }
-        
+
         eventService.OnStoppingServer();
         logger.LogInformation("Stopping server");
         var stopNormal = await StopNormal();

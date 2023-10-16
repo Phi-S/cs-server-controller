@@ -14,7 +14,7 @@ public sealed class StatusService
         bool ServerUpdatingOrInstalling,
         bool DemoUploading
     );
-    
+
     private readonly EventService _eventService;
 
     public StatusService(EventService eventService)
@@ -38,6 +38,17 @@ public sealed class StatusService
         );
     }
 
+    public void Reset()
+    {
+        ServerStarted = false;
+        ServerStarting = false;
+        ServerStopping = false;
+        ServerUpdatingOrInstalling = false;
+        DemoUploading = false;
+        ServerHibernating = false;
+        CurrentMap = "";
+        CurrentPlayerCount = 0;
+    }
 
     #region register event service handler
 

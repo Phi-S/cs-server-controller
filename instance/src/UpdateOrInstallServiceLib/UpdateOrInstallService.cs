@@ -249,12 +249,11 @@ public class UpdateOrInstallService(
     /// </summary>
     private void CreatePythonUpdateScriptFile(string pythonScriptLocation)
     {
-        // TODO: change magic string...
         var pythonScriptSrc = Path.Combine(Directory.GetCurrentDirectory(), "steamcmd.py");
         if (File.Exists(pythonScriptSrc) == false)
         {
             throw new Exception(
-                $"PythonUpdateScriptSourceFile at \"{pythonScriptSrc}\" doesn't exists.");
+                $"Python script at \"{pythonScriptSrc}\" doesn't exists.");
         }
 
         File.Copy(pythonScriptSrc, pythonScriptLocation, true);

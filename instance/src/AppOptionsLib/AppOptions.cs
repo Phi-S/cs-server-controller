@@ -1,7 +1,6 @@
 ﻿// ReSharper disable InconsistentNaming
 
 using System.ComponentModel.DataAnnotations;
-using Microsoft.Extensions.Logging;
 
 namespace AppOptionsLib;
 

@@ -28,18 +28,24 @@ def main():
     if not should_publish:
         return
 
+    git_status = run_command(["git", "status", "--porcelain"])
+    if git_status:
+        raise Exception("Git repo got pending changes")
+
     docker_registry = get_arg_value(args, "-DOCKER_REGISTRY")
     docker_registry_username = get_arg_value(args, "-DOCKER_REGISTRY_USERNAME")
     docker_registry_password = get_arg_value(args, "-DOCKER_REGISTRY_PASSWORD")
 
     print("Publishing...")
     print(f"{docker_registry}=")
-    publish(
+    docker_image_name_for_registry_with_version = publish_docker(
         docker_image_name,
         build_version,
         docker_registry,
         docker_registry_username,
         docker_registry_password)
+
+    publish_git(build_version, docker_image_name_for_registry_with_version)
 
 
 ################################################
@@ -89,11 +95,11 @@ def build(docker_image_name_with_version: str, docker_file_path: str):
     )
 
 
-def publish(docker_image_name: str,
-            build_version: str,
-            docker_registry: str,
-            docker_registry_username: str,
-            docker_registry_password: str):
+def publish_docker(docker_image_name: str,
+                   build_version: str,
+                   docker_registry: str,
+                   docker_registry_username: str,
+                   docker_registry_password: str) -> str:
     run_command(["docker", "logout"])
     run_command(["docker", "login",
                  "--username", docker_registry_username,
@@ -106,6 +112,22 @@ def publish(docker_image_name: str,
     run_command(["docker", "tag", docker_image_name_with_version, docker_image_name_for_registry_latest])
     run_command(["docker", "image", "push", docker_image_name_for_registry_with_version])
     run_command(["docker", "image", "push", docker_image_name_for_registry_latest])
+    return docker_image_name_for_registry_with_version
+
+
+def git_switching_to_main_branch(git_main_branch: str):
+    run_command(["git", "fetch", "origin", "-v"])
+    run_command(["git", "switch", git_main_branch])
+    run_command(["git", "reset", "--hard", "HEAD"])
+    run_command(["git", "pull"])
+    run_command(["git", "clean", "-d", "-f"])
+
+
+def publish_git(build_version: str, docker_image_with_version: str):
+    run_command(["git", "tag", "-a", f"{build_version}", "-m",
+                 f"{build_version}\n"
+                 f"{docker_image_with_version}"])
+    run_command(["git", "push", "--tags"])
 
 
 if __name__ == "__main__":

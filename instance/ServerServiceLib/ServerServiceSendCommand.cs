@@ -11,7 +11,7 @@ public partial class ServerService
     private const string START_PREFIX = "#####_START_";
     private const string END_PREFIX = "#####_END_";
 
-    private const int GET_RESULT_TIMEOUT_MS = 10000;
+    private const int GET_RESULT_TIMEOUT_MS = 10_000;
 
     private readonly SemaphoreSlim _executeCommandLock = new(1);
     private volatile bool _currentlyExecutingCommand;

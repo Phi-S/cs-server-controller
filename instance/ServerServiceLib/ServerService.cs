@@ -17,7 +17,6 @@ public partial class ServerService(
     #region Const
 
     private const string SERVER_STARTED_MESSAGE = "#####_SERVER_STARTED";
-    public const int RESPONSE_TIMEOUT_MS = 15_000;
     private const int SERVER_START_TIMEOUT_MS = 30_000;
     private const int SERVER_STOP_TIMEOUT_MS = 5_000;
 
@@ -187,20 +186,22 @@ public partial class ServerService(
         const string steamclientSoName = "steamclient.so";
         var steamClientDestFolder = Path.Combine(homeFolder, ".steam", "sdk64");
         var steamClientDestPath = Path.Combine(steamClientDestFolder, steamclientSoName);
-        if (File.Exists(steamClientDestPath))
+        
+        var file = new FileInfo(steamClientDestPath);
+        if (file.LinkTarget != null)
         {
             return Result.Ok();
         }
 
-        var steamClientPath = Path.Combine(steamcmdFolder, "linux64", steamclientSoName);
-        if (File.Exists(steamClientPath) == false)
+        var steamClientSrcPath = Path.Combine(steamcmdFolder, "linux64", steamclientSoName);
+        if (File.Exists(steamClientSrcPath) == false)
         {
             return Result.Fail(
-                $"Steam client not found at \"{steamClientPath}\". Run UpdateOrInstall to install steamclient");
+                $"Steam client not found at \"{steamClientSrcPath}\". Run UpdateOrInstall to install steamclient");
         }
 
         Directory.CreateDirectory(steamClientDestFolder);
-        File.CreateSymbolicLink(steamClientPath, steamClientDestPath);
+        File.CreateSymbolicLink( steamClientDestPath, steamClientSrcPath);
         return Result.Ok();
     }
 
@@ -357,6 +358,11 @@ public partial class ServerService(
 
     public async Task<Result> Stop()
     {
+        if (IsServerStopped())
+        {
+            return Result.Ok();
+        }
+        
         eventService.OnStoppingServer();
         logger.LogInformation("Stopping server");
         var stopNormal = await StopNormal();

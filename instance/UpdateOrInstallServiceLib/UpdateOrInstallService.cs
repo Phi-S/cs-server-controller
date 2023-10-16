@@ -69,6 +69,7 @@ public class UpdateOrInstallService(
         try
         {
             eventService.OnUpdateOrInstallStarted();
+            _cancellationTokenSource = new CancellationTokenSource();
             logger.LogInformation("Starting to update or install server");
             if (statusService.ServerStarting)
             {

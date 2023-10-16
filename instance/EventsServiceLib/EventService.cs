@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using EventsServiceLib.EventArgs;
 using Microsoft.Extensions.Logging;
 
@@ -13,17 +12,12 @@ public sealed class EventService
         _logger = logger;
 
         AddHandlerToAllCommonEvents(LogEventTriggered);
-
         NewOutputRegisterHandlers();
-        NewOutput += NewOutputHibernationDetection;
-        NewOutput += NewOutputMapChangeDetection;
-        NewOutput += NewOutputPlayerConnectDetection;
-        NewOutput += NewOutputPlayerDisconnectDetection;
     }
 
     #region NewOutput
 
-    public event EventHandler<string> NewOutput;
+    public event EventHandler<string>? NewOutput;
 
     private void NewOutputRegisterHandlers()
     {
@@ -35,7 +29,7 @@ public sealed class EventService
     {
         if (!string.IsNullOrWhiteSpace(output))
         {
-            NewOutput.Invoke(this, output);
+            NewOutput?.Invoke(this, output);
         }
     }
 
@@ -70,121 +64,9 @@ public sealed class EventService
         }
     }
 
-    #region Detection
-
-    private void NewOutputHibernationDetection(object? _, string output)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(output))
-            {
-                return;
-            }
-
-            output = output.Trim();
-
-            if (output.Equals("Server is hibernating"))
-            {
-                OnHibernationStarted();
-
-                _logger.LogInformation("Hibernation started");
-            }
-            else if (output.Equals("Server waking up from hibernation"))
-            {
-                OnHibernationEnded();
-
-                _logger.LogInformation("Hibernation ended");
-            }
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Exception while trying to detect Hibernation start");
-        }
-    }
-
-    // *** Map Load: de_mirage: Map Group mg_activeL 08/25/2022 - 14:20:11: -------- Mapchange to de_mirage --------
-    private void NewOutputMapChangeDetection(object? _, string output)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(output))
-            {
-                return;
-            }
-
-            const string regex = @"\*\*\* Map Load: (.+): Map Group";
-            var matches = Regex.Match(output, regex);
-            if (!matches.Success || matches.Groups.Count != 2) return;
-
-            var newMap = matches.Groups[1].ToString().Trim();
-            _logger.LogInformation("Map changed to {NewMap}", newMap);
-            OnMapChanged(newMap);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Exception while trying to detect map change");
-        }
-    }
-
-    // Client "PhiS" connected (10.10.1.20:27005).
-    private void NewOutputPlayerConnectDetection(object? _, string output)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(output))
-            {
-                return;
-            }
-
-            const string regex =
-                @"Client ""(.+)"" connected \(([0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?:[0-9]{1,5})\).";
-            var matches = Regex.Match(output, regex);
-            if (!matches.Success || matches.Groups.Count != 3) return;
-
-            var playerMame = matches.Groups[1].ToString().Trim();
-            var ipPort = matches.Groups[2].ToString().Trim();
-
-            _logger.LogWarning("New player connected. Player name: {PlayerName} | Player IP: {PlayerIp}", playerMame,
-                ipPort);
-            OnPlayerConnected(playerMame, ipPort);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Exception while trying to detect player connected");
-        }
-    }
-
-    // Dropped PhiS from server: Disconnect
-    private void NewOutputPlayerDisconnectDetection(object? _, string output)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(output))
-            {
-                return;
-            }
-
-            const string regex = "Dropped (.+) from server: ([a-zA-Z0-9]+)";
-            var matches = Regex.Match(output, regex);
-            if (!matches.Success || matches.Groups.Count != 3) return;
-
-            var playerName = matches.Groups[1].ToString().Trim();
-            var disconnectReason = matches.Groups[2].ToString().Trim();
-
-            _logger.LogWarning("Player disconnected: {PlayerName} |{DisconnectReason}", playerName, disconnectReason);
-            OnPlayerDisconnected(playerName, disconnectReason);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Exception while trying to detect player disconnect");
-        }
-    }
-
     #endregion
 
-    #endregion
-
-    public void AddHandlerToAllCommonEvents(EventHandler<CustomEventArg> handler)
+    private void AddHandlerToAllCommonEvents(EventHandler<CustomEventArg> handler)
     {
         StartingServer += handler;
         StartingServerDone += handler;
@@ -361,7 +243,7 @@ public sealed class EventService
 
     public event EventHandler<CustomEventArg>? HibernationStarted;
 
-    private void OnHibernationStarted()
+    public void OnHibernationStarted()
     {
         HibernationStarted?.Invoke(this, new CustomEventArg(nameof(HibernationStarted)));
     }
@@ -372,7 +254,7 @@ public sealed class EventService
 
     public event EventHandler<CustomEventArg>? HibernationEnded;
 
-    private void OnHibernationEnded()
+    public void OnHibernationEnded()
     {
         HibernationEnded?.Invoke(this, new CustomEventArg(nameof(HibernationEnded)));
     }
@@ -398,7 +280,7 @@ public sealed class EventService
 
     public event EventHandler<CustomEventArgPlayerConnected>? PlayerConnected;
 
-    protected void OnPlayerConnected(string playerName, string playerIp)
+    public void OnPlayerConnected(string playerName, string playerIp)
     {
         PlayerConnected?.Invoke(this, new CustomEventArgPlayerConnected(nameof(PlayerConnected), playerName, playerIp));
     }
@@ -409,7 +291,7 @@ public sealed class EventService
 
     public event EventHandler<CustomEventArgPlayerDisconnected>? PlayerDisconnected;
 
-    protected void OnPlayerDisconnected(string playerName, string disconnectReason)
+    public void OnPlayerDisconnected(string playerName, string disconnectReason)
     {
         PlayerDisconnected?.Invoke(this,
             new CustomEventArgPlayerDisconnected(nameof(PlayerDisconnected), playerName, disconnectReason));

@@ -3,6 +3,7 @@ using EventsServiceLib;
 using Microsoft.Extensions.Options;
 using ServerServiceLib;
 using StatusServiceLib;
+using TestLoggerLib;
 using Xunit.Abstractions;
 
 namespace EventDetectionTest;
@@ -48,7 +49,7 @@ public class ServerServiceEventDetectionTest
     {
         Assert.True(_statusService.CurrentMap.Equals("de_dust2") == false);
         TestEvent?.Invoke(null, "Host activate: Changelevel (de_dust2)");
-        Assert.True(_statusService.CurrentMap.Equals("de_dust2"));
+        Assert.Equal("de_dust2", _statusService.CurrentMap);
     }
 
     [Fact]

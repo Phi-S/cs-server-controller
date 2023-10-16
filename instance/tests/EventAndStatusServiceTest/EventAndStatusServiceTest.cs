@@ -1,5 +1,6 @@
 using EventsServiceLib;
 using StatusServiceLib;
+using TestLoggerLib;
 using Xunit.Abstractions;
 
 namespace EventAndStatusServiceTest;
@@ -157,7 +158,7 @@ public class EventAndStatusServiceTest
         Assert.True(string.IsNullOrWhiteSpace(_statusService.CurrentMap));
         var map = "asdf";
         _eventService.OnMapChanged(map);
-        Assert.True(_statusService.CurrentMap.Equals(map));
+        Assert.Equal(_statusService.CurrentMap, map);
     }
 
     [Fact]

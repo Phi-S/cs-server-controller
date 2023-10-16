@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
-namespace EventDetectionTest;
+namespace TestLoggerLib;
 
 public class XunitLogger<T>(ITestOutputHelper output) : ILogger<T>, IDisposable
 {

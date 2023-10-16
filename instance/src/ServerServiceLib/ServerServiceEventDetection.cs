@@ -5,7 +5,7 @@ namespace ServerServiceLib;
 
 public partial class ServerService
 {
-    public void AddEventDetection()
+    private void AddEventDetection()
     {
         ServerOutputEvent += NewOutputHibernationDetection;
         ServerOutputEvent += NewOutputMapChangeDetection;
@@ -13,7 +13,7 @@ public partial class ServerService
         ServerOutputEvent += NewOutputPlayerDisconnectDetection;
     }
 
-    public void RemoveEventDetection()
+    private void RemoveEventDetection()
     {
         ServerOutputEvent -= NewOutputHibernationDetection;
         ServerOutputEvent -= NewOutputMapChangeDetection;

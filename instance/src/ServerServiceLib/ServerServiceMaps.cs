@@ -27,12 +27,6 @@ public partial class ServerService
             }
         }
 
-        if (refreshCache == false)
-        {
-            return maps;
-        }
-
-
         lock (_maps)
         {
             _maps.Clear();

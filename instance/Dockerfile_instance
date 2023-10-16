@@ -1,6 +1,6 @@
 ﻿FROM mcr.microsoft.com/dotnet/sdk:8.0.100-rc.2-bookworm-slim-amd64 AS publish
 WORKDIR /src
-COPY . .
+COPY src/. .
 RUN dotnet restore "Instance/Instance.csproj" -r linux-x64
 
 RUN dotnet publish "Instance/Instance.csproj" \

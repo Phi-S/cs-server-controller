@@ -1,4 +1,7 @@
+using DatabaseLib;
+using DatabaseLib.Repos;
 using EventsServiceLib;
+using Moq;
 using StatusServiceLib;
 using TestLoggerLib;
 using Xunit.Abstractions;
@@ -12,7 +15,9 @@ public class EventAndStatusServiceTest
 
     public EventAndStatusServiceTest(ITestOutputHelper output)
     {
-        _eventService = new EventService(new XunitLogger<EventService>(output));
+        var dbContext = new Mock<ApiDbContext>();
+        var eventLogRepo = new EventLogRepo(dbContext.Object);
+        _eventService = new EventService(new XunitLogger<EventService>(output), eventLogRepo);
         _statusService = new StatusService(_eventService);
     }
 
@@ -68,7 +73,7 @@ public class EventAndStatusServiceTest
     {
         _statusService.Reset();
         Assert.True(_statusService.ServerUpdatingOrInstalling == false);
-        _eventService.OnUpdateOrInstallStarted();
+        _eventService.OnUpdateOrInstallStarted(Guid.NewGuid());
         Assert.True(_statusService.ServerUpdatingOrInstalling);
     }
 
@@ -77,9 +82,9 @@ public class EventAndStatusServiceTest
     public void TestUpdateOrInstallDone()
     {
         _statusService.Reset();
-        _eventService.OnUpdateOrInstallStarted();
+        _eventService.OnUpdateOrInstallStarted(Guid.NewGuid());
         Assert.True(_statusService.ServerUpdatingOrInstalling);
-        _eventService.OnUpdateOrInstallDone();
+        _eventService.OnUpdateOrInstallDone(Guid.NewGuid());
         Assert.True(_statusService.ServerUpdatingOrInstalling == false);
     }
 
@@ -87,9 +92,9 @@ public class EventAndStatusServiceTest
     public void TestUpdateOrInstallCancelled()
     {
         _statusService.Reset();
-        _eventService.OnUpdateOrInstallStarted();
+        _eventService.OnUpdateOrInstallStarted(Guid.NewGuid());
         Assert.True(_statusService.ServerUpdatingOrInstalling);
-        _eventService.OnUpdateOrInstallCancelled();
+        _eventService.OnUpdateOrInstallCancelled(Guid.NewGuid());
         Assert.True(_statusService.ServerUpdatingOrInstalling == false);
     }
 
@@ -97,9 +102,9 @@ public class EventAndStatusServiceTest
     public void TestUpdateOrInstallFailed()
     {
         _statusService.Reset();
-        _eventService.OnUpdateOrInstallStarted();
+        _eventService.OnUpdateOrInstallStarted(Guid.NewGuid());
         Assert.True(_statusService.ServerUpdatingOrInstalling);
-        _eventService.OnUpdateOrInstallFailed();
+        _eventService.OnUpdateOrInstallFailed(Guid.NewGuid());
         Assert.True(_statusService.ServerUpdatingOrInstalling == false);
     }
 

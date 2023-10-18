@@ -1,12 +1,18 @@
-﻿namespace EventsServiceLib.EventArgs;
+﻿using System.Text.Json;
 
-public class CustomEventArgDemoName : CustomEventArg
+namespace EventsServiceLib.EventArgs;
+
+public class CustomEventArgDemoName(Events eventName, string demoName) : CustomEventArg(eventName)
 {
-    public readonly string DemoName;
+    public readonly string DemoName = demoName;
 
-    public CustomEventArgDemoName(string eventName, string demoName) : base(eventName)
+    public override string GetDataJson()
     {
-        DemoName = demoName;
+        var data = new
+        {
+            DemoName
+        };
+        return JsonSerializer.Serialize(data);
     }
 
     public override string ToString()

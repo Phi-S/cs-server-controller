@@ -1,12 +1,18 @@
-﻿namespace EventsServiceLib.EventArgs;
+﻿using System.Text.Json;
 
-public class CustomEventArgPlayerCountChanged : CustomEventArg
+namespace EventsServiceLib.EventArgs;
+
+public class CustomEventArgPlayerCountChanged(Events eventName, int playerCount) : CustomEventArg(eventName)
 {
-    public int PlayerCount { get; }
+    public int PlayerCount { get; } = playerCount;
 
-    public CustomEventArgPlayerCountChanged(string eventName, int playerCount) : base(eventName)
+    public override string GetDataJson()
     {
-        PlayerCount = playerCount;
+        var data = new
+        {
+            PlayerCount
+        };
+        return JsonSerializer.Serialize(data);
     }
 
     public override string ToString()

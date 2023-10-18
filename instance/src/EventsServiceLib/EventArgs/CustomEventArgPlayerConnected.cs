@@ -1,14 +1,20 @@
-﻿namespace EventsServiceLib.EventArgs;
+﻿using System.Text.Json;
 
-public class CustomEventArgPlayerConnected : CustomEventArg
+namespace EventsServiceLib.EventArgs;
+
+public class CustomEventArgPlayerConnected(Events eventName, string playerName, string playerIp) : CustomEventArg(eventName)
 {
-    public string PlayerName { get; }
-    public string PlayerIp { get; }
+    public string PlayerName { get; } = playerName;
+    public string PlayerIp { get; } = playerIp;
 
-    public CustomEventArgPlayerConnected(string eventName, string playerName, string playerIp) : base(eventName)
+    public override string GetDataJson()
     {
-        PlayerName = playerName;
-        PlayerIp = playerIp;
+        var data = new
+        {
+            PlayerName,
+            PlayerIp
+        };
+        return JsonSerializer.Serialize(data);
     }
 
     public override string ToString()

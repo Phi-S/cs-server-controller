@@ -2,21 +2,21 @@
 
 namespace EventsServiceLib.EventArgs;
 
-public class CustomEventArgMapChanged(Events eventName, string mapName) : CustomEventArg(eventName)
+public class CustomEventArgUpdateOrInstall(Events eventName, Guid id) : CustomEventArg(eventName)
 {
-    public string MapName { get; } = mapName;
+    public Guid Id { get; } = id;
 
     public override string GetDataJson()
     {
         var data = new
         {
-            MapName
+            Id
         };
         return JsonSerializer.Serialize(data);
     }
 
     public override string ToString()
     {
-        return $"{base.ToString()}, {nameof(MapName)}: {MapName}";
+        return $"{base.ToString()}, {nameof(Id)}: {Id}";
     }
 }

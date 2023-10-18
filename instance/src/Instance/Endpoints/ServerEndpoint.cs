@@ -44,12 +44,12 @@ public static class ServerEndpoint
                 : updateOrInstallService.StartUpdateOrInstall(() => serverService.Start(startParameters));
             return startUpdateOrInstall.IsFailed
                 ? Results.Extensions.InternalServerError(startUpdateOrInstall.Exception.Message)
-                : Results.Ok();
+                : Results.Ok(startUpdateOrInstall.Value);
         });
 
-        group.MapPost("CancelUpdatingOrInstalling", (UpdateOrInstallService updateOrInstallService) =>
+        group.MapPost("CancelUpdatingOrInstalling", (UpdateOrInstallService updateOrInstallService, Guid id) =>
         {
-            updateOrInstallService.CancelUpdate();
+            updateOrInstallService.CancelUpdate(id);
             return Results.Ok();
         });
 

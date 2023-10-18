@@ -21,25 +21,27 @@ public partial class ServerService
         foreach (var mapPath in Directory.GetFiles(mapFolderPath))
         {
             var mapName = Path.GetFileName(mapPath);
-            if (mapName.EndsWith(".vpk", StringComparison.InvariantCulture))
+            if (mapName.EndsWith(".vpk", StringComparison.InvariantCulture) == false)
             {
-                if (mapName.Count(c => c == '_') > 1)
-                {
-                    continue;
-                }
-
-                if (mapName.Equals("graphics_settings.vpk"))
-                {
-                    continue;
-                }
-                
-                if (mapName.Equals("lobby_mapveto.vpk"))
-                {
-                    continue;
-                }
-
-                maps.Add(Path.GetFileNameWithoutExtension(mapName));
+                continue;
             }
+
+            if (mapName.Count(c => c == '_') > 1)
+            {
+                continue;
+            }
+
+            if (mapName.Equals("graphics_settings.vpk"))
+            {
+                continue;
+            }
+
+            if (mapName.Equals("lobby_mapveto.vpk"))
+            {
+                continue;
+            }
+
+            maps.Add(Path.GetFileNameWithoutExtension(mapName));
         }
 
         lock (_maps)

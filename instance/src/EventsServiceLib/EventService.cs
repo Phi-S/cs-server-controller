@@ -1,29 +1,53 @@
+using DatabaseLib.Repos;
 using EventsServiceLib.EventArgs;
 using Microsoft.Extensions.Logging;
 
 namespace EventsServiceLib;
 
+public enum Events
+{
+    STARTING_SERVER,
+    STARTING_SERVER_DONE,
+    STARTING_SERVER_FAILED,
+    STOPPING_SERVER,
+    SERVER_EXITED,
+
+    UPDATE_OR_INSTALL_STARTED,
+    UPDATE_OR_INSTALL_DONE,
+    UPDATE_OR_INSTALL_CANCELLED,
+    UPDATE_OR_INSTALL_FAILED,
+
+    UPLOAD_DEMO_STARTED,
+    UPLOAD_DEMO_DONE,
+    UPLOAD_DEMO_FAILED,
+
+    HIBERNATION_STARTED,
+    HIBERNATION_ENDED,
+    MAP_CHANGED,
+    PLAYER_CONNECTED,
+    PLAYER_DISCONNECTED,
+    PLAYER_COUNT_CHANGED,
+    CHAT_MESSAGE
+}
+
 public sealed class EventService
 {
     private readonly ILogger<EventService> _logger;
+    private readonly EventLogRepo _eventLogRepo;
 
-    public EventService(ILogger<EventService> logger)
+    public EventService(ILogger<EventService> logger, EventLogRepo eventLogRepo)
     {
         _logger = logger;
+        _eventLogRepo = eventLogRepo;
 
         AddHandlerToAllCommonEvents(LogEventTriggered);
-        NewOutputRegisterHandlers();
+        AddHandlerToAllCommonEvents(DatabaseEventTriggered);
+        NewOutput += OnNewOutputPrintLog;
     }
 
     #region NewOutput
 
     public event EventHandler<string>? NewOutput;
-
-    private void NewOutputRegisterHandlers()
-    {
-        NewOutput += OnNewOutputPrintLog;
-        NewOutput += OnNewOutputWriteToDatabase;
-    }
 
     public void OnNewOutput(string? output)
     {
@@ -48,22 +72,6 @@ public sealed class EventService
         }
     }
 
-    private async void OnNewOutputWriteToDatabase(object? sender, string output)
-    {
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(output))
-            {
-                // TODO: create database
-                //await ServerLogRepository.Add(output);
-            }
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Exception while trying to add csgo output to the database");
-        }
-    }
-
     #endregion
 
     private void AddHandlerToAllCommonEvents(EventHandler<CustomEventArg> handler)
@@ -73,10 +81,10 @@ public sealed class EventService
         StartingServerFailed += handler;
         StoppingServer += handler;
         ServerExited += handler;
-        UpdateOrInstallStarted += handler;
-        UpdateOrInstallDone += handler;
-        UpdateOrInstallCancelled += handler;
-        UpdateOrInstallFailed += handler;
+        UpdateOrInstallStarted += (sender, eventArg) => { handler(sender, eventArg); };
+        UpdateOrInstallDone += (sender, eventArg) => { handler(sender, eventArg); };
+        UpdateOrInstallCancelled += (sender, eventArg) => { handler(sender, eventArg); };
+        UpdateOrInstallFailed += (sender, eventArg) => { handler(sender, eventArg); };
         UploadDemoStarted += handler;
         UploadDemoDone += handler;
         UploadDemoFailed += handler;
@@ -86,11 +94,24 @@ public sealed class EventService
         PlayerConnected += (sender, eventArg) => { handler(sender, eventArg); };
         PlayerDisconnected += (sender, eventArg) => { handler(sender, eventArg); };
         PlayerCountChanged += (sender, eventArg) => { handler(sender, eventArg); };
+        ChatMessage += (sender, eventArg) => { handler(sender, eventArg); };
     }
 
     private void LogEventTriggered(object? _, CustomEventArg arg)
     {
         _logger.LogInformation("Event \"{EventName}\" triggered. EventArg: \"{Arg}\"", arg.EventName, arg.ToString());
+    }
+
+    private async void DatabaseEventTriggered(object? _, CustomEventArg arg)
+    {
+        try
+        {
+            await _eventLogRepo.Add(arg.EventName.ToString(), arg.TriggeredAtUtc, arg.GetDataJson());
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error while trying to add event \"{Event}\" to database", arg);
+        }
     }
 
     #region StartStop
@@ -101,7 +122,7 @@ public sealed class EventService
 
     public void OnStartingServer()
     {
-        StartingServer?.Invoke(this, new CustomEventArg(nameof(StartingServer)));
+        StartingServer?.Invoke(this, new CustomEventArg(Events.STARTING_SERVER));
     }
 
     #endregion StartingServer
@@ -112,7 +133,7 @@ public sealed class EventService
 
     public void OnStartingServerDone()
     {
-        StartingServerDone?.Invoke(this, new CustomEventArg(nameof(StartingServerDone)));
+        StartingServerDone?.Invoke(this, new CustomEventArg(Events.STARTING_SERVER_DONE));
     }
 
     #endregion StartingServerDone
@@ -123,7 +144,7 @@ public sealed class EventService
 
     public void OnStartingServerFailed()
     {
-        StartingServerFailed?.Invoke(this, new CustomEventArg(nameof(StartingServerFailed)));
+        StartingServerFailed?.Invoke(this, new CustomEventArg(Events.STARTING_SERVER_FAILED));
     }
 
     #endregion StartingServerFailed
@@ -134,7 +155,7 @@ public sealed class EventService
 
     public void OnStoppingServer()
     {
-        StoppingServer?.Invoke(this, new CustomEventArg(nameof(StoppingServer)));
+        StoppingServer?.Invoke(this, new CustomEventArg(Events.STOPPING_SERVER));
     }
 
     #endregion StoppingServer
@@ -145,7 +166,7 @@ public sealed class EventService
 
     public void OnServerExited()
     {
-        ServerExited?.Invoke(this, new CustomEventArg(nameof(ServerExited)));
+        ServerExited?.Invoke(this, new CustomEventArg(Events.SERVER_EXITED));
     }
 
     #endregion ServerExited
@@ -156,44 +177,45 @@ public sealed class EventService
 
     #region UpdateOrInstallStarted
 
-    public event EventHandler<CustomEventArg>? UpdateOrInstallStarted;
+    public event EventHandler<CustomEventArgUpdateOrInstall>? UpdateOrInstallStarted;
 
-    public void OnUpdateOrInstallStarted()
+    public void OnUpdateOrInstallStarted(Guid id)
     {
-        UpdateOrInstallStarted?.Invoke(this, new CustomEventArg(nameof(UpdateOrInstallStarted)));
+        UpdateOrInstallStarted?.Invoke(this, new CustomEventArgUpdateOrInstall(Events.UPDATE_OR_INSTALL_STARTED, id));
     }
 
     #endregion
 
     #region UpdateOrInstallDone
 
-    public event EventHandler<CustomEventArg>? UpdateOrInstallDone;
+    public event EventHandler<CustomEventArgUpdateOrInstall>? UpdateOrInstallDone;
 
-    public void OnUpdateOrInstallDone()
+    public void OnUpdateOrInstallDone(Guid id)
     {
-        UpdateOrInstallDone?.Invoke(this, new CustomEventArg(nameof(UpdateOrInstallDone)));
+        UpdateOrInstallDone?.Invoke(this, new CustomEventArgUpdateOrInstall(Events.UPDATE_OR_INSTALL_DONE, id));
     }
 
     #endregion
 
     #region UpdateOrInstallCancelled
 
-    public event EventHandler<CustomEventArg>? UpdateOrInstallCancelled;
+    public event EventHandler<CustomEventArgUpdateOrInstall>? UpdateOrInstallCancelled;
 
-    public void OnUpdateOrInstallCancelled()
+    public void OnUpdateOrInstallCancelled(Guid id)
     {
-        UpdateOrInstallCancelled?.Invoke(this, new CustomEventArg(nameof(UpdateOrInstallCancelled)));
+        UpdateOrInstallCancelled?.Invoke(this,
+            new CustomEventArgUpdateOrInstall(Events.UPDATE_OR_INSTALL_CANCELLED, id));
     }
 
     #endregion
 
     #region UpdateOrInstallFailed
 
-    public event EventHandler<CustomEventArg>? UpdateOrInstallFailed;
+    public event EventHandler<CustomEventArgUpdateOrInstall>? UpdateOrInstallFailed;
 
-    public void OnUpdateOrInstallFailed()
+    public void OnUpdateOrInstallFailed(Guid id)
     {
-        UpdateOrInstallFailed?.Invoke(this, new CustomEventArg(nameof(UpdateOrInstallFailed)));
+        UpdateOrInstallFailed?.Invoke(this, new CustomEventArgUpdateOrInstall(Events.UPDATE_OR_INSTALL_FAILED, id));
     }
 
     #endregion
@@ -208,7 +230,7 @@ public sealed class EventService
 
     public void OnUploadDemoStarted(string demo)
     {
-        UploadDemoStarted?.Invoke(this, new CustomEventArgDemoName(nameof(UploadDemoStarted), demo));
+        UploadDemoStarted?.Invoke(this, new CustomEventArgDemoName(Events.UPLOAD_DEMO_STARTED, demo));
     }
 
     #endregion
@@ -219,7 +241,7 @@ public sealed class EventService
 
     public void OnUploadDemoDone(string demo)
     {
-        UploadDemoDone?.Invoke(this, new CustomEventArgDemoName(nameof(UploadDemoDone), demo));
+        UploadDemoDone?.Invoke(this, new CustomEventArgDemoName(Events.UPLOAD_DEMO_DONE, demo));
     }
 
     #endregion
@@ -230,7 +252,7 @@ public sealed class EventService
 
     public void OnUploadDemoFailed(string demo)
     {
-        UploadDemoFailed?.Invoke(this, new CustomEventArgDemoName(nameof(UploadDemoFailed), demo));
+        UploadDemoFailed?.Invoke(this, new CustomEventArgDemoName(Events.UPLOAD_DEMO_FAILED, demo));
     }
 
     #endregion
@@ -245,7 +267,7 @@ public sealed class EventService
 
     public void OnHibernationStarted()
     {
-        HibernationStarted?.Invoke(this, new CustomEventArg(nameof(HibernationStarted)));
+        HibernationStarted?.Invoke(this, new CustomEventArg(Events.HIBERNATION_STARTED));
     }
 
     #endregion HibernationStarted
@@ -256,7 +278,7 @@ public sealed class EventService
 
     public void OnHibernationEnded()
     {
-        HibernationEnded?.Invoke(this, new CustomEventArg(nameof(HibernationEnded)));
+        HibernationEnded?.Invoke(this, new CustomEventArg(Events.HIBERNATION_ENDED));
     }
 
     #endregion HibernationEnded
@@ -269,7 +291,7 @@ public sealed class EventService
 
     public void OnMapChanged(string mapName)
     {
-        MapChanged?.Invoke(this, new CustomEventArgMapChanged(nameof(MapChanged), mapName));
+        MapChanged?.Invoke(this, new CustomEventArgMapChanged(Events.MAP_CHANGED, mapName));
     }
 
     #endregion MapChanged
@@ -282,7 +304,7 @@ public sealed class EventService
 
     public void OnPlayerConnected(string playerName, string playerIp)
     {
-        PlayerConnected?.Invoke(this, new CustomEventArgPlayerConnected(nameof(PlayerConnected), playerName, playerIp));
+        PlayerConnected?.Invoke(this, new CustomEventArgPlayerConnected(Events.PLAYER_CONNECTED, playerName, playerIp));
     }
 
     #endregion PlayerConnected
@@ -294,7 +316,7 @@ public sealed class EventService
     public void OnPlayerDisconnected(string playerName, string disconnectReason)
     {
         PlayerDisconnected?.Invoke(this,
-            new CustomEventArgPlayerDisconnected(nameof(PlayerDisconnected), playerName, disconnectReason));
+            new CustomEventArgPlayerDisconnected(Events.PLAYER_DISCONNECTED, playerName, disconnectReason));
     }
 
     #endregion PlayerConnected
@@ -305,10 +327,23 @@ public sealed class EventService
 
     public void OnPlayerCountChanged(int playerCount)
     {
-        PlayerCountChanged?.Invoke(this, new CustomEventArgPlayerCountChanged(nameof(PlayerCountChanged), playerCount));
+        PlayerCountChanged?.Invoke(this,
+            new CustomEventArgPlayerCountChanged(Events.PLAYER_COUNT_CHANGED, playerCount));
     }
 
     #endregion PlayerCountChanged
 
     #endregion Player
+
+    #region Chat
+
+    public event EventHandler<CustomEventArgChatMessage>? ChatMessage;
+
+    public void OnChatMessage(string chat, string playerName, string steamId3, string message)
+    {
+        ChatMessage?.Invoke(this,
+            new CustomEventArgChatMessage(Events.CHAT_MESSAGE, chat, playerName, steamId3, message));
+    }
+
+    #endregion
 }

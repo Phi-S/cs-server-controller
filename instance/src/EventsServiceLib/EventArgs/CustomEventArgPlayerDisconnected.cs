@@ -1,14 +1,21 @@
-﻿namespace EventsServiceLib.EventArgs;
+﻿using System.Text.Json;
 
-public class CustomEventArgPlayerDisconnected : CustomEventArg
+namespace EventsServiceLib.EventArgs;
+
+public class CustomEventArgPlayerDisconnected(Events eventName, string playerName, string disconnectReason)
+    : CustomEventArg(eventName)
 {
-    public string PlayerName { get; }
-    public string DisconnectReason { get; }
-    
-    public CustomEventArgPlayerDisconnected(string eventName, string playerName, string disconnectReason) : base(eventName)
+    public string PlayerName { get; } = playerName;
+    public string DisconnectReason { get; } = disconnectReason;
+
+    public override string GetDataJson()
     {
-        PlayerName = playerName;
-        DisconnectReason = disconnectReason;
+        var data = new
+        {
+            PlayerName,
+            DisconnectReason
+        };
+        return JsonSerializer.Serialize(data);
     }
 
     public override string ToString()

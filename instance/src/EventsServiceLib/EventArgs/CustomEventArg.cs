@@ -1,16 +1,17 @@
 ﻿namespace EventsServiceLib.EventArgs;
 
-public class CustomEventArg : System.EventArgs
+public class CustomEventArg(Events eventName) : System.EventArgs
 {
-    public string EventName { get; }
+    public Events EventName { get; } = eventName;
+    public DateTime TriggeredAtUtc { get; } = DateTime.UtcNow;
 
-    public CustomEventArg(string eventName)
+    public virtual string? GetDataJson()
     {
-        EventName = eventName;
+        return null;
     }
 
     public override string ToString()
     {
-        return $"{nameof(EventName)}: {EventName}";
+        return $"{nameof(EventName)}: {EventName}, {nameof(TriggeredAtUtc)}: {TriggeredAtUtc}";
     }
 }

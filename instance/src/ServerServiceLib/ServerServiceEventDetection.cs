@@ -11,6 +11,7 @@ public partial class ServerService
         ServerOutputEvent += NewOutputMapChangeDetection;
         ServerOutputEvent += NewOutputPlayerConnectDetection;
         ServerOutputEvent += NewOutputPlayerDisconnectDetection;
+        ServerOutputEvent += NewOutputAllChatDetection;
     }
 
     private void RemoveEventDetection()
@@ -19,6 +20,7 @@ public partial class ServerService
         ServerOutputEvent -= NewOutputMapChangeDetection;
         ServerOutputEvent -= NewOutputPlayerConnectDetection;
         ServerOutputEvent -= NewOutputPlayerDisconnectDetection;
+        ServerOutputEvent -= NewOutputAllChatDetection;
     }
 
     public void NewOutputHibernationDetection(object? _, string output)
@@ -162,6 +164,33 @@ public partial class ServerService
         catch (Exception e)
         {
             logger.LogError(e, "Exception while trying to detect player disconnect");
+        }
+    }
+
+    // [All Chat][PhiS (194151532)]: ezz
+    // [All Chat][PhiS (194151532)]: noob
+    public void NewOutputAllChatDetection(object? _, string output)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(output))
+            {
+                return;
+            }
+
+            const string regex = @"\[(.*?)\]\[(.*?)\s\((\d+?)\)]:\s(.+)";
+            var match = Regex.Match(output, regex);
+            var chat = match.Groups[1].Value;
+            var name = match.Groups[2].Value;
+            var steamId3 = match.Groups[3].Value;
+            var message = match.Groups[4].Value;
+
+            logger.LogWarning("{Chat} message from {Name}/{SteamId3}: {Message}", chat, name, steamId3, message);
+            eventService.OnChatMessage(chat, name, steamId3, message);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Exception while trying to detect chat message");
         }
     }
 }

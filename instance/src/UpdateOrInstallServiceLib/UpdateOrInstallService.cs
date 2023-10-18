@@ -24,10 +24,30 @@ public class UpdateOrInstallService(
 
     private volatile CancellationTokenSource _cancellationTokenSource = new();
     private readonly SemaphoreSlim _updateOrInstallLock = new(1);
+    private readonly object _idLock = new();
+    private Guid? _id;
+
+    private Guid? Id
+    {
+        get
+        {
+            lock (_idLock)
+            {
+                return _id;
+            }
+        }
+        set
+        {
+            lock (_idLock)
+            {
+                _id = value;
+            }
+        }
+    }
 
     #endregion
 
-    public Result StartUpdateOrInstall(Func<Task>? afterUpdateOrInstallSuccessfulAction = null)
+    public Result<Guid> StartUpdateOrInstall(Func<Task>? afterUpdateOrInstallSuccessfulAction = null)
     {
         try
         {
@@ -36,11 +56,14 @@ public class UpdateOrInstallService(
             {
                 logger.LogWarning(
                     "Failed to start updating or installing. Another update or install process is still running");
-                return Result.Fail(
+                return Result<Guid>.Fail(
                     "Failed to start updating or installing. Another update or install process is still running");
             }
 
+            var id = Guid.NewGuid();
+            Id = id;
             _ = UpdateOrInstallServer(
+                id,
                 options.Value.STEAMCMD_FOLDER,
                 options.Value.STEAMCMD_SH_PATH,
                 options.Value.STEAMCMD_PYTHON_SCRIPT_PATH,
@@ -49,7 +72,7 @@ public class UpdateOrInstallService(
                 options.Value.STEAM_PASSWORD,
                 afterUpdateOrInstallSuccessfulAction);
 
-            return Result.Ok();
+            return Result<Guid>.Ok(id);
         }
         finally
         {
@@ -58,6 +81,7 @@ public class UpdateOrInstallService(
     }
 
     private async Task UpdateOrInstallServer(
+        Guid id,
         string steamcmdFolder,
         string steamcmdShFileLocation,
         string pythonScriptLocation,
@@ -68,7 +92,7 @@ public class UpdateOrInstallService(
     {
         try
         {
-            eventService.OnUpdateOrInstallStarted();
+            eventService.OnUpdateOrInstallStarted(id);
             _cancellationTokenSource = new CancellationTokenSource();
             logger.LogInformation("Starting to update or install server");
             if (statusService.ServerStarting)
@@ -115,19 +139,25 @@ public class UpdateOrInstallService(
                 await afterUpdateOrInstallSuccessfulAction.Invoke();
             }
 
-            eventService.OnUpdateOrInstallDone();
+            eventService.OnUpdateOrInstallDone(id);
+            Id = null;
         }
         catch (Exception e)
         {
             logger.LogError(e, "Failed to update or install csgo server");
-            eventService.OnUpdateOrInstallFailed();
+            eventService.OnUpdateOrInstallFailed(id);
         }
     }
 
-    public void CancelUpdate()
+    public void CancelUpdate(Guid id)
     {
+        if (id.Equals(Id) == false)
+        {
+            return;
+        }
+
         _cancellationTokenSource.Cancel();
-        eventService.OnUpdateOrInstallCancelled();
+        eventService.OnUpdateOrInstallCancelled(id);
     }
 
     private async Task ExecuteUpdateOrInstallProcess(

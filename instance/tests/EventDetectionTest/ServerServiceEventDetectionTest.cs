@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using AppOptionsLib;
 using DatabaseLib;
 using DatabaseLib.Repos;
@@ -19,7 +18,6 @@ public class ServerServiceEventDetectionTest
     private event EventHandler<string>? TestEvent;
 
     private readonly EventService _eventService;
-    private readonly StatusService _statusService;
     private readonly ITestOutputHelper _output;
 
     public ServerServiceEventDetectionTest(ITestOutputHelper output)
@@ -28,7 +26,7 @@ public class ServerServiceEventDetectionTest
         var dbContext = new Mock<ApiDbContext>();
         var eventLogRepo = new EventLogRepo(dbContext.Object);
         _eventService = new EventService(new XunitLogger<EventService>(output), eventLogRepo);
-        _statusService = new StatusService(_eventService);
+        var statusService = new StatusService(_eventService);
         var options = Options.Create(new AppOptions
         {
             APP_NAME = "test",
@@ -36,7 +34,7 @@ public class ServerServiceEventDetectionTest
             STEAM_PASSWORD = "test"
         });
         var serverService =
-            new ServerService(new XunitLogger<ServerService>(output), options, _statusService, _eventService);
+            new ServerService(new XunitLogger<ServerService>(output), options, statusService, _eventService);
         TestEvent += serverService.NewOutputHibernationDetection;
         TestEvent += serverService.NewOutputMapChangeDetection;
         TestEvent += serverService.NewOutputPlayerConnectDetection;
@@ -44,61 +42,101 @@ public class ServerServiceEventDetectionTest
         TestEvent += serverService.NewOutputAllChatDetection;
     }
 
-
     [Fact]
-    public void TestNewOutputHibernationDetection()
+    public async Task TestNewOutputHibernationStartedDetection()
     {
-        Assert.True(_statusService.ServerHibernating == false);
+        CustomEventArg? arg = null;
+        _eventService.HibernationStarted += (_, disconnected) => arg = disconnected;
         TestEvent?.Invoke(null, "Server is hibernating");
-        Assert.True(_statusService.ServerHibernating);
+        var waitResult =
+            await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
+
+        Assert.True(waitResult.IsOk, waitResult.IsFailed ? waitResult.Exception.ToString() : "");
+        Assert.True(arg is not null);
+        Assert.True(arg.EventName == Events.HIBERNATION_STARTED);
+    }
+
+    [Fact]
+    public async Task TestNewOutputHibernationEndedDetection()
+    {
+        CustomEventArg? arg = null;
+        _eventService.HibernationEnded += (_, disconnected) => arg = disconnected;
         TestEvent?.Invoke(null, "Server waking up from hibernation");
-        Assert.True(_statusService.ServerHibernating == false);
+        var waitResult =
+            await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
+
+        Assert.True(waitResult.IsOk, waitResult.IsFailed ? waitResult.Exception.ToString() : "");
+        Assert.True(arg is not null);
+        Assert.True(arg.EventName == Events.HIBERNATION_ENDED);
     }
 
     [Fact]
-    public void TestNewOutputMapChangeDetection()
+    public async Task TestNewOutputMapChangeDetection()
     {
-        Assert.True(_statusService.CurrentMap.Equals("de_dust2") == false);
+        CustomEventArgMapChanged? arg = null;
+        _eventService.MapChanged += (_, disconnected) => arg = disconnected;
         TestEvent?.Invoke(null, "Host activate: Changelevel (de_dust2)");
-        Assert.Equal("de_dust2", _statusService.CurrentMap);
+        var waitResult =
+            await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
+
+        Assert.True(waitResult.IsOk, waitResult.IsFailed ? waitResult.Exception.ToString() : "");
+        Assert.True(arg is not null);
+        Assert.True(arg.EventName == Events.MAP_CHANGED);
+        Assert.Equal("de_dust2", arg.MapName);
     }
 
     [Fact]
-    public void TestNewOutputPlayerConnectDetection()
+    public async Task TestNewOutputPlayerConnectDetection()
     {
-        var currentPlayerCount = _statusService.CurrentPlayerCount;
+        CustomEventArgPlayerConnected? arg = null;
+        _eventService.PlayerConnected += (_, disconnected) => arg = disconnected;
         TestEvent?.Invoke(null, "CNetworkGameServerBase::ConnectClient( name='PhiS', remote='10.10.20.10:57143' )");
-        Assert.True(currentPlayerCount + 1 == _statusService.CurrentPlayerCount);
+        var waitResult =
+            await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
+
+        Assert.True(waitResult.IsOk, waitResult.IsFailed ? waitResult.Exception.ToString() : "");
+        Assert.True(arg is not null);
+        Assert.True(arg.EventName == Events.PLAYER_CONNECTED);
+        Assert.Equal("PhiS", arg.PlayerName);
+        Assert.Equal("10.10.20.10:57143", arg.PlayerIp);
     }
 
     [Fact]
-    public void TestNewOutputPlayerDisconnectDetection()
+    public async Task TestNewOutputPlayerDisconnectDetection()
     {
-        _eventService.OnPlayerConnected("asf", "asdf");
-        var currentPlayerCount = _statusService.CurrentPlayerCount;
-        Assert.True(currentPlayerCount == 1);
+        CustomEventArgPlayerDisconnected? arg = null;
+        _eventService.PlayerDisconnected += (_, disconnected) => arg = disconnected;
         TestEvent?.Invoke(null, "Disconnect client 'PhiS' from server(59): NETWORK_DISCONNECT_EXITING");
-        Assert.True(currentPlayerCount - 1 == _statusService.CurrentPlayerCount);
+        var waitResult =
+            await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
+
+        Assert.True(waitResult.IsOk, waitResult.IsFailed ? waitResult.Exception.ToString() : "");
+        Assert.True(arg is not null);
+        Assert.True(arg.EventName == Events.PLAYER_DISCONNECTED);
+        Assert.Equal("PhiS", arg.PlayerName);
+        Assert.Equal("NETWORK_DISCONNECT_EXITING", arg.DisconnectReason);
     }
 
     [Theory]
     [InlineData("[All Chat][PhiS (194151532)]: ezz", "All Chat", "PhiS", "194151532", "ezz")]
     [InlineData("[All Chat][PhiS (194151532)]: noob", "All Chat", "PhiS", "194151532", "noob")]
-    [InlineData("[All Chat][PhiS (194151532)]: [All Chat][bhbggg (43434343434)]", "All Chat", "PhiS", "194151532",
-        "[All Chat][bhbggg (43434343434)]")]
+    [InlineData("[All Chat][PhiS (194151532)]: [All Chat][alt (43434343434)]", "All Chat", "PhiS", "194151532",
+        "[All Chat][alt (43434343434)]")]
     public async Task TestNewOutputAllChatDetection(string rawMessage, string shouldBeChat, string shouldBePlayerName,
         string shouldBeSteamId3, string shouldBeMessage)
     {
-        CustomEventArgChatMessage? messageEventAr = null;
-        _eventService.ChatMessage += (_, message) => { messageEventAr = message; };
+        CustomEventArgChatMessage? arg = null;
+        _eventService.ChatMessage += (_, message) => { arg = message; };
         TestEvent?.Invoke(null, rawMessage);
+        var waitResult =
+            await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
 
-        var waitResult = await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => messageEventAr is not null, _output.WriteLine);
         Assert.True(waitResult.IsOk, waitResult.IsFailed ? waitResult.Exception.ToString() : "");
-        Assert.True(messageEventAr is not null);
-        Assert.True(messageEventAr.Chat.Equals(shouldBeChat));
-        Assert.True(messageEventAr.PlayerName.Equals(shouldBePlayerName));
-        Assert.True(messageEventAr.SteamId3.Equals(shouldBeSteamId3));
-        Assert.True(messageEventAr.Message.Equals(shouldBeMessage));
+        Assert.True(arg is not null);
+        Assert.True(arg.EventName == Events.CHAT_MESSAGE);
+        Assert.True(arg.Chat.Equals(shouldBeChat));
+        Assert.True(arg.PlayerName.Equals(shouldBePlayerName));
+        Assert.True(arg.SteamId3.Equals(shouldBeSteamId3));
+        Assert.True(arg.Message.Equals(shouldBeMessage));
     }
 }

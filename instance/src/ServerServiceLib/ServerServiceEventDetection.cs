@@ -51,6 +51,9 @@ public partial class ServerService
         }
     }
 
+    [GeneratedRegex("Host activate: Changelevel (.+)")]
+    private static partial Regex MapChangeRegex();
+
     // Host activate: Changelevel (de_dust2)
     public void NewOutputMapChangeDetection(object? _, string output)
     {
@@ -61,10 +64,7 @@ public partial class ServerService
                 return;
             }
 
-            output = output.Trim();
-
-            const string regex = @"Host activate: Changelevel (.+)";
-            var matches = Regex.Match(output, regex);
+            var matches = MapChangeRegex().Match(output);
             if (!matches.Success || matches.Groups.Count != 2) return;
 
             var newMap = matches.Groups[1].ToString()
@@ -79,6 +79,10 @@ public partial class ServerService
             logger.LogError(e, "Exception while trying to detect map change");
         }
     }
+
+    [GeneratedRegex(
+        @"CNetworkGameServerBase::ConnectClient\(\sname='(.+?)',\sremote='([0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?:[0-9]{1,5})'")]
+    private static partial Regex PlayerConnectRegex();
 
     // CNetworkGameServerBase::ConnectClient( name='PhiS', remote='10.10.20.10:57143' )
     public void NewOutputPlayerConnectDetection(object? _, string output)
@@ -95,25 +99,14 @@ public partial class ServerService
                 return;
             }
 
-            const string nameRegex = "name='(.+?)'";
-            var nameMatch = Regex.Match(output, nameRegex);
-            if (nameMatch.Groups.Count != 2)
+            var match = PlayerConnectRegex().Match(output);
+            if (match.Groups.Count != 3)
             {
                 return;
             }
 
-            var name = nameMatch.Groups[1].Value;
-
-            const string remoteRegex =
-                "remote='([0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?:[0-9]{1,5})'";
-            var remoteMatch = Regex.Match(output, remoteRegex);
-            if (remoteMatch.Groups.Count != 2)
-            {
-                return;
-            }
-
-            var remote = remoteMatch.Groups[1].Value;
-
+            var name = match.Groups[1].Value;
+            var remote = match.Groups[2].Value;
 
             logger.LogWarning("New player connected. Player name: {PlayerName} | Player IP: {PlayerIp}", name,
                 remote);
@@ -124,6 +117,9 @@ public partial class ServerService
             logger.LogError(e, "Exception while trying to detect player connected");
         }
     }
+
+    [GeneratedRegex("Disconnect client '(.+?)'.+\\):\\s(.+)")]
+    private static partial Regex PlayerDisconnectRegex();
 
     // Disconnect client 'PhiS' from server(59): NETWORK_DISCONNECT_EXITING
     public void NewOutputPlayerDisconnectDetection(object? _, string output)
@@ -140,23 +136,14 @@ public partial class ServerService
                 return;
             }
 
-            const string nameRegex = "client '(.+?)'";
-            var nameMatch = Regex.Match(output, nameRegex);
-            if (nameMatch.Groups.Count != 2)
+            var match = PlayerDisconnectRegex().Match(output);
+            if (match.Groups.Count != 3)
             {
                 return;
             }
 
-            var name = nameMatch.Groups[1].Value;
-
-            const string disconnectReasonRegex = ":\\s(.+?)$";
-            var disconnectReasonMatch = Regex.Match(output, disconnectReasonRegex);
-            if (nameMatch.Groups.Count != 2)
-            {
-                return;
-            }
-
-            var disconnectReason = disconnectReasonMatch.Groups[1].Value;
+            var name = match.Groups[1].Value;
+            var disconnectReason = match.Groups[2].Value;
 
             logger.LogWarning("Player disconnected: {PlayerName} |{DisconnectReason}", name, disconnectReason);
             eventService.OnPlayerDisconnected(name, disconnectReason);
@@ -166,6 +153,9 @@ public partial class ServerService
             logger.LogError(e, "Exception while trying to detect player disconnect");
         }
     }
+
+    [GeneratedRegex(@"\[(.*?)\]\[(.*?)\s\((\d+?)\)]:\s(.+)")]
+    private static partial Regex ChatRegex();
 
     // [All Chat][PhiS (194151532)]: ezz
     // [All Chat][PhiS (194151532)]: noob
@@ -178,8 +168,12 @@ public partial class ServerService
                 return;
             }
 
-            const string regex = @"\[(.*?)\]\[(.*?)\s\((\d+?)\)]:\s(.+)";
-            var match = Regex.Match(output, regex);
+            var match = ChatRegex().Match(output);
+            if (match.Groups.Count != 5)
+            {
+                return;
+            }
+
             var chat = match.Groups[1].Value;
             var name = match.Groups[2].Value;
             var steamId3 = match.Groups[3].Value;

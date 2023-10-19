@@ -23,23 +23,16 @@ public partial class ServerService
         ServerOutputEvent -= NewOutputAllChatDetection;
     }
 
-    public void NewOutputHibernationDetection(object? _, string output)
+    public void NewOutputHibernationDetection(object? _, ServerOutputEventArg output)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(output))
-            {
-                return;
-            }
-
-            output = output.Trim();
-
-            if (output.Equals("Server is hibernating"))
+            if (output.Output.Equals("Server is hibernating"))
             {
                 eventService.OnHibernationStarted();
                 logger.LogInformation("Hibernation started");
             }
-            else if (output.Equals("Server waking up from hibernation"))
+            else if (output.Output.Equals("Server waking up from hibernation"))
             {
                 eventService.OnHibernationEnded();
                 logger.LogInformation("Hibernation ended");
@@ -55,16 +48,11 @@ public partial class ServerService
     private static partial Regex MapChangeRegex();
 
     // Host activate: Changelevel (de_dust2)
-    public void NewOutputMapChangeDetection(object? _, string output)
+    public void NewOutputMapChangeDetection(object? _, ServerOutputEventArg output)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(output))
-            {
-                return;
-            }
-
-            var matches = MapChangeRegex().Match(output);
+            var matches = MapChangeRegex().Match(output.Output);
             if (!matches.Success || matches.Groups.Count != 2) return;
 
             var newMap = matches.Groups[1].ToString()
@@ -85,21 +73,16 @@ public partial class ServerService
     private static partial Regex PlayerConnectRegex();
 
     // CNetworkGameServerBase::ConnectClient( name='PhiS', remote='10.10.20.10:57143' )
-    public void NewOutputPlayerConnectDetection(object? _, string output)
+    public void NewOutputPlayerConnectDetection(object? _, ServerOutputEventArg output)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(output))
+            if (output.Output.StartsWith("CNetworkGameServerBase::ConnectClient(") == false)
             {
                 return;
             }
 
-            if (output.StartsWith("CNetworkGameServerBase::ConnectClient(") == false)
-            {
-                return;
-            }
-
-            var match = PlayerConnectRegex().Match(output);
+            var match = PlayerConnectRegex().Match(output.Output);
             if (match.Groups.Count != 3)
             {
                 return;
@@ -122,21 +105,16 @@ public partial class ServerService
     private static partial Regex PlayerDisconnectRegex();
 
     // Disconnect client 'PhiS' from server(59): NETWORK_DISCONNECT_EXITING
-    public void NewOutputPlayerDisconnectDetection(object? _, string output)
+    public void NewOutputPlayerDisconnectDetection(object? _, ServerOutputEventArg output)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(output))
+            if (output.Output.StartsWith("Disconnect client") == false)
             {
                 return;
             }
 
-            if (output.StartsWith("Disconnect client") == false)
-            {
-                return;
-            }
-
-            var match = PlayerDisconnectRegex().Match(output);
+            var match = PlayerDisconnectRegex().Match(output.Output);
             if (match.Groups.Count != 3)
             {
                 return;
@@ -159,16 +137,16 @@ public partial class ServerService
 
     // [All Chat][PhiS (194151532)]: ezz
     // [All Chat][PhiS (194151532)]: noob
-    public void NewOutputAllChatDetection(object? _, string output)
+    public void NewOutputAllChatDetection(object? _, ServerOutputEventArg output)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(output))
+            if (output.Output.StartsWith("[") == false)
             {
                 return;
             }
 
-            var match = ChatRegex().Match(output);
+            var match = ChatRegex().Match(output.Output);
             if (match.Groups.Count != 5)
             {
                 return;

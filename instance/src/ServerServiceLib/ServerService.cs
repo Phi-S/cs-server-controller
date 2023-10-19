@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using AppOptionsLib;
+using DatabaseLib.Models;
+using DatabaseLib.Repos;
 using EventsServiceLib;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,7 +14,8 @@ public partial class ServerService(
     ILogger<ServerService> logger,
     IOptions<AppOptions> options,
     StatusService statusService,
-    EventService eventService)
+    EventService eventService,
+    ServerRepo serverRepo)
 {
     #region Const
 
@@ -27,7 +30,7 @@ public partial class ServerService(
 
     private readonly SemaphoreSlim _serverStartStopLock = new(1);
 
-    private event EventHandler<string>? ServerOutputEvent;
+    private event EventHandler<ServerOutputEventArg>? ServerOutputEvent;
 
 
     public async Task<Result> Start(StartParameters startParameters)
@@ -54,7 +57,6 @@ public partial class ServerService(
 
             #region CopySteamclient
 
-            // TODO: home folder is options??????
             var homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var copySteamclient = CopySteamclient(homeFolder, options.Value.STEAMCMD_FOLDER);
             if (copySteamclient.IsFailed)
@@ -66,13 +68,19 @@ public partial class ServerService(
 
             #endregion
 
+
             #region StartServerProcess
 
+            // ReSharper disable once StringLiteralTypo
             var executablePath = Path.Combine(options.Value.SERVER_FOLDER, "game", "bin", "linuxsteamrt64", "cs2");
             var startParameterString = startParameters.GetString();
+
+            var serverStart = await serverRepo.AddStart(startParameterString, DateTime.UtcNow);
+
             logger.LogInformation("Starting server with command: \"{StartCommand}\"",
                 $"{executablePath} {startParameterString}");
             var startServerProcess = StartServerProcess(
+                serverStart,
                 executablePath,
                 options.Value.SERVER_FOLDER,
                 startParameterString
@@ -171,12 +179,13 @@ public partial class ServerService(
         return Result.Ok();
     }
 
+    // ReSharper disable once CommentTypo
     /// <summary>
     /// https://developer.valvesoftware.com/wiki/Counter-Strike_2/Dedicated_Servers#steamservice.so_missing.2Ffailed_to_load
     /// fixes steamservice.so missing/failed to load
     /// This is a common issue with a fairly easy fix.
     /// The reason for this error is that SteamCMD doesnt place the file in the folder it should, as the games typically look for it there. So what you need to do is the following:
-    /// Create a symlink (shortcut) for each of the files like this: (run each seprately)
+    /// Create a symlink (shortcut) for each of the files like this: (run each separately)
     /// ln -s /home/your_user/.local/share/Steam/steamcmd/linux64/steamclient.so /home/your_user/.steam/sdk64/
     /// ln -s /home/your_user/.local/share/Steam/steamcmd/linux32/steamclient.so /home/your_user/.steam/sdk32/
     ///</summary>
@@ -205,7 +214,8 @@ public partial class ServerService(
         return Result.Ok();
     }
 
-    private Result<Process> StartServerProcess(string executablePath, string serverFolder, string startParameter)
+    private Result<Process> StartServerProcess(ServerStart serverStart, string executablePath, string serverFolder,
+        string startParameter)
     {
         var process = new Process
         {
@@ -236,7 +246,8 @@ public partial class ServerService(
             return Result<Process>.Fail("Failed to start server process");
         }
 
-        ServerOutputEvent += ServerOutputToEventServiceNewOutput;
+        ServerOutputEvent += ServerOutputLog;
+        ServerOutputEvent += ServerOutputToDatabase;
         AddEventDetection();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
@@ -249,14 +260,33 @@ public partial class ServerService(
                 return;
             }
 
-            ServerOutputEvent?.Invoke(this, args.Data);
+            ServerOutputEvent?.Invoke(this, new ServerOutputEventArg(serverStart, args.Data));
         }
     }
 
 
-    private void ServerOutputToEventServiceNewOutput(object? _, string output)
+    private void ServerOutputLog(object? _, ServerOutputEventArg arg)
     {
-        eventService.OnNewOutput(output);
+        try
+        {
+            logger.LogInformation("Server: StartId: {StartID} | Output: {Output}", arg.ServerStart.Id, arg.Output);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Exception while trying to add server output to database");
+        }
+    }
+
+    private async void ServerOutputToDatabase(object? _, ServerOutputEventArg serverOutputEventArg)
+    {
+        try
+        {
+            await serverRepo.AddLog(serverOutputEventArg.ServerStart.Id, serverOutputEventArg.Output);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Exception while trying to add server output to database");
+        }
     }
 
     private void WriteLine(string text)
@@ -281,15 +311,15 @@ public partial class ServerService(
 
     private async Task<Result> WaitForServerToStart(Process process)
     {
-        EventHandler<string>? serverStartedHandler = null;
+        EventHandler<ServerOutputEventArg>? serverStartedHandler = null;
         try
         {
             var serverStarted = false;
             var hostActivated = false;
-            serverStartedHandler = (_, output) =>
+            serverStartedHandler = (_, serverOutputEventArg) =>
             {
-                output = output.Trim();
-                if (output.StartsWith("Host activate: Loading"))
+                var message = serverOutputEventArg.Output;
+                if (message.StartsWith("Host activate: Loading"))
                 {
                     hostActivated = true;
                     process.StandardInput.WriteLine($"say {SERVER_STARTED_MESSAGE}");
@@ -301,7 +331,7 @@ public partial class ServerService(
                     return;
                 }
 
-                if (output.Equals($"[All Chat][Console (0)]: {SERVER_STARTED_MESSAGE}") == false)
+                if (message.Equals($"[All Chat][Console (0)]: {SERVER_STARTED_MESSAGE}") == false)
                 {
                     return;
                 }
@@ -350,7 +380,8 @@ public partial class ServerService(
             }
 
             RemoveEventDetection();
-            ServerOutputEvent -= ServerOutputToEventServiceNewOutput;
+            ServerOutputEvent -= ServerOutputLog;
+            ServerOutputEvent -= ServerOutputToDatabase;
         }
         catch (Exception e)
         {

@@ -2,6 +2,8 @@ using System.Text;
 using AppOptionsLib;
 using CliWrap;
 using CliWrap.Buffered;
+using DatabaseLib.Models;
+using DatabaseLib.Repos;
 using ExceptionsLib;
 using EventsServiceLib;
 using ICSharpCode.SharpZipLib.GZip;
@@ -18,40 +20,42 @@ public class UpdateOrInstallService(
     IOptions<AppOptions> options,
     StatusService statusService,
     EventService eventService,
-    HttpClient httpClient)
+    HttpClient httpClient,
+    UpdateOrInstallRepo updateOrInstallRepo)
 {
     #region Properties
 
+    public event EventHandler<UpdateOrInstallOutputEventArg>? UpdateOrInstallOutput;
     private volatile CancellationTokenSource _cancellationTokenSource = new();
     private readonly SemaphoreSlim _updateOrInstallLock = new(1);
     private readonly object _idLock = new();
-    private Guid? _id;
+    private UpdateOrInstallStart? _updateOrInstallStart;
 
-    private Guid? Id
+    private UpdateOrInstallStart? UpdateOrInstallStart
     {
         get
         {
             lock (_idLock)
             {
-                return _id;
+                return _updateOrInstallStart;
             }
         }
         set
         {
             lock (_idLock)
             {
-                _id = value;
+                _updateOrInstallStart = value;
             }
         }
     }
 
     #endregion
 
-    public Result<Guid> StartUpdateOrInstall(Func<Task>? afterUpdateOrInstallSuccessfulAction = null)
+    public async Task<Result<Guid>> StartUpdateOrInstall(Func<Task>? afterUpdateOrInstallSuccessfulAction = null)
     {
         try
         {
-            _updateOrInstallLock.Wait();
+            await _updateOrInstallLock.WaitAsync();
             if (statusService.ServerUpdatingOrInstalling)
             {
                 logger.LogWarning(
@@ -60,10 +64,12 @@ public class UpdateOrInstallService(
                     "Failed to start updating or installing. Another update or install process is still running");
             }
 
-            var id = Guid.NewGuid();
-            Id = id;
+            UpdateOrInstallStart updateOrInstallStart = await updateOrInstallRepo.AddStart(DateTime.UtcNow);
+
+
+            UpdateOrInstallStart = updateOrInstallStart;
             _ = UpdateOrInstallServer(
-                id,
+                updateOrInstallStart.Id,
                 options.Value.STEAMCMD_FOLDER,
                 options.Value.STEAMCMD_SH_PATH,
                 options.Value.STEAMCMD_PYTHON_SCRIPT_PATH,
@@ -72,7 +78,7 @@ public class UpdateOrInstallService(
                 options.Value.STEAM_PASSWORD,
                 afterUpdateOrInstallSuccessfulAction);
 
-            return Result<Guid>.Ok(id);
+            return Result<Guid>.Ok(updateOrInstallStart.Id);
         }
         finally
         {
@@ -124,8 +130,12 @@ public class UpdateOrInstallService(
                 logger.LogInformation("steamcmd already installed");
             }
 
+            UpdateOrInstallOutput += OnUpdateOrInstallOutputLog;
+            UpdateOrInstallOutput += OnUpdateOrInstallOutputToDatabase;
+
             logger.LogInformation("Starting the update or install process");
             await ExecuteUpdateOrInstallProcess(
+                id,
                 steamcmdShFileLocation,
                 pythonScriptLocation,
                 serverFolder,
@@ -140,27 +150,37 @@ public class UpdateOrInstallService(
             }
 
             eventService.OnUpdateOrInstallDone(id);
-            Id = null;
+            UpdateOrInstallStart = null;
+            UpdateOrInstallOutput -= OnUpdateOrInstallOutputLog;
+            UpdateOrInstallOutput -= OnUpdateOrInstallOutputToDatabase;
         }
         catch (Exception e)
         {
             logger.LogError(e, "Failed to update or install csgo server");
             eventService.OnUpdateOrInstallFailed(id);
+            UpdateOrInstallOutput -= OnUpdateOrInstallOutputLog;
+            UpdateOrInstallOutput -= OnUpdateOrInstallOutputToDatabase;
         }
     }
 
-    public void CancelUpdate(Guid id)
+    public Result CancelUpdate(Guid id)
     {
-        if (id.Equals(Id) == false)
+        if (id.Equals(UpdateOrInstallStart?.Id) == false)
         {
-            return;
+            logger.LogWarning(
+                "Failed to cancel update or install. Ids dont match. IdToCancel: {CancelId} CurrentId: {CurrentId}",
+                id, UpdateOrInstallStart?.Id);
+            return Result.Fail(
+                $"Failed to cancel update or install. Ids dont match. IdToCancel: {id} CurrentId: {UpdateOrInstallStart?.Id}");
         }
 
         _cancellationTokenSource.Cancel();
         eventService.OnUpdateOrInstallCancelled(id);
+        return Result.Ok();
     }
 
     private async Task ExecuteUpdateOrInstallProcess(
+        Guid updateOrInstallId,
         string steamcmdShFilePath,
         string steamcmdPythonScriptPath,
         string serverFolder,
@@ -185,17 +205,20 @@ public class UpdateOrInstallService(
 
         var cli = await Cli.Wrap("python3")
             .WithArguments(command)
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(message =>
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(output =>
             {
-                eventService.OnNewOutput(message);
-                if (string.IsNullOrWhiteSpace(message) || message.Trim().Equals(successMessage) == false)
+                UpdateOrInstallOutput?.Invoke(this, new UpdateOrInstallOutputEventArg(updateOrInstallId, output));
+                if (string.IsNullOrWhiteSpace(output) || output.Trim().Equals(successMessage) == false)
                 {
                     return;
                 }
 
                 successMessageReceived = true;
             }))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(eventService.OnNewOutput))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(output =>
+            {
+                UpdateOrInstallOutput?.Invoke(this, new UpdateOrInstallOutputEventArg(updateOrInstallId, output));
+            }))
             .ExecuteAsync(_cancellationTokenSource.Token);
 
         if (cli.ExitCode is not 0)
@@ -256,13 +279,15 @@ public class UpdateOrInstallService(
         await DownloadAndUnpackSteamcmd(steamCmdFolder);
         CreatePythonUpdateScriptFile(pythonScriptLocation);
 
-        if (!CheckIfSteamcmdIsInstalled(steamCmdFolder, steamcmdShFileLocation, pythonScriptLocation))
+        if (CheckIfSteamcmdIsInstalled(steamCmdFolder, steamcmdShFileLocation, pythonScriptLocation) == false)
+        {
             throw new Exception("Failed to install steamcmd.");
+        }
 
         await SetLinuxPermissionRecursive(steamCmdFolder, "770");
     }
 
-    private static async Task SetLinuxPermissionRecursive(string directoryPath, string umask)
+    private async Task SetLinuxPermissionRecursive(string directoryPath, string umask)
     {
         var result = await Cli.Wrap($"chmod").WithArguments(new[] {"-R", umask, directoryPath}).ExecuteBufferedAsync();
         if (result.ExitCode != 0)
@@ -273,13 +298,54 @@ public class UpdateOrInstallService(
 
     #endregion
 
+    private void OnUpdateOrInstallOutputLog(object? _, UpdateOrInstallOutputEventArg arg)
+    {
+        try
+        {
+            logger.LogInformation("UpdateOrInstall: Id: {Id} | Output: {Output}",
+                arg.UpdateOrInstallId, arg.Message);
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning(e, "Exception");
+        }
+    }
+
+    private async void OnUpdateOrInstallOutputToDatabase(object? _, UpdateOrInstallOutputEventArg arg)
+    {
+        try
+        {
+            var currentUpdateOrInstallStart = UpdateOrInstallStart;
+            if (currentUpdateOrInstallStart is null ||
+                currentUpdateOrInstallStart.Id.Equals(arg.UpdateOrInstallId) == false)
+            {
+                logger.LogError(
+                    "Error while trying to add update or install output to database. The ID of the current update or install dose not match the id of the output. Id of output: {OutputId} | Output: {Output}",
+                    arg.UpdateOrInstallId, arg.Message);
+                return;
+            }
+
+            await updateOrInstallRepo.AddLog(currentUpdateOrInstallStart.Id, arg.Message);
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning(e, "Exception");
+        }
+    }
+
     /// <summary>
     /// The Python update script is needed because the steamcmd output is not recorded properly if steamcmd is started with c#.
     /// Some buffer issue?! https://github.com/ValveSoftware/Source-1-Games/issues/1684
     /// </summary>
     private void CreatePythonUpdateScriptFile(string pythonScriptLocation)
     {
-        var pythonScriptSrc = Path.Combine(Directory.GetCurrentDirectory(), "steamcmd.py");
+        var pythonScriptSrcFolder = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+        if (string.IsNullOrWhiteSpace(pythonScriptSrcFolder))
+        {
+            throw new NullReferenceException(nameof(pythonScriptSrcFolder));
+        }
+
+        var pythonScriptSrc = Path.Combine(pythonScriptSrcFolder, "steamcmd.py");
         if (File.Exists(pythonScriptSrc) == false)
         {
             throw new Exception(

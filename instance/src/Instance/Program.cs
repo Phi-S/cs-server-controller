@@ -1,4 +1,6 @@
+using System.Globalization;
 using AppOptionsLib;
+using DatabaseLib;
 using EventsServiceLib;
 using Instance.Endpoints;
 using Instance.Middleware;
@@ -41,6 +43,9 @@ try
             .WriteTo.Console(expressionTemplate)
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning);
     });
+
+    builder.Services.AddDatabaseServices();
+    
     builder.Services.AddScoped<ApiLogMiddleware>();
     builder.Services.AddScoped<GlobalExceptionHandlerMiddleware>();
 
@@ -61,6 +66,9 @@ try
             prop.Name, prop.GetValue(options.Value, null));
     }
 
+    Directory.CreateDirectory(options.Value.DATA_FOLDER);
+    await app.Services.CreateAndMigrateDatabase();
+    
     app.UseMiddleware<ApiLogMiddleware>();
     app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
     app.UseSwagger();

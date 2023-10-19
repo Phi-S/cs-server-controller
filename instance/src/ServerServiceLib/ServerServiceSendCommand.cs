@@ -23,17 +23,15 @@ public partial class ServerService
         var captureOutput = false;
         var result = new StringBuilder();
 
-        void CaptureCommandResult(object? _, string s)
+        void CaptureCommandResult(object? _, ServerOutputEventArg output)
         {
-            s = s.Trim();
-
-            if (s.Equals($"{START_PREFIX}{commandId}"))
+            if (output.Output.Equals($"{START_PREFIX}{commandId}"))
             {
                 captureOutput = true;
                 return;
             }
 
-            if (s.Equals($"{END_PREFIX}{commandId}"))
+            if (output.Output.Equals($"{END_PREFIX}{commandId}"))
             {
                 captureOutput = false;
                 resultReceived = true;
@@ -42,7 +40,7 @@ public partial class ServerService
 
             if (captureOutput)
             {
-                result.AppendLine(s);
+                result.AppendLine(output.Output);
             }
         }
 
@@ -53,18 +51,22 @@ public partial class ServerService
             {
                 var e = new ServerIsBusyException(ServerBusyAction.EXECUTING_COMMAND);
                 logger.LogError(e, "Failed to execute command {Command}", command);
+                _executeCommandLock.Release();
                 return e;
             }
 
             if (statusService.ServerStarted == false)
             {
-                return new ServerNotStartedException();
+                logger.LogError("Failed to execute command {Command}. Server is not started", command);
+                _executeCommandLock.Release();
+                return new ServerNotStartedException($"Failed to execute command {command}. Server is not started.");
             }
 
             if (statusService.ServerUpdatingOrInstalling)
             {
                 var e = new ServerIsBusyException(ServerBusyAction.UPDATING_OR_INSTALLING);
                 logger.LogError(e, "Failed to execute command {Command}", command);
+                _executeCommandLock.Release();
                 return e;
             }
 
@@ -72,6 +74,7 @@ public partial class ServerService
             {
                 var e = new ServerIsBusyException(ServerBusyAction.STOPPING);
                 logger.LogError(e, "Failed to execute command {Command}", command);
+                _executeCommandLock.Release();
                 return e;
             }
 

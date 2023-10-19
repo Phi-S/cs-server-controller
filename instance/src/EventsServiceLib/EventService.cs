@@ -42,37 +42,7 @@ public sealed class EventService
 
         AddHandlerToAllCommonEvents(LogEventTriggered);
         AddHandlerToAllCommonEvents(DatabaseEventTriggered);
-        NewOutput += OnNewOutputPrintLog;
     }
-
-    #region NewOutput
-
-    public event EventHandler<string>? NewOutput;
-
-    public void OnNewOutput(string? output)
-    {
-        if (!string.IsNullOrWhiteSpace(output))
-        {
-            NewOutput?.Invoke(this, output);
-        }
-    }
-
-    private void OnNewOutputPrintLog(object? _, string output)
-    {
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(output))
-            {
-                _logger.LogInformation("CS: {InstanceLog}", output);
-            }
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Exception while trying to print csgo output to the console");
-        }
-    }
-
-    #endregion
 
     private void AddHandlerToAllCommonEvents(EventHandler<CustomEventArg> handler)
     {

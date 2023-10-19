@@ -1,10 +1,12 @@
-﻿namespace DatabaseLib.Models;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace DatabaseLib.Models;
 
 public class EventLog
 {
-    public long Id { get; set; }
-    public required string Name { get; set; }
-    public required DateTime TriggeredAt { get; set; }
+    [Key] public long Id { get; set; }
+    [Required] public required string Name { get; set; }
+    [Required] public required DateTime TriggeredAt { get; set; }
     public string? DataJson { get; set; }
-    public DateTime CreatedAtUtc { get; set; }
+    [Required] public required DateTime CreatedAtUtc { get; set; }
 }

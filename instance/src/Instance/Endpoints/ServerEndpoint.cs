@@ -40,8 +40,8 @@ public static class ServerEndpoint
             }
 
             var startUpdateOrInstall = startParameters == null
-                ? updateOrInstallService.StartUpdateOrInstall()
-                : updateOrInstallService.StartUpdateOrInstall(() => serverService.Start(startParameters));
+                ? await updateOrInstallService.StartUpdateOrInstall()
+                : await updateOrInstallService.StartUpdateOrInstall(() => serverService.Start(startParameters));
             return startUpdateOrInstall.IsFailed
                 ? Results.Extensions.InternalServerError(startUpdateOrInstall.Exception.Message)
                 : Results.Ok(startUpdateOrInstall.Value);
@@ -49,8 +49,10 @@ public static class ServerEndpoint
 
         group.MapPost("CancelUpdatingOrInstalling", (UpdateOrInstallService updateOrInstallService, Guid id) =>
         {
-            updateOrInstallService.CancelUpdate(id);
-            return Results.Ok();
+            var cancelUpdate = updateOrInstallService.CancelUpdate(id);
+            return cancelUpdate.IsFailed
+                ? Results.Extensions.InternalServerError(cancelUpdate.Exception.Message)
+                : Results.Ok();
         });
 
         group.MapPost("Start", async (

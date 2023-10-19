@@ -1,10 +1,11 @@
 using AppOptionsLib;
 using DatabaseLib;
+using DatabaseLib.Models;
 using DatabaseLib.Repos;
 using EventsServiceLib;
 using EventsServiceLib.EventArgs;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Moq;
 using ServerServiceLib;
 using StatusServiceLib;
 using TestLoggerLib;
@@ -15,16 +16,19 @@ namespace EventDetectionTest;
 
 public class ServerServiceEventDetectionTest
 {
-    private event EventHandler<string>? TestEvent;
+    private event EventHandler<ServerOutputEventArg>? TestEvent;
 
     private readonly EventService _eventService;
     private readonly ITestOutputHelper _output;
 
     public ServerServiceEventDetectionTest(ITestOutputHelper output)
     {
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddDatabaseServices();
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+        
         _output = output;
-        var dbContext = new Mock<ApiDbContext>();
-        var eventLogRepo = new EventLogRepo(dbContext.Object);
+        var eventLogRepo = new EventLogRepo(serviceProvider);
         _eventService = new EventService(new XunitLogger<EventService>(output), eventLogRepo);
         var statusService = new StatusService(_eventService);
         var options = Options.Create(new AppOptions
@@ -33,8 +37,11 @@ public class ServerServiceEventDetectionTest
             STEAM_USERNAME = "test",
             STEAM_PASSWORD = "test"
         });
+
+        var serverRepo = new ServerRepo(serviceProvider);
         var serverService =
-            new ServerService(new XunitLogger<ServerService>(output), options, statusService, _eventService);
+            new ServerService(new XunitLogger<ServerService>(output), options, statusService, _eventService,
+                serverRepo);
         TestEvent += serverService.NewOutputHibernationDetection;
         TestEvent += serverService.NewOutputMapChangeDetection;
         TestEvent += serverService.NewOutputPlayerConnectDetection;
@@ -47,7 +54,16 @@ public class ServerServiceEventDetectionTest
     {
         CustomEventArg? arg = null;
         _eventService.HibernationStarted += (_, disconnected) => arg = disconnected;
-        TestEvent?.Invoke(null, "Server is hibernating");
+        TestEvent?.Invoke(null,
+            new ServerOutputEventArg(
+                new ServerStart
+                {
+                    Id = Guid.NewGuid(),
+                    StartParameters = "-startParameter",
+                    StartedAtUtc = DateTime.UtcNow,
+                    CreatedAtUtc = DateTime.UtcNow
+                },
+                "Server is hibernating"));
         var waitResult =
             await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
 
@@ -61,7 +77,16 @@ public class ServerServiceEventDetectionTest
     {
         CustomEventArg? arg = null;
         _eventService.HibernationEnded += (_, disconnected) => arg = disconnected;
-        TestEvent?.Invoke(null, "Server waking up from hibernation");
+        TestEvent?.Invoke(null,
+            new ServerOutputEventArg(
+                new ServerStart
+                {
+                    Id = Guid.NewGuid(),
+                    StartParameters = "-startParameter",
+                    StartedAtUtc = DateTime.UtcNow,
+                    CreatedAtUtc = DateTime.UtcNow
+                },
+                "Server waking up from hibernation"));
         var waitResult =
             await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
 
@@ -75,7 +100,16 @@ public class ServerServiceEventDetectionTest
     {
         CustomEventArgMapChanged? arg = null;
         _eventService.MapChanged += (_, disconnected) => arg = disconnected;
-        TestEvent?.Invoke(null, "Host activate: Changelevel (de_dust2)");
+        TestEvent?.Invoke(null,
+            new ServerOutputEventArg(
+                new ServerStart
+                {
+                    Id = Guid.NewGuid(),
+                    StartParameters = "-startParameter",
+                    StartedAtUtc = DateTime.UtcNow,
+                    CreatedAtUtc = DateTime.UtcNow
+                },
+                "Host activate: Changelevel (de_dust2)"));
         var waitResult =
             await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
 
@@ -90,7 +124,16 @@ public class ServerServiceEventDetectionTest
     {
         CustomEventArgPlayerConnected? arg = null;
         _eventService.PlayerConnected += (_, disconnected) => arg = disconnected;
-        TestEvent?.Invoke(null, "CNetworkGameServerBase::ConnectClient( name='PhiS', remote='10.10.20.10:57143' )");
+        TestEvent?.Invoke(null,
+            new ServerOutputEventArg(
+                new ServerStart
+                {
+                    Id = Guid.NewGuid(),
+                    StartParameters = "-startParameter",
+                    StartedAtUtc = DateTime.UtcNow,
+                    CreatedAtUtc = DateTime.UtcNow
+                },
+                "CNetworkGameServerBase::ConnectClient( name='PhiS', remote='10.10.20.10:57143' )"));
         var waitResult =
             await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
 
@@ -106,7 +149,16 @@ public class ServerServiceEventDetectionTest
     {
         CustomEventArgPlayerDisconnected? arg = null;
         _eventService.PlayerDisconnected += (_, disconnected) => arg = disconnected;
-        TestEvent?.Invoke(null, "Disconnect client 'PhiS' from server(59): NETWORK_DISCONNECT_EXITING");
+        TestEvent?.Invoke(null,
+            new ServerOutputEventArg(
+                new ServerStart
+                {
+                    Id = Guid.NewGuid(),
+                    StartParameters = "-startParameter",
+                    StartedAtUtc = DateTime.UtcNow,
+                    CreatedAtUtc = DateTime.UtcNow
+                },
+                "Disconnect client 'PhiS' from server(59): NETWORK_DISCONNECT_EXITING"));
         var waitResult =
             await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
 
@@ -127,16 +179,25 @@ public class ServerServiceEventDetectionTest
     {
         CustomEventArgChatMessage? arg = null;
         _eventService.ChatMessage += (_, message) => { arg = message; };
-        TestEvent?.Invoke(null, rawMessage);
+        TestEvent?.Invoke(null,
+            new ServerOutputEventArg(
+                new ServerStart
+                {
+                    Id = Guid.NewGuid(),
+                    StartParameters = "-startParameter",
+                    StartedAtUtc = DateTime.UtcNow,
+                    CreatedAtUtc = DateTime.UtcNow
+                },
+                rawMessage));
         var waitResult =
             await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
 
         Assert.True(waitResult.IsOk, waitResult.IsFailed ? waitResult.Exception.ToString() : "");
         Assert.True(arg is not null);
         Assert.True(arg.EventName == Events.CHAT_MESSAGE);
-        Assert.True(arg.Chat.Equals(shouldBeChat));
-        Assert.True(arg.PlayerName.Equals(shouldBePlayerName));
-        Assert.True(arg.SteamId3.Equals(shouldBeSteamId3));
-        Assert.True(arg.Message.Equals(shouldBeMessage));
+        Assert.Equal(arg.Chat, shouldBeChat);
+        Assert.Equal(arg.PlayerName, shouldBePlayerName);
+        Assert.Equal(arg.SteamId3, shouldBeSteamId3);
+        Assert.Equal(arg.Message, shouldBeMessage);
     }
 }

@@ -1,7 +1,7 @@
 using DatabaseLib;
 using DatabaseLib.Repos;
 using EventsServiceLib;
-using Moq;
+using Microsoft.Extensions.DependencyInjection;
 using StatusServiceLib;
 using TestLoggerLib;
 using Xunit.Abstractions;
@@ -15,8 +15,11 @@ public class EventAndStatusServiceTest
 
     public EventAndStatusServiceTest(ITestOutputHelper output)
     {
-        var dbContext = new Mock<ApiDbContext>();
-        var eventLogRepo = new EventLogRepo(dbContext.Object);
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddDatabaseServices();
+        var scope = serviceCollection.BuildServiceProvider();
+
+        var eventLogRepo = new EventLogRepo(scope);
         _eventService = new EventService(new XunitLogger<EventService>(output), eventLogRepo);
         _statusService = new StatusService(_eventService);
     }

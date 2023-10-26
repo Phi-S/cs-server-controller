@@ -1,7 +1,9 @@
+using AppOptionsLib;
 using DatabaseLib;
 using DatabaseLib.Repos;
 using EventsServiceLib;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using StatusServiceLib;
 using TestLoggerLib;
 using Xunit.Abstractions;
@@ -21,7 +23,15 @@ public class EventAndStatusServiceTest
 
         var eventLogRepo = new EventLogRepo(scope);
         _eventService = new EventService(new XunitLogger<EventService>(output), eventLogRepo);
-        _statusService = new StatusService(_eventService);
+        var options = Options.Create(new AppOptions
+        {
+            APP_NAME = "test",
+            STEAM_USERNAME = "test",
+            STEAM_PASSWORD = "test",
+            PORT = "27015",
+            IP_OR_DOMAIN = "localhost"
+        });
+        _statusService = new StatusService(options, _eventService);
     }
 
     [Fact]

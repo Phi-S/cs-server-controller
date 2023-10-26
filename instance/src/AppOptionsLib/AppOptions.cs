@@ -9,6 +9,8 @@ public class AppOptions
     public const string SECTION_NAME = "APP_OPTIONS";
 
     [Required] public required string APP_NAME { get; init; }
+    [Required] public required string IP_OR_DOMAIN { get; init; }
+    [Required] public required string PORT { get; init; }
     [Required] public required string STEAM_USERNAME { get; init; }
     [Required] public required string STEAM_PASSWORD { get; init; }
 

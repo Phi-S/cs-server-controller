@@ -20,6 +20,7 @@
     <ItemGroup>
       <ProjectReference Include="..\EventsServiceLib\EventsServiceLib.csproj" />
       <ProjectReference Include="..\ServerServiceLib\ServerServiceLib.csproj" />
+      <ProjectReference Include="..\SharedModelsLib\SharedModelsLib.csproj" />
       <ProjectReference Include="..\UpdateOrInstallServiceLib\UpdateOrInstallServiceLib.csproj" />
     </ItemGroup>
 

@@ -10,7 +10,7 @@ public class EventLogRepo(IServiceProvider serviceProvider)
         await dbContext.EvenLogs.AddAsync(new EventLog()
         {
             Name = eventName,
-            TriggeredAt = eventTriggeredAt,
+            TriggeredAtUtc = eventTriggeredAt,
             DataJson = eventDataJson,
             CreatedAtUtc = DateTime.UtcNow
         });
@@ -26,13 +26,13 @@ public class EventLogRepo(IServiceProvider serviceProvider)
     public async Task<List<EventLog>> GetAllSince(DateTime since)
     {
         await using var dbContext = RepoHelper.New(serviceProvider);
-        return dbContext.EvenLogs.Where(log => log.TriggeredAt >= since).ToList();
+        return dbContext.EvenLogs.Where(log => log.TriggeredAtUtc >= since).ToList();
     }
 
     public async Task<List<EventLog>> GetAllSince(DateTime since, string eventName)
     {
         await using var dbContext = RepoHelper.New(serviceProvider);
-        return dbContext.EvenLogs.Where(log => log.TriggeredAt >= since && log.Name.Equals(eventName))
+        return dbContext.EvenLogs.Where(log => log.TriggeredAtUtc >= since && log.Name.Equals(eventName))
             .ToList();
     }
 }

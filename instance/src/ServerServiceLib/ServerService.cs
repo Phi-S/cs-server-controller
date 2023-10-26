@@ -6,6 +6,7 @@ using EventsServiceLib;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ResultLib;
+using SharedModelsLib;
 using StatusServiceLib;
 
 namespace ServerServiceLib;
@@ -73,7 +74,7 @@ public partial class ServerService(
 
             // ReSharper disable once StringLiteralTypo
             var executablePath = Path.Combine(options.Value.SERVER_FOLDER, "game", "bin", "linuxsteamrt64", "cs2");
-            var startParameterString = startParameters.GetString();
+            var startParameterString = startParameters.GetString(options.Value.PORT);
 
             var serverStart = await serverRepo.AddStart(startParameterString, DateTime.UtcNow);
 

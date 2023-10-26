@@ -26,17 +26,19 @@ public class ServerServiceEventDetectionTest
         var serviceCollection = new ServiceCollection();
         serviceCollection.AddDatabaseServices();
         var serviceProvider = serviceCollection.BuildServiceProvider();
-        
+
         _output = output;
         var eventLogRepo = new EventLogRepo(serviceProvider);
         _eventService = new EventService(new XunitLogger<EventService>(output), eventLogRepo);
-        var statusService = new StatusService(_eventService);
         var options = Options.Create(new AppOptions
         {
             APP_NAME = "test",
             STEAM_USERNAME = "test",
-            STEAM_PASSWORD = "test"
+            STEAM_PASSWORD = "test",
+            PORT = "27015",
+            IP_OR_DOMAIN = "localhost"
         });
+        var statusService = new StatusService(options, _eventService);
 
         var serverRepo = new ServerRepo(serviceProvider);
         var serverService =

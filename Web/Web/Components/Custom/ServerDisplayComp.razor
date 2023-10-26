@@ -1,0 +1,82 @@
+﻿@using web.Helper
+@inherits ServerDisplayCompRazor
+@attribute [RenderModeInteractiveServer]
+
+<style>
+        body {
+            font: 1em sans-serif;
+            text-align: center;
+        }
+        .stage {
+            border-bottom: 3px solid #444;
+            display: flex;
+            height: 330px;
+            width: 100%;
+        }
+        .box {
+            align-self: flex-end;
+            animation-duration: 2s;
+            animation-iteration-count: infinite;
+            background-color: #F44336;
+            height: 200px;
+            margin: 0 auto 0 auto;
+            transform-origin: bottom;
+            width: 200px;
+        }
+        .bounce-7 {
+            animation-name: bounce-7;
+            animation-timing-function: cubic-bezier(0.280, 0.840, 0.420, 1);
+        }
+</style>
+
+@if (ServerInfo == null)
+{
+    <div>
+        <strong>Loading...</strong>
+        <div class="spinner-border spinner-border-sm">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container container-md @GetBackgroundColor() rounded" style="max-width: 35rem; height: 3rem; font-size: large">
+        <div class="row h-100 align-items-center ps-1 pe-1">
+            <div class="col-7 col-md-4 text-start m-0 p-0 text-truncate">
+                <span class="text-decoration-underline" title="@ServerInfo.Hostname: @GetConnectionString()" style="font-size: x-large">
+                    <strong>@ServerInfo.Hostname</strong>
+                </span>
+            </div>
+
+            <div class="col-2 d-none d-sm-block text-start m-0 p-0">
+                <span title="Player count: @ServerInfo.CurrentPlayerCount / @ServerInfo.MaxPlayerCount">@ServerInfo.CurrentPlayerCount / @ServerInfo.MaxPlayerCount</span>
+            </div>
+
+            <div class="col-2 d-none d-sm-block text-start m-0 p-0 text-truncate">
+                <span title="Current map: @ServerInfo.CurrentMap">@ServerInfo.CurrentMap</span>
+            </div>
+
+            <div class="col-5 col-md-4 text-end m-0 p-0" style="font-size: x-large">
+                <button class="border-0 bg-transparent bi bi-copy" title="Copy IP" @onclick="CopyConnectStringToClipboard"></button>
+                <button class="border-0 bg-transparent bi bi-map" title="Change map"></button>
+                <button class="border-0 bg-transparent bi bi-file-earmark-post" title="Logs"></button>
+                @if (ServerInfo.ServerStarted)
+                {
+                    <button class="border-0 bg-transparent bi-stop" title="Stop server"></button>
+                }
+                else if (ServerInfo.ServerStarting)
+                {
+                    <button class="border-0 bg-transparent">
+                        <div class="spinner-grow" title="Loading" role="status" style="width: 1.3rem; height: 1.3rem">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </button>
+                }
+                else
+                {
+                    <button class="border-0 bg-transparent bi-play" title="Start server"></button>
+                }
+            </div>
+        </div>
+    </div>
+}

@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace ServerServiceLib;
+namespace SharedModelsLib;
 
 public record StartParameters(
     string ServerName,
@@ -11,16 +11,16 @@ public record StartParameters(
     int GameType = 0,
     string? AdditionalStartParameters = null)
 {
-    public string GetString()
+    public string GetString(string port)
     {
         var sb = new StringBuilder();
         const string seperatorChar = " ";
         sb.AppendJoin(seperatorChar,
             "-dedicated",
             "-console",
-            "-port 27015",
+            $"-port {port}",
             $"+hostname {ServerName}",
-            $"-maxplayers_override {MaxPlayer}",
+            $"-maxplayers {MaxPlayer}",
             $"+game_type {GameType}",
             $"+game_mode {GameMode}",
             $"+map {StartMap}",

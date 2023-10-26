@@ -51,4 +51,10 @@ public class ServerRepo(IServiceProvider serviceProvider)
         await using var dbContext = RepoHelper.New(serviceProvider);
         return dbContext.ServerLogs.Where(log => log.ServerStart.Id == serverStart.Id).ToList();
     }
+
+    public async Task<List<ServerLog>> GetSince(DateTime since)
+    {
+        await using var dbContext = RepoHelper.New(serviceProvider);
+        return dbContext.ServerLogs.Where(log => log.ServerStart.CreatedAtUtc > since).ToList();
+    }
 }

@@ -1,4 +1,6 @@
+using AppOptionsLib;
 using EventsServiceLib;
+using Microsoft.Extensions.Options;
 
 namespace StatusServiceLib;
 
@@ -15,10 +17,13 @@ public sealed class StatusService
         bool DemoUploading
     );
 
+    private readonly IOptions<AppOptions> _options;
+
     private readonly EventService _eventService;
 
-    public StatusService(EventService eventService)
+    public StatusService(IOptions<AppOptions> options, EventService eventService)
     {
+        _options = options;
         _eventService = eventService;
 
         RegisterEventServiceHandler();

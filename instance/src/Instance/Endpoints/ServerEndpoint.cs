@@ -1,8 +1,12 @@
 ﻿using AppOptionsLib;
+using DatabaseLib.Repos;
+using EventsServiceLib;
 using Instance.Response;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using ServerServiceLib;
+using SharedModelsLib;
 using StatusServiceLib;
 using UpdateOrInstallServiceLib;
 
@@ -18,16 +22,37 @@ public static class ServerEndpoint
             .WithTags(tag)
             .WithOpenApi();
 
-        group.MapGet("Status", (StatusService statusService) =>
+        group.MapGet("info", (IOptions<AppOptions> options, StatusService statusService) =>
         {
             var status = statusService.GetStatus();
-            return Results.Ok(status);
+            var info = new InfoModel(
+                "server", // get hostname from status service
+                "pw", // get pw from status server start parameter
+                status.CurrentMap,
+                status.CurrentPlayerCount,
+                10, // TODO: get from start parameters... prob. should add to status server,
+                options.Value.IP_OR_DOMAIN,
+                options.Value.PORT,
+                status.ServerStarting,
+                status.ServerStarted,
+                status.ServerStopping,
+                status.ServerHibernating,
+                status.ServerUpdatingOrInstalling,
+                status.DemoUploading
+            );
+            return Results.Ok(info);
+        });
+
+        group.MapGet("events", (IOptions<AppOptions> options, EventService eventService) =>
+        {
+            var events = Enum.GetValues<Events>().Select(e => e.ToString()).ToList();
+            return Results.Ok(events);
         });
 
 
         // Stops the server and starts the update or install process.
         // If startParameters is set, the server will start automatically after the update or install process
-        group.MapPost("StartUpdatingOrInstalling", async (
+        group.MapPost("start-updating-or-installing", async (
             ServerService serverService,
             UpdateOrInstallService updateOrInstallService,
             [FromBody] StartParameters? startParameters = null) =>
@@ -47,15 +72,16 @@ public static class ServerEndpoint
                 : Results.Ok(startUpdateOrInstall.Value);
         });
 
-        group.MapPost("CancelUpdatingOrInstalling", (UpdateOrInstallService updateOrInstallService, Guid id) =>
-        {
-            var cancelUpdate = updateOrInstallService.CancelUpdate(id);
-            return cancelUpdate.IsFailed
-                ? Results.Extensions.InternalServerError(cancelUpdate.Exception.Message)
-                : Results.Ok();
-        });
+        group.MapPost("cancel-updating-or-installing",
+            (UpdateOrInstallService updateOrInstallService, [FromBody] Guid id) =>
+            {
+                var cancelUpdate = updateOrInstallService.CancelUpdate(id);
+                return cancelUpdate.IsFailed
+                    ? Results.Extensions.InternalServerError(cancelUpdate.Exception.Message)
+                    : Results.Ok();
+            });
 
-        group.MapPost("Start", async (
+        group.MapPost("start", async (
             ServerService serverService,
             [FromBody] StartParameters startParameters) =>
         {
@@ -65,7 +91,7 @@ public static class ServerEndpoint
                 : Results.Ok();
         });
 
-        group.MapPost("Stop", async (ServerService serverService) =>
+        group.MapPost("stop", async (ServerService serverService) =>
         {
             var start = await serverService.Stop();
             return start.IsFailed
@@ -73,13 +99,13 @@ public static class ServerEndpoint
                 : Results.Ok();
         });
 
-        group.MapGet("Maps", (IOptions<AppOptions> options, ServerService serverService) =>
+        group.MapGet("maps", (IOptions<AppOptions> options, ServerService serverService) =>
         {
             var maps = serverService.GetAllMaps(options.Value.SERVER_FOLDER);
             return Results.Ok(maps);
         });
 
-        group.MapPost("SendCommand", async (ServerService serverService, [FromBody] string command) =>
+        group.MapPost("send-command", async (ServerService serverService, [FromBody] string command) =>
         {
             var executeCommand = await serverService.ExecuteCommand(command);
             return executeCommand.IsFailed

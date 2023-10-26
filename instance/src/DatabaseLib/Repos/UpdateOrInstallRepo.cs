@@ -24,7 +24,7 @@ public class UpdateOrInstallRepo(IServiceProvider serviceProvider)
         var latestStartedAt = await dbContext.UpdateOrInstallStarts.MaxAsync(start => start.StartedAtUtc);
         return await dbContext.UpdateOrInstallStarts.FirstAsync(start => start.StartedAtUtc == latestStartedAt);
     }
-    
+
     public async Task AddLog(Guid updateOrInstallStartId, string message)
     {
         await using var dbContext = RepoHelper.New(serviceProvider);
@@ -44,5 +44,11 @@ public class UpdateOrInstallRepo(IServiceProvider serviceProvider)
         await using var dbContext = RepoHelper.New(serviceProvider);
         var latestStartedAt = await dbContext.ServerStarts.MaxAsync(serverStart => serverStart.StartedAtUtc);
         return await dbContext.ServerStarts.FirstAsync(start => start.StartedAtUtc == latestStartedAt);
+    }
+
+    public async Task<List<UpdateOrInstallLog>> GetSince(DateTime logsSince)
+    {
+        await using var dbContext = RepoHelper.New(serviceProvider);
+        return dbContext.UpdateOrInstallLogs.Where(log => log.CreatedAtUtc > logsSince).ToList();
     }
 }

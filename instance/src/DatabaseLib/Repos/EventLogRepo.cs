@@ -17,12 +17,6 @@ public class EventLogRepo(IServiceProvider serviceProvider)
         await dbContext.SaveChangesAsync();
     }
 
-    public async Task<List<EventLog>> GetLast(int amount = 50)
-    {
-        await using var dbContext = RepoHelper.New(serviceProvider);
-        return dbContext.EvenLogs.TakeLast(amount).ToList();
-    }
-
     public async Task<List<EventLog>> GetAllSince(DateTime since)
     {
         await using var dbContext = RepoHelper.New(serviceProvider);

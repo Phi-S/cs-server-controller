@@ -29,9 +29,5 @@ RUN chown -R 1001:1001 /data
 RUN chmod -R 755 /data
 
 USER user
-ENV ASPNETCORE_URLS=http://+:11111
+ENV HTTP_PORTS=11111
 CMD ["./Instance"]
-
-EXPOSE 27015/tcp 
-EXPOSE 27015/udp 
-EXPOSE 11111/tcp

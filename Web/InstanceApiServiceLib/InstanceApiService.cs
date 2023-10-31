@@ -1,7 +1,5 @@
-﻿using System.Diagnostics;
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using AppOptionsLib;
 using Microsoft.Extensions.Options;
 using SharedModelsLib;
@@ -11,6 +9,8 @@ namespace InstanceApiServiceLib;
 
 public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpClient)
 {
+    private JsonSerializerOptions _jsonOption = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
     #region Server
 
     public async Task<InfoModel> Info()
@@ -18,7 +18,7 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
         var url = options.Value.INSTANCE_API_ENDPOINT + "/server/info";
         var json = await httpClient.GetStringAsync(url);
         json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var result = JsonSerializer.Deserialize<InfoModel>(json);
+        var result = JsonSerializer.Deserialize<InfoModel>(json, _jsonOption);
         result.ThrowIfNull();
         return result;
     }
@@ -28,7 +28,7 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
         var url = options.Value.INSTANCE_API_ENDPOINT + "/server/events";
         var json = await httpClient.GetStringAsync(url);
         json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var result = JsonSerializer.Deserialize<List<string>>(json);
+        var result = JsonSerializer.Deserialize<List<string>>(json, _jsonOption);
         result.ThrowIfNull();
         return result;
     }
@@ -46,7 +46,7 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var result = JsonSerializer.Deserialize<Guid>(json);
+        var result = JsonSerializer.Deserialize<Guid>(json, _jsonOption);
         result.ThrowIfNull();
         return result;
     }
@@ -60,7 +60,7 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var result = JsonSerializer.Deserialize<Guid>(json);
+        var result = JsonSerializer.Deserialize<Guid>(json, _jsonOption);
         result.ThrowIfNull();
         return result;
     }
@@ -90,7 +90,7 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var maps = JsonSerializer.Deserialize<List<string>>(json);
+        var maps = JsonSerializer.Deserialize<List<string>>(json, _jsonOption);
         maps.ThrowIfNull();
         return maps;
     }
@@ -110,58 +110,57 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
 
     #region Logs
 
-    public async Task<List<StartLogResponse>> LogsServer(DateTime logsSince)
+    public async Task<List<StartLogResponse>> LogsServer(DateTimeOffset logsSince)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + "/logs/server";
+        var url = options.Value.INSTANCE_API_ENDPOINT + $"/logs/server?logsSince={logsSince.ToUnixTimeMilliseconds()}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Content = JsonContent.Create(new {logsSince});
+        request.Content = JsonContent.Create(new {logsSince = logsSince.ToUnixTimeSeconds()});
         var response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var maps = JsonSerializer.Deserialize<List<StartLogResponse>>(json);
+        var maps = JsonSerializer.Deserialize<List<StartLogResponse>>(json, _jsonOption);
         maps.ThrowIfNull();
         return maps;
     }
 
-    public async Task<List<StartLogResponse>> LogsUpdateOrInstall(DateTime logsSince)
+    public async Task<List<UpdateOrInstallLogResponse>> LogsUpdateOrInstall(DateTimeOffset logsSince)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + "/logs/update-or-install";
+        var url = options.Value.INSTANCE_API_ENDPOINT + $"/logs/update-or-install?logsSince={logsSince.ToUnixTimeMilliseconds()}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Content = JsonContent.Create(new {logsSince});
+        request.Content = JsonContent.Create(new {logsSince = logsSince.ToUnixTimeSeconds()});
         var response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var maps = JsonSerializer.Deserialize<List<StartLogResponse>>(json);
+        var maps = JsonSerializer.Deserialize<List<UpdateOrInstallLogResponse>>(json, _jsonOption);
         maps.ThrowIfNull();
         return maps;
     }
 
-    public async Task<List<EventLogResponse>> LogsEvents(DateTime logsSince)
+    public async Task<List<EventLogResponse>> LogsEvents(DateTimeOffset logsSince)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + "/logs/events";
+        var url = options.Value.INSTANCE_API_ENDPOINT + $"/logs/events?logsSince={logsSince.ToUnixTimeMilliseconds()}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Content = JsonContent.Create(new {logsSince});
         var response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var maps = JsonSerializer.Deserialize<List<EventLogResponse>>(json);
+        var maps = JsonSerializer.Deserialize<List<EventLogResponse>>(json, _jsonOption);
         maps.ThrowIfNull();
         return maps;
     }
 
-    public async Task<List<EventLogResponse>> LogsEvents(string eventName, DateTime logsSince)
+    public async Task<List<EventLogResponse>> LogsEvents(string eventName, DateTimeOffset logsSince)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + $"/logs/events/{eventName}";
+        var url = options.Value.INSTANCE_API_ENDPOINT + $"/logs/events/{eventName}?logsSince={logsSince.ToUnixTimeMilliseconds()}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Content = JsonContent.Create(new {logsSince});
+        request.Content = JsonContent.Create(new {logsSince = logsSince.ToUnixTimeSeconds()});
         var response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var maps = JsonSerializer.Deserialize<List<EventLogResponse>>(json);
+        var maps = JsonSerializer.Deserialize<List<EventLogResponse>>(json, _jsonOption);
         maps.ThrowIfNull();
         return maps;
     }

@@ -14,9 +14,10 @@ public static class LogsEndpoint
             .WithTags(tag)
             .WithOpenApi();
 
-        group.MapGet("server", async (ServerRepo serverRepo, [FromBody] DateTime logsSince) =>
+        group.MapGet("server", async (ServerRepo serverRepo, [FromQuery] long logsSince) =>
         {
-            var logs = await serverRepo.GetSince(logsSince);
+            var logsSinceDateTime = DateTimeOffset.FromUnixTimeMilliseconds(logsSince).DateTime;
+            var logs = await serverRepo.GetSince(logsSinceDateTime);
             var response = logs.Select(
                     log => new StartLogResponse(
                         log.ServerStart.Id,
@@ -28,9 +29,10 @@ public static class LogsEndpoint
         });
 
         group.MapGet("update-or-install",
-            async (UpdateOrInstallRepo updateOrInstallRepo, [FromBody] DateTime logsSince) =>
+            async (UpdateOrInstallRepo updateOrInstallRepo, [FromQuery] long logsSince) =>
             {
-                var logs = await updateOrInstallRepo.GetSince(logsSince);
+                var logsSinceDateTime = DateTimeOffset.FromUnixTimeMilliseconds(logsSince).DateTime;
+                var logs = await updateOrInstallRepo.GetSince(logsSinceDateTime);
                 var response = logs.Select(
                         log => new UpdateOrInstallLogResponse(
                             log.UpdateOrInstallStart.Id,
@@ -42,9 +44,12 @@ public static class LogsEndpoint
                 return Results.Ok(response);
             });
 
-        group.MapGet("events", async (EventLogRepo eventLogRepo, [FromBody] DateTime logsSince) =>
+        group.MapGet("events", async (EventLogRepo eventLogRepo, [FromQuery] long logsSince) =>
         {
-            var logs = await eventLogRepo.GetAllSince(logsSince);
+            Console.WriteLine("logsSince: " + logsSince);
+            var logsSinceDateTime = DateTimeOffset.FromUnixTimeMilliseconds(logsSince).DateTime;
+            Console.WriteLine("logsSinceDateTime: " + logsSinceDateTime);
+            var logs = await eventLogRepo.GetAllSince(logsSinceDateTime);
             var response = logs.Select(
                     log => new EventLogResponse(
                         log.Name,
@@ -54,17 +59,19 @@ public static class LogsEndpoint
             return Results.Ok(response);
         });
 
-        group.MapGet("events/{eventName}", async (EventLogRepo eventLogRepo, [FromBody] DateTime logsSince, string eventName) =>
-        {
-            var logs = await eventLogRepo.GetAllSince(logsSince, eventName);
-            var response = logs.Select(
-                    log => new EventLogResponse(
-                        log.Name,
-                        log.TriggeredAtUtc)
-                )
-                .ToList();
-            return Results.Ok(response);
-        });
+        group.MapGet("events/{eventName}",
+            async (EventLogRepo eventLogRepo, string eventName, [FromQuery] long logsSince) =>
+            {
+                var logsSinceDateTime = DateTimeOffset.FromUnixTimeMilliseconds(logsSince).DateTime;
+                var logs = await eventLogRepo.GetAllSince(logsSinceDateTime, eventName);
+                var response = logs.Select(
+                        log => new EventLogResponse(
+                            log.Name,
+                            log.TriggeredAtUtc)
+                    )
+                    .ToList();
+                return Results.Ok(response);
+            });
 
 
         return group;

@@ -3,7 +3,7 @@
 namespace SharedModelsLib;
 
 public record StartParameters(
-    string ServerName,
+    string ServerName = "TheAurum.net cs2 prac server",
     string? ServerPw = null,
     int MaxPlayer = 10,
     string StartMap = "de_anubis",
@@ -28,5 +28,10 @@ public record StartParameters(
             $"{AdditionalStartParameters}");
 
         return sb.ToString();
+    }
+
+    public override string ToString()
+    {
+        return $"{nameof(ServerName)}: {ServerName}, {nameof(ServerPw)}: {ServerPw}, {nameof(MaxPlayer)}: {MaxPlayer}, {nameof(StartMap)}: {StartMap}, {nameof(GameMode)}: {GameMode}, {nameof(GameType)}: {GameType}, {nameof(AdditionalStartParameters)}: {AdditionalStartParameters}";
     }
 }

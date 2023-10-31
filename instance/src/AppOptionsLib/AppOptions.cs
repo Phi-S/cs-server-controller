@@ -18,8 +18,7 @@ public class AppOptions
     public string DATABASE_PATH => Path.Combine(DATA_FOLDER, "instance.db");
     public string SERVER_FOLDER => Path.Combine(DATA_FOLDER, "server");
     public string STEAMCMD_FOLDER => Path.Combine(DATA_FOLDER, "steamcmd");
-    public readonly string STEAMCMD_SH_NAME = "steamcmd.sh";
-    public string STEAMCMD_SH_PATH => Path.Combine(STEAMCMD_FOLDER, STEAMCMD_SH_NAME);
-    public readonly string STEAMCMD_PYTHON_SCRIPT_NAME = "steamcmd.py";
-    public string STEAMCMD_PYTHON_SCRIPT_PATH => Path.Combine(STEAMCMD_FOLDER, STEAMCMD_PYTHON_SCRIPT_NAME);
+
+    public string EXECUTING_FOLDER =
+        Path.GetDirectoryName(Environment.ProcessPath) ?? throw new NullReferenceException(nameof(EXECUTING_FOLDER));
 }

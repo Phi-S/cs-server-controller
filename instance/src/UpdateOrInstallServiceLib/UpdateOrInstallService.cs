@@ -70,12 +70,7 @@ public class UpdateOrInstallService(
             UpdateOrInstallStart = updateOrInstallStart;
             _ = UpdateOrInstallServer(
                 updateOrInstallStart.Id,
-                options.Value.STEAMCMD_FOLDER,
-                options.Value.STEAMCMD_SH_PATH,
-                options.Value.STEAMCMD_PYTHON_SCRIPT_PATH,
-                options.Value.SERVER_FOLDER,
-                options.Value.STEAM_USERNAME,
-                options.Value.STEAM_PASSWORD,
+                options.Value,
                 afterUpdateOrInstallSuccessfulAction);
 
             return Result<Guid>.Ok(updateOrInstallStart.Id);
@@ -88,12 +83,7 @@ public class UpdateOrInstallService(
 
     private async Task UpdateOrInstallServer(
         Guid id,
-        string steamcmdFolder,
-        string steamcmdShFileLocation,
-        string pythonScriptLocation,
-        string serverFolder,
-        string steamUsername,
-        string steamPassword,
+        AppOptions options,
         Func<Task>? afterUpdateOrInstallSuccessfulAction)
     {
         try
@@ -116,13 +106,20 @@ public class UpdateOrInstallService(
                 throw new ServerIsBusyException(ServerBusyAction.STARTED);
             }
 
+            const string steamcmdShName = "steamcmd.sh";
+            const string pythonScriptName = "steamcmd.py";
+
             logger.LogInformation("Installing steamcmd");
             if (CheckIfSteamcmdIsInstalled(
-                    steamcmdFolder,
-                    steamcmdShFileLocation,
-                    pythonScriptLocation) == false)
+                    options.STEAMCMD_FOLDER,
+                    steamcmdShName,
+                    pythonScriptName) == false)
             {
-                await InstallSteamcmd(steamcmdFolder, steamcmdShFileLocation, pythonScriptLocation);
+                await InstallSteamcmd(
+                    options.EXECUTING_FOLDER,
+                    options.STEAMCMD_FOLDER,
+                    steamcmdShName,
+                    pythonScriptName);
                 logger.LogInformation("steamcmd installed successfully");
             }
             else
@@ -136,11 +133,13 @@ public class UpdateOrInstallService(
             logger.LogInformation("Starting the update or install process");
             await ExecuteUpdateOrInstallProcess(
                 id,
-                steamcmdShFileLocation,
-                pythonScriptLocation,
-                serverFolder,
-                steamUsername,
-                steamPassword);
+                options.STEAMCMD_FOLDER,
+                steamcmdShName,
+                pythonScriptName,
+                options.SERVER_FOLDER,
+                options.STEAM_USERNAME,
+                options.STEAM_PASSWORD
+            );
 
             logger.LogInformation("Done updating or installing csgo server");
 
@@ -181,16 +180,19 @@ public class UpdateOrInstallService(
 
     private async Task ExecuteUpdateOrInstallProcess(
         Guid updateOrInstallId,
-        string steamcmdShFilePath,
-        string steamcmdPythonScriptPath,
+        string steamcmdFolder,
+        string steamcmdShName,
+        string pythonScriptName,
         string serverFolder,
         string steamUsername,
         string steamPassword)
     {
+        var pythonScriptPath = Path.Combine(steamcmdFolder, pythonScriptName);
+        var steamcmdShPath = Path.Combine(steamcmdFolder, steamcmdShName);
         var command =
-            $"{steamcmdPythonScriptPath} " +
+            $"{pythonScriptPath} " +
             $"\"" +
-            $"{steamcmdShFilePath} " +
+            $"{steamcmdShPath} " +
             $"+force_install_dir {serverFolder} " +
             $"+login {steamUsername} {steamPassword} " +
             $"+app_update 730 " +
@@ -235,56 +237,68 @@ public class UpdateOrInstallService(
 
     #region streamcmd
 
-    private bool CheckIfSteamcmdIsInstalled(string steamCmdFolder, string steamcmdShFileLocation,
-        string pythonUpdateScriptDestinationPath)
+    private bool CheckIfSteamcmdIsInstalled(
+        string steamCmdFolder,
+        string steamcmdShName,
+        string steamcmdPythonScriptName)
     {
+        var steamcmdShPath = Path.Combine(steamCmdFolder, steamcmdShName);
+        var steamcmdPythonScriptPath = Path.Combine(steamCmdFolder, steamcmdPythonScriptName);
+
         return Directory.Exists(steamCmdFolder)
-               && File.Exists(steamcmdShFileLocation)
-               && File.Exists(pythonUpdateScriptDestinationPath);
+               && File.Exists(steamcmdShPath)
+               && File.Exists(steamcmdPythonScriptPath);
     }
 
     private async Task DownloadAndUnpackSteamcmd(string steamCmdFolder)
     {
-        var fileOutputPath = Path.Combine(steamCmdFolder, "steamcmd_linux.tar.gz");
+        var steamcmdTarGzPath = Path.Combine(steamCmdFolder, "steamcmd_linux.tar.gz");
         const string downloadUrl = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz";
 
         await using (var downloadStream = await httpClient.GetStreamAsync(downloadUrl))
-        await using (var fw = File.Create(fileOutputPath))
+        await using (var fw = File.Create(steamcmdTarGzPath))
         {
             await downloadStream.CopyToAsync(fw);
         }
 
-        await using (var fs = File.OpenRead(fileOutputPath))
+        await using (var fs = File.OpenRead(steamcmdTarGzPath))
         await using (var gzipFs = new GZipInputStream(fs))
         using (var tarArchive = TarArchive.CreateInputTarArchive(gzipFs, Encoding.Default))
         {
             tarArchive.ExtractContents(steamCmdFolder);
         }
 
-        File.Delete(fileOutputPath);
+        File.Delete(steamcmdTarGzPath);
     }
 
     /// <summary>
     /// Will install or reinstall steamcmd. If steamcmd already exists, it will be deleted and reinstalled.
     /// </summary>
     /// <exception cref="Exception"></exception>
-    private async Task InstallSteamcmd(string steamCmdFolder, string steamcmdShFileLocation,
-        string pythonScriptLocation)
+    private async Task InstallSteamcmd(
+        string executingFolder,
+        string steamcmdFolder,
+        string steamcmdShFileName,
+        string steamcmdPythonScriptName)
     {
-        if (Directory.Exists(steamCmdFolder))
-            Directory.Delete(steamCmdFolder, true);
+        if (Directory.Exists(steamcmdFolder))
+        {
+            Directory.Delete(steamcmdFolder, true);
+        }
 
-        Directory.CreateDirectory(steamCmdFolder);
+        Directory.CreateDirectory(steamcmdFolder);
 
-        await DownloadAndUnpackSteamcmd(steamCmdFolder);
-        CreatePythonUpdateScriptFile(pythonScriptLocation);
+        await DownloadAndUnpackSteamcmd(steamcmdFolder);
+        var pythonScriptSrcPath = Path.Combine(executingFolder, steamcmdPythonScriptName);
+        var pythonScriptDestPath = Path.Combine(steamcmdFolder, steamcmdPythonScriptName);
+        CreatePythonUpdateScriptFile(pythonScriptSrcPath, pythonScriptDestPath);
 
-        if (CheckIfSteamcmdIsInstalled(steamCmdFolder, steamcmdShFileLocation, pythonScriptLocation) == false)
+        if (CheckIfSteamcmdIsInstalled(steamcmdFolder, steamcmdShFileName, steamcmdPythonScriptName) == false)
         {
             throw new Exception("Failed to install steamcmd.");
         }
 
-        await SetLinuxPermissionRecursive(steamCmdFolder, "770");
+        await SetLinuxPermissionRecursive(steamcmdFolder, "770");
     }
 
     private async Task SetLinuxPermissionRecursive(string directoryPath, string umask)
@@ -337,21 +351,14 @@ public class UpdateOrInstallService(
     /// The Python update script is needed because the steamcmd output is not recorded properly if steamcmd is started with c#.
     /// Some buffer issue?! https://github.com/ValveSoftware/Source-1-Games/issues/1684
     /// </summary>
-    private void CreatePythonUpdateScriptFile(string pythonScriptLocation)
+    private void CreatePythonUpdateScriptFile(string srcPath, string destPath)
     {
-        var pythonScriptSrcFolder = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-        if (string.IsNullOrWhiteSpace(pythonScriptSrcFolder))
-        {
-            throw new NullReferenceException(nameof(pythonScriptSrcFolder));
-        }
-
-        var pythonScriptSrc = Path.Combine(pythonScriptSrcFolder, "steamcmd.py");
-        if (File.Exists(pythonScriptSrc) == false)
+        if (File.Exists(srcPath) == false)
         {
             throw new Exception(
-                $"Python script at \"{pythonScriptSrc}\" doesn't exists.");
+                $"Python script at \"{srcPath}\" doesn't exists.");
         }
 
-        File.Copy(pythonScriptSrc, pythonScriptLocation, true);
+        File.Copy(srcPath, destPath, true);
     }
 }

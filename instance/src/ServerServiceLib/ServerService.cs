@@ -134,7 +134,7 @@ public partial class ServerService(
             #endregion
 
             logger.LogInformation("Server started");
-            eventService.OnStartingServerDone();
+            eventService.OnStartingServerDone(startParameters);
             return Result.Ok();
         }
         catch (Exception e)

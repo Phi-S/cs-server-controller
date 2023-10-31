@@ -104,12 +104,13 @@ public partial class ServerService
     [GeneratedRegex("Disconnect client '(.+?)'.+\\):\\s(.+)")]
     private static partial Regex PlayerDisconnectRegex();
 
+    // TODO: test player discconent
     // Disconnect client 'PhiS' from server(59): NETWORK_DISCONNECT_EXITING
     public void NewOutputPlayerDisconnectDetection(object? _, ServerOutputEventArg output)
     {
         try
         {
-            if (output.Output.StartsWith("Disconnect client") == false)
+            if (output.Output.StartsWith("SV: Disconnect client") == false)
             {
                 return;
             }

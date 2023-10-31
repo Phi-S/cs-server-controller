@@ -36,7 +36,8 @@ try
         configuration.Enrich.WithProperty("ApplicationName", options.Value.APP_NAME)
             .Enrich.FromLogContext()
             .WriteTo.Console(expressionTemplate)
-            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning);
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning);
     });
 
     builder.Services.AddHttpClient();

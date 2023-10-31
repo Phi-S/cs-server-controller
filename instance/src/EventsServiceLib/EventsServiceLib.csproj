@@ -12,6 +12,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\DatabaseLib\DatabaseLib.csproj" />
+      <ProjectReference Include="..\SharedModelsLib\SharedModelsLib.csproj" />
     </ItemGroup>
 
 </Project>

@@ -33,7 +33,7 @@ namespace DatabaseLib.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("TriggeredAt")
+                    b.Property<DateTime>("TriggeredAtUtc")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

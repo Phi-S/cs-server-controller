@@ -1,6 +1,7 @@
 using DatabaseLib.Repos;
 using EventsServiceLib.EventArgs;
 using Microsoft.Extensions.Logging;
+using SharedModelsLib;
 
 namespace EventsServiceLib;
 
@@ -47,7 +48,7 @@ public sealed class EventService
     private void AddHandlerToAllCommonEvents(EventHandler<CustomEventArg> handler)
     {
         StartingServer += handler;
-        StartingServerDone += handler;
+        StartingServerDone += (sender, eventArg) => { handler(sender, eventArg); };
         StartingServerFailed += handler;
         StoppingServer += handler;
         ServerExited += handler;
@@ -99,11 +100,12 @@ public sealed class EventService
 
     #region StartingServerDone
 
-    public event EventHandler<CustomEventArg>? StartingServerDone;
+    public event EventHandler<CustomEventArgStartingServerDone>? StartingServerDone;
 
-    public void OnStartingServerDone()
+    public void OnStartingServerDone(StartParameters startParameters)
     {
-        StartingServerDone?.Invoke(this, new CustomEventArg(Events.STARTING_SERVER_DONE));
+        StartingServerDone?.Invoke(this,
+            new CustomEventArgStartingServerDone(Events.STARTING_SERVER_DONE, startParameters));
     }
 
     #endregion StartingServerDone

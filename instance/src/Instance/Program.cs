@@ -1,4 +1,3 @@
-using System.Globalization;
 using AppOptionsLib;
 using DatabaseLib;
 using EventsServiceLib;
@@ -45,7 +44,7 @@ try
     });
 
     builder.Services.AddDatabaseServices();
-    
+
     builder.Services.AddScoped<ApiLogMiddleware>();
     builder.Services.AddScoped<GlobalExceptionHandlerMiddleware>();
 
@@ -66,15 +65,22 @@ try
             prop.Name, prop.GetValue(options.Value, null));
     }
 
+    foreach (var field in options.Value.GetType().GetFields())
+    {
+        Log.Logger.Information("{Property}: {PropertyValue}",
+            field.Name, field.GetValue(options.Value));
+    }
+
     Directory.CreateDirectory(options.Value.DATA_FOLDER);
     await app.Services.CreateAndMigrateDatabase();
-    
+
     app.UseMiddleware<ApiLogMiddleware>();
     app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
     app.UseSwagger();
     app.UseSwaggerUI();
 
     app.MapServerEndpoints();
+    app.MapLogsEndpoints();
 
     await app.StartAsync();
     Log.Logger.Information("Server is running under: {Addresses}", string.Join(",", app.Urls));

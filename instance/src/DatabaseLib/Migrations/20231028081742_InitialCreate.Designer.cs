@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DatabaseLib.Migrations
 {
     [DbContext(typeof(InstanceDbContext))]
-    [Migration("20231019120330_InitialCreate")]
+    [Migration("20231028081742_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -36,7 +36,7 @@ namespace DatabaseLib.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("TriggeredAt")
+                    b.Property<DateTime>("TriggeredAtUtc")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

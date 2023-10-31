@@ -18,7 +18,7 @@ namespace DatabaseLib.Migrations
                     Id = table.Column<long>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
-                    TriggeredAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    TriggeredAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
                     DataJson = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },

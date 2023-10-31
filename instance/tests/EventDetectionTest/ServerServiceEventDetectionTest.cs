@@ -38,7 +38,7 @@ public class ServerServiceEventDetectionTest
             PORT = "27015",
             IP_OR_DOMAIN = "localhost"
         });
-        var statusService = new StatusService(options, _eventService);
+        var statusService = new StatusService(_eventService);
 
         var serverRepo = new ServerRepo(serviceProvider);
         var serverService =

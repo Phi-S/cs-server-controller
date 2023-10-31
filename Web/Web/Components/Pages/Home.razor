@@ -1,5 +1,24 @@
 ﻿@page "/"
+@inherits HomeRazor
 @attribute [RenderModeInteractiveServer]
 
-<h1>Serasdfasdf</h1>
+<div class="p-1">
+    <button @onclick="@StartUpdateOrInstall">Update server</button>
 
+    <button @onclick="@CancelUpdateOrInstall">Cancel server update</button>
+</div>
+
+<div class="dropdown">
+    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+        Change map
+    </button>
+    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+        @foreach (var map in Maps)
+        {
+            <li>
+                <button class="dropdown-item" type="button" @onclick="() => ChangeMap(map)">@map</button>
+            </li>
+        }
+
+    </ul>
+</div>

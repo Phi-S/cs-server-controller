@@ -1,34 +1,61 @@
+using InstanceApiServiceLib;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using ServerInfoServiceLib;
 using SharedModelsLib;
 
-
 namespace web.Components.Custom;
 
-public class ServerDisplayCompRazor : ComponentBase, IDisposable
+public class ServerDisplayCompRazor : ComponentBase
 {
     [Inject] private ILogger<ServerDisplayCompRazor> Logger { get; set; } = default!;
     [Inject] protected IJSRuntime JsRuntime { get; set; } = default!;
     [Inject] protected NavigationManager NavigationManager { get; set; } = default!;
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
+    [Inject] protected InstanceApiService InstanceApiService { get; set; } = default!;
 
+    private readonly StartParameters _defaultStartParameters = new();
     protected InfoModel? ServerInfo => ServerInfoService.ServerInfo;
+    protected string Hostname => ServerInfo?.Hostname ?? _defaultStartParameters.ServerName;
 
-    protected override async Task OnInitializedAsync()
+    protected string HostnameMdCol
+    {
+        get
+        {
+            if (ServerInfo is null || ServerInfo.ServerStarted == false)
+            {
+                return "col-md-7";
+            }
+
+            return "col-md-4";
+        }
+    }
+
+    protected string ButtonsMdCol
+    {
+        get
+        {
+            if (ServerInfo is null || ServerInfo.ServerStarted == false)
+            {
+                return "col-md-5";
+            }
+
+            return "col-md-4";
+        }
+    }
+
+    protected override void OnInitialized()
     {
         try
         {
-            ServerInfoService.StartStatusBackgroundTask();
+            ServerInfoService.OnServerInfoChangedEvent += async (_, _) => await InvokeAsync(StateHasChanged);
+            ServerInfoService.StartServerInfoBackgroundTask();
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Exception while executing OnInitializedAsync method");
+            Logger.LogError(e, "Exception while initialing the ServerDisplayComp");
         }
-
-        await base.OnInitializedAsync();
     }
-
 
     protected string GetConnectionString()
     {
@@ -69,37 +96,7 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
         catch (Exception e)
         {
             Logger.LogError(e, "Failed to get background color");
-        }
-
-        return "background-color: red;";
-    }
-
-    protected async Task UpdateOrInstall()
-    {
-        try
-        {
-            /*
-            using (ServerInfoModel.Busy)
-            {
-                StatusMessageService.TriggerInfo(Username,
-                    $"Started updating the server \"{ServerInfoModel.Hostname}\"");
-                using (Logger.BeginScope(ComponentParameterModel.LogParameter))
-                {
-                    Logger.LogInformation("{Username} started updating the server \"{ServerHostname}\"",
-                        Username,
-                        ServerInfoModel.Hostname);
-                }
-
-                await ServerBackendService.HubServerApi.UpdateOrInstall(ServerInfoModel.ServerId);
-
-                await Task.Delay(ServerBackendService.REFRESH_SERVER_ONLINE_STATUS_INTERVAL_IN_MS * 2);
-            }
-            */
-        }
-        catch (Exception e)
-        {
-            await InvokeAsync(StateHasChanged);
-            Logger.LogError(e, "Failed to update server");
+            throw;
         }
     }
 
@@ -124,18 +121,7 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
     {
         try
         {
-            /*
-            using (ServerInfoModel.Busy)
-            {
-                StatusMessageService.TriggerInfo(ComponentParameterModel.Username,
-                    $"Stopping server \"{ServerInfoModel.Hostname}\"");
-                using (Logger.BeginScope(ComponentParameterModel.LogParameter))
-                {
-                    Logger.LogInformation("Stopping server \"{Hostname}\"", ServerInfoModel.Hostname);
-                }
-
-                await ServerBackendService.HubServerApi.Stop(ServerInfoModel.ServerId);
-            }*/
+            await InstanceApiService.Stop();
         }
         catch (Exception e)
         {
@@ -147,29 +133,12 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
     {
         try
         {
-            /*
-            using (ServerInfoModel.Busy)
-            {
-                StatusMessageService.TriggerInfo(ComponentParameterModel.Username,
-                    $"Starting server \"{ServerInfoModel.Hostname}\"");
-                using (Logger.BeginScope(ComponentParameterModel.LogParameter))
-                {
-                    Logger.LogInformation("Starting server \"{Hostname}\"", ServerInfoModel.Hostname);
-                }
-
-                await ServerBackendService.HubServerApi.Assign(ServerInfoModel.ServerId);
-                await ServerBackendService.HubServerApi.Start(ServerInfoModel.ServerId);
-            }
-            */
+            // TODO: change default start parameters
+            await InstanceApiService.Start(new StartParameters());
         }
         catch (Exception e)
         {
             Logger.LogError(e, "Failed to start server");
         }
-    }
-
-    public void Dispose()
-    {
-        ServerInfoService.StopServerStatusBackgroundTask();
     }
 }

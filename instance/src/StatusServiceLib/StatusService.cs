@@ -1,6 +1,5 @@
-using AppOptionsLib;
 using EventsServiceLib;
-using Microsoft.Extensions.Options;
+using SharedModelsLib;
 
 namespace StatusServiceLib;
 
@@ -17,15 +16,11 @@ public sealed class StatusService
         bool DemoUploading
     );
 
-    private readonly IOptions<AppOptions> _options;
-
     private readonly EventService _eventService;
 
-    public StatusService(IOptions<AppOptions> options, EventService eventService)
+    public StatusService(EventService eventService)
     {
-        _options = options;
         _eventService = eventService;
-
         RegisterEventServiceHandler();
     }
 
@@ -60,8 +55,9 @@ public sealed class StatusService
     private void RegisterEventServiceHandler()
     {
         _eventService.StartingServer += (_, _) => ServerStarting = true;
-        _eventService.StartingServerDone += (_, _) =>
+        _eventService.StartingServerDone += (_, customEventArgStartingServerDone) =>
         {
+            ServerStartParameters = customEventArgStartingServerDone.StartParameters;
             ServerStarting = false;
             ServerStarted = true;
         };
@@ -75,6 +71,7 @@ public sealed class StatusService
             ServerHibernating = false;
             CurrentPlayerCount = 0;
             CurrentMap = "";
+            ServerStartParameters = null;
             ServerStopping = false;
         };
 
@@ -95,6 +92,31 @@ public sealed class StatusService
         _eventService.PlayerConnected += (_, _) => { CurrentPlayerCount += 1; };
 
         _eventService.PlayerDisconnected += (_, _) => { CurrentPlayerCount -= 1; };
+    }
+
+    #endregion
+
+    #region ServerStartParameters
+
+    private volatile StartParameters? _serverStartParameters;
+    private readonly object _serverStartParametersLock = new();
+
+    public StartParameters? ServerStartParameters
+    {
+        get
+        {
+            lock (_serverStartParametersLock)
+            {
+                return _serverStartParameters;
+            }
+        }
+        private set
+        {
+            lock (_serverStartParametersLock)
+            {
+                _serverStartParameters = value;
+            }
+        }
     }
 
     #endregion

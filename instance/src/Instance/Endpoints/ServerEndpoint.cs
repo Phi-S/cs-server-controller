@@ -1,8 +1,6 @@
 ﻿using AppOptionsLib;
-using DatabaseLib.Repos;
 using EventsServiceLib;
 using Instance.Response;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using ServerServiceLib;
@@ -26,11 +24,11 @@ public static class ServerEndpoint
         {
             var status = statusService.GetStatus();
             var info = new InfoModel(
-                "server", // get hostname from status service
-                "pw", // get pw from status server start parameter
+                statusService.ServerStartParameters?.ServerName,
+                statusService.ServerStartParameters?.ServerPw,
                 status.CurrentMap,
                 status.CurrentPlayerCount,
-                10, // TODO: get from start parameters... prob. should add to status server,
+                statusService.ServerStartParameters?.MaxPlayer,
                 options.Value.IP_OR_DOMAIN,
                 options.Value.PORT,
                 status.ServerStarting,
@@ -43,7 +41,7 @@ public static class ServerEndpoint
             return Results.Ok(info);
         });
 
-        group.MapGet("events", (IOptions<AppOptions> options, EventService eventService) =>
+        group.MapGet("events", () =>
         {
             var events = Enum.GetValues<Events>().Select(e => e.ToString()).ToList();
             return Results.Ok(events);

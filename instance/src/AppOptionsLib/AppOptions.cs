@@ -13,6 +13,7 @@ public class AppOptions
     [Required] public required string PORT { get; init; }
     [Required] public required string STEAM_USERNAME { get; init; }
     [Required] public required string STEAM_PASSWORD { get; init; }
+    [Required] public required string LOGIN_TOKEN { get; init; }
 
     public string DATA_FOLDER { get; init; } = "/data";
     public string DATABASE_PATH => Path.Combine(DATA_FOLDER, "instance.db");

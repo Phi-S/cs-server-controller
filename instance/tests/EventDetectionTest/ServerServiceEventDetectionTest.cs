@@ -36,7 +36,8 @@ public class ServerServiceEventDetectionTest
             STEAM_USERNAME = "test",
             STEAM_PASSWORD = "test",
             PORT = "27015",
-            IP_OR_DOMAIN = "localhost"
+            IP_OR_DOMAIN = "localhost",
+            LOGIN_TOKEN = "test"
         });
         var statusService = new StatusService(_eventService);
 

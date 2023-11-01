@@ -25,8 +25,8 @@ public static class ServerEndpoint
         {
             var status = statusService.GetStatus();
             var info = new InfoModel(
-                statusService.ServerStartParameters?.ServerName,
-                statusService.ServerStartParameters?.ServerPw,
+                statusService.ServerStartParameters?.ServerHostname,
+                statusService.ServerStartParameters?.ServerPassword,
                 status.CurrentMap,
                 status.CurrentPlayerCount,
                 statusService.ServerStartParameters?.MaxPlayer,

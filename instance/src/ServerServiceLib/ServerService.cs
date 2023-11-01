@@ -82,7 +82,7 @@ public partial class ServerService(
 
             // ReSharper disable once StringLiteralTypo
             var executablePath = Path.Combine(options.Value.SERVER_FOLDER, "game", "bin", "linuxsteamrt64", "cs2");
-            var startParameterString = startParameters.GetString(options.Value.PORT);
+            var startParameterString = startParameters.GetString(options.Value.PORT, options.Value.LOGIN_TOKEN);
 
             var serverStart = await serverRepo.AddStart(startParameterString, DateTime.UtcNow);
 

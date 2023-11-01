@@ -17,7 +17,7 @@ public class ServerDisplayCompRazor : ComponentBase
 
     private readonly StartParameters _defaultStartParameters = new();
     protected InfoModel? ServerInfo => ServerInfoService.ServerInfo;
-    protected string Hostname => ServerInfo?.Hostname ?? _defaultStartParameters.ServerName;
+    protected string Hostname => ServerInfo?.Hostname ?? _defaultStartParameters.ServerHostname;
 
     protected override void OnInitialized()
     {

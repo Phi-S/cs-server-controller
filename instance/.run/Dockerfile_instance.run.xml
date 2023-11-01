@@ -11,20 +11,24 @@
               <option name="value" value="cs-controller-instance" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
-              <option name="name" value="APP_OPTIONS:STEAM_PASSWORD" />
-              <option name="value" value="mLb9ZsYhQyZZ7irR3KzbKL" />
+              <option name="name" value="APP_OPTIONS:IP_OR_DOMAIN" />
+              <option name="value" value="localhost" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
-              <option name="name" value="APP_OPTIONS:STEAM_USERNAME" />
-              <option name="value" value="oijnz" />
+              <option name="name" value="APP_OPTIONS:LOGIN_TOKEN" />
+              <option name="value" value="2EA2E957633AD47D27A0F1CB05EBBE3B" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:PORT" />
               <option name="value" value="27015" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
-              <option name="name" value="APP_OPTIONS:IP_OR_DOMAIN" />
-              <option name="value" value="localhost" />
+              <option name="name" value="APP_OPTIONS:STEAM_PASSWORD" />
+              <option name="value" value="mLb9ZsYhQyZZ7irR3KzbKL" />
+            </DockerEnvVarImpl>
+            <DockerEnvVarImpl>
+              <option name="name" value="APP_OPTIONS:STEAM_USERNAME" />
+              <option name="value" value="oijnz" />
             </DockerEnvVarImpl>
           </list>
         </option>

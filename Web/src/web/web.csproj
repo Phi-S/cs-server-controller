@@ -26,13 +26,10 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\..\instance\src\SharedModelsLib\SharedModelsLib.csproj" />
       <ProjectReference Include="..\AppOptionsLib\AppOptionsLib.csproj" />
       <ProjectReference Include="..\InstanceApiServiceLib\InstanceApiServiceLib.csproj" />
       <ProjectReference Include="..\ServerInfoServiceLib\ServerInfoServiceLib.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Models\" />
     </ItemGroup>
 
 </Project>

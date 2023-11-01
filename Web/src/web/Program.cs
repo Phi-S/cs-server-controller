@@ -43,7 +43,7 @@ try
     builder.Services.AddHttpClient();
     builder.Services.AddSingleton<InstanceApiService>();
     builder.Services.AddSingleton<ServerInfoService>();
-    
+
     builder.Services.AddRazorComponents()
         .AddInteractiveServerComponents();
 

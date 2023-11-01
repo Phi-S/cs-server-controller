@@ -1,5 +1,5 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Dockerfile_instance" type="docker-deploy" factoryName="dockerfile" server-name="Docker">
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="../Dockerfile_instance" type="docker-deploy" factoryName="dockerfile" server-name="Docker">
     <deployment type="dockerfile">
       <settings>
         <option name="imageTag" value="instance" />
@@ -46,7 +46,7 @@
           </list>
         </option>
         <option name="commandLineOptions" value="-v cs-controller-instance:/data" />
-        <option name="sourceFilePath" value="Dockerfile_instance" />
+        <option name="sourceFilePath" value="../Dockerfile_instance" />
       </settings>
     </deployment>
     <EXTENSION ID="com.jetbrains.rider.docker.debug" isFastModeEnabled="true" isSslEnabled="false" />

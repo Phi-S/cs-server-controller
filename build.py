@@ -9,7 +9,9 @@ working_directory = os.path.dirname(os.path.realpath(__file__))
 #  python3 build.py -BUILD_VERSION 1.0.0 -PUBLISH -DOCKER_REGISTRY docker-registry.theaurum.net -DOCKER_REGISTRY_USERNAME username -DOCKER_REGISTRY_PASSWORD password
 def main():
     print(f"{working_directory=}")
-    docker_image_name = "cs-controller-instance"
+    docker_image_name = "cs-controller"
+    docker_image_name_instance = f"{docker_image_name}-instance"
+    docker_image_name_web = f"{docker_image_name}-web"
 
     args: list[str] = sys.argv[1:]
     build_version = get_arg_value(args, "-BUILD_VERSION")
@@ -18,11 +20,13 @@ def main():
             f"{build_version} is not valid."
             f" Valid versions examples: \"123.123.123\", \"1.2.3\", \"1.2.123\"")
 
-    docker_image_name_with_version = f"{docker_image_name}:{build_version}"
-    print(f"Building {docker_image_name_with_version} docker image")
-    print(f"{build_version=}")
-    print(f"{docker_image_name=}")
-    build(docker_image_name_with_version, "Dockerfile_instance")
+    docker_image_name_with_version_instance = f"{docker_image_name_instance}:{build_version}"
+    print(f"Building {docker_image_name_with_version_instance} docker image")
+    build(docker_image_name_with_version_instance, "Dockerfile_instance")
+
+    docker_image_name_with_version_web = f"{docker_image_name_web}:{build_version}"
+    print(f"Building {docker_image_name_with_version_web} docker image")
+    build(docker_image_name_with_version_web, "Dockerfile_web")
 
     should_publish = "-PUBLISH" in args
     if not should_publish:
@@ -38,14 +42,28 @@ def main():
 
     print("Publishing...")
     print(f"{docker_registry}=")
-    docker_image_name_for_registry_with_version = publish_docker(
-        docker_image_name,
+    docker_image_name_for_registry_with_version_instance = publish_docker(
+        docker_image_name_instance,
         build_version,
         docker_registry,
         docker_registry_username,
         docker_registry_password)
+    print(f"Docker image {docker_image_name_for_registry_with_version_instance} published")
 
-    publish_git(build_version, docker_image_name_for_registry_with_version)
+    docker_image_name_for_registry_with_version_web = publish_docker(
+        docker_image_name_web,
+        build_version,
+        docker_registry,
+        docker_registry_username,
+        docker_registry_password)
+    print(f"Docker image {docker_image_name_for_registry_with_version_web} published")
+
+    publish_git(
+        build_version,
+        docker_image_name_for_registry_with_version_instance,
+        docker_image_name_for_registry_with_version_web)
+    print(f"git {build_version} tag pushed")
+    print("DONE DONE DONE")
 
 
 ################################################
@@ -123,10 +141,11 @@ def git_switching_to_main_branch(git_main_branch: str):
     run_command(["git", "clean", "-d", "-f"])
 
 
-def publish_git(build_version: str, docker_image_with_version: str):
+def publish_git(build_version: str, docker_image_with_version_instance: str, docker_image_with_version_web: str):
     run_command(["git", "tag", "-a", f"{build_version}", "-m",
                  f"{build_version}\n"
-                 f"{docker_image_with_version}"])
+                 f"{docker_image_with_version_instance}\n"
+                 f"{docker_image_with_version_web}\n"])
     run_command(["git", "push", "--tags"])
 
 

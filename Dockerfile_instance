@@ -1,14 +1,22 @@
 ﻿FROM mcr.microsoft.com/dotnet/runtime-deps:8.0.0-rc.2-bookworm-slim-amd64 as runtime
 WORKDIR /app
+RUN set -x \
+	# Install, update & upgrade packages
+	&& apt-get update \
+	&& apt-get install -y --no-install-recommends --no-install-suggests \
+		python3=3.11.2-1+b1 \
+		lib32z1=1:1.2.13.dfsg-1 \
+	&& rm -rf /var/lib/apt/lists/* 
+
 RUN groupadd -g 1001 user
 RUN useradd -m user -g 1001 -u 1001
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0.100-rc.2-bookworm-slim-amd64 AS publish
 WORKDIR /src
-COPY src/. .
-RUN dotnet restore "web/web.csproj" -r linux-x64
+COPY . .
+RUN dotnet restore "instance/src/Instance/Instance.csproj" -r linux-x64
 
-RUN dotnet publish "web/web.csproj" \
+RUN dotnet publish "instance/src/Instance/Instance.csproj" \
     -c Release \
     --no-restore \
     -o /publish \
@@ -27,5 +35,5 @@ RUN chown -R 1001:1001 /data
 RUN chmod -R 755 /data
 
 USER user
-ENV HTTP_PORTS=80
-CMD ["./web"]
+ENV HTTP_PORTS=11111
+CMD ["./Instance"]

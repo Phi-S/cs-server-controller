@@ -338,7 +338,7 @@ public partial class ServerService(
         try
         {
             {
-                if (statusService.ServerStarted == false || _process == null)
+                if (statusService.ServerStarted == false || _process is null)
                 {
                     return Result.Fail($"Failed to write line \"{text}\". Server is not started");
                 }
@@ -548,7 +548,7 @@ public partial class ServerService(
                 {
                     try
                     {
-                        await Task.Delay(10);
+                        await Task.Delay(50);
                         if (_process == null ||
                             statusService.ServerStarted == false ||
                             statusService.ServerStopping)
@@ -556,11 +556,7 @@ public partial class ServerService(
                             break;
                         }
 
-                        var writeLine = WriteLine(_process.StandardInput.NewLine);
-                        if (writeLine.IsFailed)
-                        {
-                            logger.LogWarning(writeLine.Exception, "Failed to write line to standard output");
-                        }
+                        await _process.StandardInput.WriteAsync(_process.StandardInput.NewLine);
                     }
                     catch (Exception e)
                     {
@@ -572,6 +568,8 @@ public partial class ServerService(
             {
                 logger.LogError(e, "Exception in OutputFlushBackgroundTask");
             }
+
+            logger.LogInformation("OutputFlushBackgroundTask exited");
         });
     }
 }

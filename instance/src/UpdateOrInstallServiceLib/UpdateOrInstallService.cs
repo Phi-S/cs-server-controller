@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using AppOptionsLib;
 using CliWrap;
@@ -64,10 +65,33 @@ public class UpdateOrInstallService(
                     "Failed to start updating or installing. Another update or install process is still running");
             }
 
-            UpdateOrInstallStart updateOrInstallStart = await updateOrInstallRepo.AddStart(DateTime.UtcNow);
+            if (statusService.ServerStarting)
+            {
+                logger.LogWarning(
+                    "Failed to start updating or installing. Server is starting");
+                return Result<Guid>.Fail(
+                    "Failed to start updating or installing. Server is starting");
+            }
 
+            if (statusService.ServerStopping)
+            {
+                logger.LogWarning(
+                    "Failed to start updating or installing. Server is stopping");
+                return Result<Guid>.Fail(
+                    "Failed to start updating or installing. Server is stopping");
+            }
 
+            if (statusService.ServerStarted)
+            {
+                logger.LogWarning(
+                    "Failed to start updating or installing. Server is started");
+                return Result<Guid>.Fail(
+                    "Failed to start updating or installing. Server is started");
+            }
+
+            var updateOrInstallStart = await updateOrInstallRepo.AddStart(DateTime.UtcNow);
             UpdateOrInstallStart = updateOrInstallStart;
+
             _ = UpdateOrInstallServer(
                 updateOrInstallStart.Id,
                 options.Value,
@@ -91,20 +115,8 @@ public class UpdateOrInstallService(
             eventService.OnUpdateOrInstallStarted(id);
             _cancellationTokenSource = new CancellationTokenSource();
             logger.LogInformation("Starting to update or install server");
-            if (statusService.ServerStarting)
-            {
-                throw new ServerIsBusyException(ServerBusyAction.STARTING);
-            }
 
-            if (statusService.ServerStopping)
-            {
-                throw new ServerIsBusyException(ServerBusyAction.STOPPING);
-            }
-
-            if (statusService.ServerStarted)
-            {
-                throw new ServerIsBusyException(ServerBusyAction.STARTED);
-            }
+            #region install steamcmd
 
             const string steamcmdShName = "steamcmd.sh";
             const string pythonScriptName = "steamcmd.py";
@@ -127,8 +139,9 @@ public class UpdateOrInstallService(
                 logger.LogInformation("steamcmd already installed");
             }
 
-            UpdateOrInstallOutput += OnUpdateOrInstallOutputLog;
-            UpdateOrInstallOutput += OnUpdateOrInstallOutputToDatabase;
+            #endregion
+
+            #region executing update or install process
 
             logger.LogInformation("Starting the update or install process");
             await ExecuteUpdateOrInstallProcess(
@@ -141,6 +154,8 @@ public class UpdateOrInstallService(
                 options.STEAM_PASSWORD
             );
 
+            #endregion
+
             logger.LogInformation("Done updating or installing csgo server");
 
             if (afterUpdateOrInstallSuccessfulAction != null)
@@ -149,16 +164,15 @@ public class UpdateOrInstallService(
             }
 
             eventService.OnUpdateOrInstallDone(id);
-            UpdateOrInstallStart = null;
-            UpdateOrInstallOutput -= OnUpdateOrInstallOutputLog;
-            UpdateOrInstallOutput -= OnUpdateOrInstallOutputToDatabase;
         }
         catch (Exception e)
         {
             logger.LogError(e, "Failed to update or install csgo server");
             eventService.OnUpdateOrInstallFailed(id);
-            UpdateOrInstallOutput -= OnUpdateOrInstallOutputLog;
-            UpdateOrInstallOutput -= OnUpdateOrInstallOutputToDatabase;
+        }
+        finally
+        {
+            UpdateOrInstallStart = null;
         }
     }
 
@@ -187,51 +201,63 @@ public class UpdateOrInstallService(
         string steamUsername,
         string steamPassword)
     {
-        var pythonScriptPath = Path.Combine(steamcmdFolder, pythonScriptName);
-        var steamcmdShPath = Path.Combine(steamcmdFolder, steamcmdShName);
-        var command =
-            $"{pythonScriptPath} " +
-            $"\"" +
-            $"{steamcmdShPath} " +
-            $"+force_install_dir {serverFolder} " +
-            $"+login {steamUsername} {steamPassword} " +
-            $"+app_update 730 " +
-            $"validate " +
-            $"+quit" +
-            $"\"";
+        try
+        {
+            UpdateOrInstallOutput += OnUpdateOrInstallOutputLog;
+            UpdateOrInstallOutput += OnUpdateOrInstallOutputToDatabase;
 
-        logger.LogDebug("Steamcmd command: {Command}", command);
-        const string successMessage = "Success! App '730' fully installed.";
+            var pythonScriptPath = Path.Combine(steamcmdFolder, pythonScriptName);
+            var steamcmdShPath = Path.Combine(steamcmdFolder, steamcmdShName);
+            var command =
+                $"{pythonScriptPath} " +
+                $"\"" +
+                $"{steamcmdShPath} " +
+                $"+force_install_dir {serverFolder} " +
+                $"+login {steamUsername} {steamPassword} " +
+                $"+app_update 730 " +
+                $"validate " +
+                $"+quit" +
+                $"\"";
 
-        var successMessageReceived = false;
+            logger.LogDebug("Steamcmd command: {Command}", command);
+            const string successMessage = "Success! App '730' fully installed.";
 
-        var cli = await Cli.Wrap("python3")
-            .WithArguments(command)
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(output =>
-            {
-                UpdateOrInstallOutput?.Invoke(this, new UpdateOrInstallOutputEventArg(updateOrInstallId, output));
-                if (string.IsNullOrWhiteSpace(output) || output.Trim().Equals(successMessage) == false)
+            var successMessageReceived = false;
+
+            var cli = await Cli.Wrap("python3")
+                .WithArguments(command)
+                .WithStandardOutputPipe(PipeTarget.ToDelegate(output =>
                 {
-                    return;
-                }
+                    UpdateOrInstallOutput?.Invoke(this, new UpdateOrInstallOutputEventArg(updateOrInstallId, output));
+                    if (string.IsNullOrWhiteSpace(output) || output.Trim().Equals(successMessage) == false)
+                    {
+                        return;
+                    }
 
-                successMessageReceived = true;
-            }))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(output =>
+                    successMessageReceived = true;
+                }))
+                .WithStandardErrorPipe(PipeTarget.ToDelegate(output =>
+                {
+                    UpdateOrInstallOutput?.Invoke(this,
+                        new UpdateOrInstallOutputEventArg(updateOrInstallId, output));
+                }))
+                .ExecuteAsync(_cancellationTokenSource.Token);
+
+            if (cli.ExitCode is not 0)
             {
-                UpdateOrInstallOutput?.Invoke(this, new UpdateOrInstallOutputEventArg(updateOrInstallId, output));
-            }))
-            .ExecuteAsync(_cancellationTokenSource.Token);
+                throw new UpdateOrInstallFailedException($"Update or install failed with error code {cli.ExitCode}");
+            }
 
-        if (cli.ExitCode is not 0)
-        {
-            throw new UpdateOrInstallFailedException($"Update or install failed with error code {cli.ExitCode}");
+            if (successMessageReceived == false)
+            {
+                throw new UpdateOrInstallFailedException(
+                    $"Failed to receive success message from update or install process");
+            }
         }
-
-        if (successMessageReceived == false)
+        finally
         {
-            throw new UpdateOrInstallFailedException(
-                $"Failed to receive success message from update or install process");
+            UpdateOrInstallOutput -= OnUpdateOrInstallOutputLog;
+            UpdateOrInstallOutput -= OnUpdateOrInstallOutputToDatabase;
         }
     }
 
@@ -289,13 +315,18 @@ public class UpdateOrInstallService(
         Directory.CreateDirectory(steamcmdFolder);
 
         await DownloadAndUnpackSteamcmd(steamcmdFolder);
+        logger.LogInformation("Steamcmd downloaded and unpacked");
+
         var pythonScriptSrcPath = Path.Combine(executingFolder, steamcmdPythonScriptName);
         var pythonScriptDestPath = Path.Combine(steamcmdFolder, steamcmdPythonScriptName);
-        CreatePythonUpdateScriptFile(pythonScriptSrcPath, pythonScriptDestPath);
+
+        logger.LogInformation("Linking python script {SrcFile} > {DestFile}",
+            pythonScriptSrcPath, pythonScriptDestPath);
+        File.CreateSymbolicLink(pythonScriptDestPath, pythonScriptSrcPath);
 
         if (CheckIfSteamcmdIsInstalled(steamcmdFolder, steamcmdShFileName, steamcmdPythonScriptName) == false)
         {
-            throw new Exception("Failed to install steamcmd.");
+            throw new Exception("Failed to install steamcmd");
         }
 
         await SetLinuxPermissionRecursive(steamcmdFolder, "770");
@@ -345,20 +376,5 @@ public class UpdateOrInstallService(
         {
             logger.LogWarning(e, "Exception");
         }
-    }
-
-    /// <summary>
-    /// The Python update script is needed because the steamcmd output is not recorded properly if steamcmd is started with c#.
-    /// Some buffer issue?! https://github.com/ValveSoftware/Source-1-Games/issues/1684
-    /// </summary>
-    private void CreatePythonUpdateScriptFile(string srcPath, string destPath)
-    {
-        if (File.Exists(srcPath) == false)
-        {
-            throw new Exception(
-                $"Python script at \"{srcPath}\" doesn't exists.");
-        }
-
-        File.Copy(srcPath, destPath, true);
     }
 }

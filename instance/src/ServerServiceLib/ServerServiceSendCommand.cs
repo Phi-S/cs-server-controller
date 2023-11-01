@@ -89,7 +89,14 @@ public partial class ServerService
                 $"echo {END_PREFIX}{commandId}";
 
             ServerOutputEvent += CaptureCommandResult;
-            WriteLine(finalCommand);
+            var writeLine = WriteLine(finalCommand);
+            if (writeLine.IsFailed)
+            {
+                logger.LogError(writeLine.Exception, "Failed to execute command {Command}", command);
+                return Result<string>.Fail(
+                    $"Failed to execute command {command}. Failed to write line {writeLine.Exception}");
+            }
+
             var sw = Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds <= GET_RESULT_TIMEOUT_MS)
             {

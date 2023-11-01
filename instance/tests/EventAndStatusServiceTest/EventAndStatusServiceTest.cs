@@ -1,9 +1,7 @@
-using AppOptionsLib;
 using DatabaseLib;
 using DatabaseLib.Repos;
 using EventsServiceLib;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using SharedModelsLib;
 using StatusServiceLib;
 using TestLoggerLib;

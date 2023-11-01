@@ -46,9 +46,7 @@ public static class LogsEndpoint
 
         group.MapGet("events", async (EventLogRepo eventLogRepo, [FromQuery] long logsSince) =>
         {
-            Console.WriteLine("logsSince: " + logsSince);
             var logsSinceDateTime = DateTimeOffset.FromUnixTimeMilliseconds(logsSince).DateTime;
-            Console.WriteLine("logsSinceDateTime: " + logsSinceDateTime);
             var logs = await eventLogRepo.GetAllSince(logsSinceDateTime);
             var response = logs.Select(
                     log => new EventLogResponse(

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using ServerInfoServiceLib;
 using SharedModelsLib;
+using web.Helper;
 
 namespace web.Components.Custom;
 
@@ -17,32 +18,6 @@ public class ServerDisplayCompRazor : ComponentBase
     private readonly StartParameters _defaultStartParameters = new();
     protected InfoModel? ServerInfo => ServerInfoService.ServerInfo;
     protected string Hostname => ServerInfo?.Hostname ?? _defaultStartParameters.ServerName;
-
-    protected string HostnameMdCol
-    {
-        get
-        {
-            if (ServerInfo is null || ServerInfo.ServerStarted == false)
-            {
-                return "col-md-7";
-            }
-
-            return "col-md-4";
-        }
-    }
-
-    protected string ButtonsMdCol
-    {
-        get
-        {
-            if (ServerInfo is null || ServerInfo.ServerStarted == false)
-            {
-                return "col-md-5";
-            }
-
-            return "col-md-4";
-        }
-    }
 
     protected override void OnInitialized()
     {
@@ -72,12 +47,9 @@ public class ServerDisplayCompRazor : ComponentBase
     {
         try
         {
-            // TODO: get ip/domain from status command??
-            /*
-
-            await JsRuntimeHelper.CopyToClipboard(JsRuntime,
-                $"connect {ServerInfoModel.IpOrDomain}:{ServerInfoModel.Port}; password {ServerInfoModel.ServerPassword};");
-                */
+            var connectionString = GetConnectionString();
+            Logger.LogInformation("Coping connection \"{ConnectionString}\" string to clipboard", connectionString);
+            await JsRuntimeHelper.CopyToClipboard(JsRuntime, connectionString);
         }
         catch (Exception e)
         {
@@ -100,27 +72,11 @@ public class ServerDisplayCompRazor : ComponentBase
         }
     }
 
-    protected async Task OpenChangeMapComponent()
-    {
-        try
-        {
-            /*
-            ChangeMapCompRef.ThrowIfNull();
-
-            await ChangeMapCompRef.Open();
-            ChangeMapCompRef.ModalTitle = ServerInfoModel.Hostname;
-            */
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e, "Failed to open change password component");
-        }
-    }
-
     protected async Task StopServer()
     {
         try
         {
+            Logger.LogInformation("Stopping server");
             await InstanceApiService.Stop();
         }
         catch (Exception e)
@@ -133,12 +89,85 @@ public class ServerDisplayCompRazor : ComponentBase
     {
         try
         {
+            Logger.LogInformation("Starting server");
             // TODO: change default start parameters
             await InstanceApiService.Start(new StartParameters());
         }
         catch (Exception e)
         {
             Logger.LogError(e, "Failed to start server");
+        }
+    }
+
+    protected void NavigateToServerLogsPage()
+    {
+        try
+        {
+            NavigationManager.NavigateTo("/server-logs");
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Failed to navigate to server logs page");
+        }
+    }
+
+    protected async Task ChangeMap(string map)
+    {
+        try
+        {
+            await InstanceApiService.SendCommand($"changelevel {map}");
+            Logger.LogInformation("Changing map to {Map}", map);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Failed to change map");
+        }
+    }
+
+    protected string HostnameMdCol
+    {
+        get
+        {
+            if (ServerInfo is null || ServerInfo.ServerStarted == false)
+            {
+                return "col-md-7";
+            }
+
+            return "col-md-4";
+        }
+    }
+
+    protected string ButtonsMdCol
+    {
+        get
+        {
+            if (ServerInfo is null || ServerInfo.ServerStarted == false)
+            {
+                return "col-md-5";
+            }
+
+            return "col-md-4";
+        }
+    }
+
+    protected string LoadingMessage
+    {
+        get
+        {
+            if (ServerInfo is not null)
+            {
+                if (ServerInfo.ServerStarting)
+                {
+                    return "Starting server...";
+                }
+
+                if (ServerInfo.ServerUpdatingOrInstalling)
+                {
+                    return "Updating server...";
+                }
+            }
+
+            return "";
         }
     }
 }

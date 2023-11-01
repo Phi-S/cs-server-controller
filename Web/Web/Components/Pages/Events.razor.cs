@@ -9,7 +9,7 @@ public class EventsRazor : ComponentBase
     [Inject] private ILogger<ServerLogsRazor> Logger { get; set; } = default!;
     [Inject] private ServerInfoService ServerInfoService { get; set; } = default!;
 
-    protected List<EventLogResponse>? EventLogs => ServerInfoService.Events;
+    protected List<EventLogResponse> EventLogs => ServerInfoService.Events ?? new List<EventLogResponse>();
 
     protected override void OnInitialized()
     {

@@ -2,23 +2,60 @@
 @inherits HomeRazor
 @attribute [RenderModeInteractiveServer]
 
-<div class="p-1">
-    <button @onclick="@StartUpdateOrInstall">Update server</button>
+@if (ServerInfoService.ServerInfo == null)
+{
+    <LoadingComp/>
+}
+else
+{
 
-    <button @onclick="@CancelUpdateOrInstall">Cancel server update</button>
-</div>
-
-<div class="dropdown">
-    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
-        Change map
-    </button>
-    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-        @foreach (var map in Maps)
+    <div class="p-1">
+        @if (ServerInfoService.ServerInfo.ServerStarted == false)
         {
-            <li>
-                <button class="dropdown-item" type="button" @onclick="() => ChangeMap(map)">@map</button>
-            </li>
+            <button disabled="@ServerInfoService.ServerInfo?.ServerUpdatingOrInstalling" title="Start server" @onclick="@Start">Start server</button>
         }
+        else
+        {
+            <button title="Stop server" @onclick="@Stop">Stop server</button>
+        }
+    </div>
 
-    </ul>
-</div>
+    <div class="p-1">
+        @if (ServerInfoService.ServerInfo?.ServerUpdatingOrInstalling == false)
+        {
+            <button title="Update server" @onclick="@StartUpdateOrInstall">Update server</button>
+        }
+        else
+        {
+            <button title="Cancel server update" @onclick="@CancelUpdateOrInstall">Cancel server update</button>
+        }
+    </div>
+
+    <div class="dropdown p-1">
+        <button disabled="@DisabledWhenServerIsOffline" type="button" id="changeMapDropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Changes map. The server needs to be online to do this">
+            Change map
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="changeMapDropdownMenuButton">
+            @foreach (var map in ServerInfoService.Maps)
+            {
+                <li>
+                    <button disabled="@DisabledWhenServerIsOffline" class="dropdown-item" type="button" @onclick="() => ChangeMap(map)">@map</button>
+                </li>
+            }
+        </ul>
+    </div>
+
+    <div class="dropdown p-1">
+        <button disabled="@DisabledWhenServerIsOffline" type="button" id="executeConfigDropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Executing config. The server needs to be online to do this">
+            Execute config
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="executeConfigDropdownMenuButton">
+            @foreach (var config in ServerInfoService.Configs)
+            {
+                <li>
+                    <button disabled="@DisabledWhenServerIsOffline" class="dropdown-item" type="button" @onclick="() => ExecuteConfig(config)">@config</button>
+                </li>
+            }
+        </ul>
+    </div>
+}

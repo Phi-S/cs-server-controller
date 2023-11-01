@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
+using System.Web;
 using AppOptionsLib;
 using Microsoft.Extensions.Options;
 using SharedModelsLib;
@@ -9,7 +10,7 @@ namespace InstanceApiServiceLib;
 
 public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpClient)
 {
-    private JsonSerializerOptions _jsonOption = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    private readonly JsonSerializerOptions _jsonOption = new(JsonSerializerDefaults.Web);
 
     #region Server
 
@@ -53,9 +54,8 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
 
     public async Task<Guid> CancelUpdatingOrInstalling(Guid id)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + "/server/cancel-updating-or-installing";
+        var url = options.Value.INSTANCE_API_ENDPOINT + $"/server/cancel-updating-or-installing?id={id.ToString()}";
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Content = JsonContent.Create(new {id});
         var response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
@@ -82,6 +82,18 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task<string> SendCommand(string command)
+    {
+        var commandUrlEncoded = HttpUtility.HtmlEncode(command);
+        var url = $"{options.Value.INSTANCE_API_ENDPOINT}/server/send-command?command={commandUrlEncoded}";
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Content = new StringContent(command);
+        var response = await httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        var commandResponse = await response.Content.ReadAsStringAsync();
+        return commandResponse;
+    }
+    
     public async Task<List<string>> Maps()
     {
         var url = options.Value.INSTANCE_API_ENDPOINT + "/server/maps";
@@ -94,16 +106,18 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
         maps.ThrowIfNull();
         return maps;
     }
-
-    public async Task<string> SendCommand(string command)
+    
+    public async Task<List<string>> Configs()
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + "/server/send-command";
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Content = JsonContent.Create(new {command});
+        var url = options.Value.INSTANCE_API_ENDPOINT + "/server/configs";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
         var response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
-        var commandResponse = await response.Content.ReadAsStringAsync();
-        return commandResponse;
+        var json = await response.Content.ReadAsStringAsync();
+        json.ThrowIfNull().IfEmpty().IfWhiteSpace();
+        var configs = JsonSerializer.Deserialize<List<string>>(json, _jsonOption);
+        configs.ThrowIfNull();
+        return configs;
     }
 
     #endregion
@@ -114,7 +128,6 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
     {
         var url = options.Value.INSTANCE_API_ENDPOINT + $"/logs/server?logsSince={logsSince.ToUnixTimeMilliseconds()}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Content = JsonContent.Create(new {logsSince = logsSince.ToUnixTimeSeconds()});
         var response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
@@ -126,9 +139,9 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
 
     public async Task<List<UpdateOrInstallLogResponse>> LogsUpdateOrInstall(DateTimeOffset logsSince)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + $"/logs/update-or-install?logsSince={logsSince.ToUnixTimeMilliseconds()}";
+        var url =
+            $"{options.Value.INSTANCE_API_ENDPOINT}/logs/update-or-install?logsSince={logsSince.ToUnixTimeMilliseconds()}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Content = JsonContent.Create(new {logsSince = logsSince.ToUnixTimeSeconds()});
         var response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
@@ -140,7 +153,7 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
 
     public async Task<List<EventLogResponse>> LogsEvents(DateTimeOffset logsSince)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + $"/logs/events?logsSince={logsSince.ToUnixTimeMilliseconds()}";
+        var url = $"{options.Value.INSTANCE_API_ENDPOINT}/logs/events?logsSince={logsSince.ToUnixTimeMilliseconds()}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         var response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
@@ -153,9 +166,9 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
 
     public async Task<List<EventLogResponse>> LogsEvents(string eventName, DateTimeOffset logsSince)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + $"/logs/events/{eventName}?logsSince={logsSince.ToUnixTimeMilliseconds()}";
+        var url =
+            $"{options.Value.INSTANCE_API_ENDPOINT}/logs/events/{eventName}?logsSince={logsSince.ToUnixTimeMilliseconds()}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Content = JsonContent.Create(new {logsSince = logsSince.ToUnixTimeSeconds()});
         var response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();

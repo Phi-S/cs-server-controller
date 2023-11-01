@@ -28,14 +28,10 @@ public class ServerInfoService(ILogger<ServerInfoService> logger, InstanceApiSer
         {
             lock (_serverInfoLock)
             {
-                if (_serverInfo is not null && _serverInfo.Equals(value))
-                {
-                    return;
-                }
-
                 _serverInfo = value;
-                OnServerInfoChangedEvent?.Invoke(this, EventArgs.Empty);
             }
+
+            OnServerInfoChangedEvent?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -59,10 +55,19 @@ public class ServerInfoService(ILogger<ServerInfoService> logger, InstanceApiSer
                     try
                     {
                         var newServerInfo = await instanceApiService.Info();
-                        if (ServerInfo == null || ServerInfo.Equals(newServerInfo) == false)
+                        if (ServerInfo is not null && ServerInfo.Equals(newServerInfo))
                         {
-                            ServerInfo = newServerInfo;
+                            continue;
                         }
+
+                        // If the server first started or the server went from offline to online; refresh the available maps
+                        if (ServerInfo is null || (ServerInfo.ServerStarted == false && newServerInfo.ServerStarted))
+                        {
+                            Maps = await instanceApiService.Maps();
+                            Configs = await instanceApiService.Configs();
+                        }
+
+                        ServerInfo = newServerInfo;
                     }
                     catch (Exception e)
                     {
@@ -232,21 +237,27 @@ public class ServerInfoService(ILogger<ServerInfoService> logger, InstanceApiSer
                 {
                     try
                     {
-                        var logs = await instanceApiService.LogsServer(lastServerLogsPullTimestamp);
+                        var newLogsFromInstance = await instanceApiService.LogsServer(lastServerLogsPullTimestamp);
                         lastServerLogsPullTimestamp = DateTime.UtcNow;
+
+                        if (newLogsFromInstance.Count == 0)
+                        {
+                            continue;
+                        }
+
                         var currentLogs = ServerLogs;
                         if (currentLogs == null)
                         {
-                            ServerLogs = logs;
+                            ServerLogs = newLogsFromInstance;
                             continue;
                         }
 
                         var newServerLogs = new List<StartLogResponse>();
-                        foreach (var e in logs)
+                        foreach (var log in newLogsFromInstance)
                         {
-                            if (currentLogs.Any(currentEvent => currentEvent.Equals(e)) == false)
+                            if (currentLogs.Any(currentLog => currentLog.Equals(log)) == false)
                             {
-                                newServerLogs.Add(e);
+                                newServerLogs.Add(log);
                             }
                         }
 
@@ -364,6 +375,60 @@ public class ServerInfoService(ILogger<ServerInfoService> logger, InstanceApiSer
                 logger.LogInformation("UpdateOrInstallLogsBackgroundTask stopped");
             }
         });
+    }
+
+    #endregion
+
+    #region Maps
+
+    private readonly List<string> _maps = new();
+    private readonly object _mapsLock = new();
+
+    public List<string> Maps
+    {
+        get
+        {
+            lock (_mapsLock)
+            {
+                return _maps;
+            }
+        }
+        private set
+        {
+            if (value.Count <= 0) return;
+            lock (_mapsLock)
+            {
+                _maps.Clear();
+                _maps.AddRange(value);
+            }
+        }
+    }
+
+    #endregion
+
+    #region Configs
+
+    private readonly List<string> _configs = new();
+    private readonly object _configsLock = new();
+
+    public List<string> Configs
+    {
+        get
+        {
+            lock (_configsLock)
+            {
+                return _configs;
+            }
+        }
+        private set
+        {
+            if (value.Count <= 0) return;
+            lock (_configsLock)
+            {
+                _configs.Clear();
+                _configs.AddRange(value);
+            }
+        }
     }
 
     #endregion

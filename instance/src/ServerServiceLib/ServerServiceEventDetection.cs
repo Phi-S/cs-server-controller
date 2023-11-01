@@ -44,10 +44,10 @@ public partial class ServerService
         }
     }
 
-    [GeneratedRegex("Host activate: Changelevel (.+)")]
+    [GeneratedRegex("Changelevel to (.+)")]
     private static partial Regex MapChangeRegex();
 
-    // Host activate: Changelevel (de_dust2)
+    // Changelevel to de_nuke
     public void NewOutputMapChangeDetection(object? _, ServerOutputEventArg output)
     {
         try

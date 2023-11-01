@@ -1,4 +1,5 @@
-﻿using AppOptionsLib;
+﻿using System.Web;
+using AppOptionsLib;
 using EventsServiceLib;
 using Instance.Response;
 using Microsoft.AspNetCore.Mvc;
@@ -71,7 +72,7 @@ public static class ServerEndpoint
         });
 
         group.MapPost("cancel-updating-or-installing",
-            (UpdateOrInstallService updateOrInstallService, [FromBody] Guid id) =>
+            (UpdateOrInstallService updateOrInstallService, [FromQuery] Guid id) =>
             {
                 var cancelUpdate = updateOrInstallService.CancelUpdate(id);
                 return cancelUpdate.IsFailed
@@ -97,18 +98,26 @@ public static class ServerEndpoint
                 : Results.Ok();
         });
 
+
+        group.MapPost("send-command", async (ServerService serverService, [FromQuery] string command) =>
+        {
+            var commandUrlDecoded = HttpUtility.UrlDecode(command);
+            var executeCommand = await serverService.ExecuteCommand(commandUrlDecoded);
+            return executeCommand.IsFailed
+                ? Results.Extensions.InternalServerError(executeCommand.Exception.Message)
+                : Results.Ok(executeCommand.Value);
+        });
+
         group.MapGet("maps", (IOptions<AppOptions> options, ServerService serverService) =>
         {
             var maps = serverService.GetAllMaps(options.Value.SERVER_FOLDER);
             return Results.Ok(maps);
         });
 
-        group.MapPost("send-command", async (ServerService serverService, [FromBody] string command) =>
+        group.MapGet("configs", (IOptions<AppOptions> options, ServerService serverService) =>
         {
-            var executeCommand = await serverService.ExecuteCommand(command);
-            return executeCommand.IsFailed
-                ? Results.Extensions.InternalServerError(executeCommand.Exception.Message)
-                : Results.Ok(executeCommand.Value);
+            var configs = serverService.GetAvailableConfigs(options.Value.SERVER_FOLDER).Keys.ToList();
+            return Task.FromResult(Results.Ok(configs));
         });
 
         return group;

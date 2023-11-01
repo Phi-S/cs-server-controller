@@ -47,28 +47,36 @@ public partial class ServerService(
             var checkIfServerIsReadyToStart = CheckIfServerIsReadyToStart();
             if (checkIfServerIsReadyToStart.IsFailed)
             {
+                eventService.OnStartingServer();
                 logger.LogWarning(checkIfServerIsReadyToStart.Exception, "Server is not ready to start");
                 eventService.OnStartingServerFailed();
                 return Result.Fail(checkIfServerIsReadyToStart.Exception, "Server is not ready to start");
             }
 
-            #endregion
-
             eventService.OnStartingServer();
+
+            #endregion
 
             #region CopySteamclient
 
             var homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var copySteamclient = CopySteamclient(homeFolder, options.Value.STEAMCMD_FOLDER);
+            var copySteamclient = LinkSteamclient(homeFolder, options.Value.STEAMCMD_FOLDER);
             if (copySteamclient.IsFailed)
             {
                 eventService.OnStartingServerFailed();
-                logger.LogError(checkIfServerIsReadyToStart.Exception, "Failed to start server");
+                logger.LogError(copySteamclient.Exception, "Failed to start server");
                 return Result.Fail(copySteamclient.Exception, "Failed to start server");
             }
 
             #endregion
 
+            #region LinkConfigs
+
+            logger.LogInformation("Creating symbolic links for server configs");
+            LinkServerConfigs(options.Value.EXECUTING_FOLDER, options.Value.SERVER_FOLDER);
+            logger.LogInformation("All configs linked");
+
+            #endregion
 
             #region StartServerProcess
 
@@ -115,21 +123,29 @@ public partial class ServerService(
 
             #endregion
 
+            #region StartOutputFlushBackgroundTask
+
             StartOutputFlushBackgroundTask();
             logger.LogInformation("Background task to periodically write in StandardInput started");
 
-            #region Maps
+            #endregion
+
+            #region RefreshMaps
 
             if (string.IsNullOrWhiteSpace(startParameters.StartMap) == false)
             {
                 eventService.OnMapChanged(startParameters.StartMap);
             }
 
-            lock (_mapsLock)
-            {
-                GetAllMaps(options.Value.SERVER_FOLDER, true);
-                logger.LogInformation("Available maps refreshed");
-            }
+            GetAllMaps(options.Value.SERVER_FOLDER, true);
+            logger.LogInformation("Available maps refreshed");
+
+            #endregion
+
+            #region RefreshConfigs
+
+            GetAvailableConfigs(options.Value.SERVER_FOLDER, true);
+            logger.LogInformation("Available configs refreshed");
 
             #endregion
 
@@ -191,28 +207,55 @@ public partial class ServerService(
     /// ln -s /home/your_user/.local/share/Steam/steamcmd/linux32/steamclient.so /home/your_user/.steam/sdk32/
     ///</summary>
     /// <returns></returns>
-    private Result CopySteamclient(string homeFolder, string steamcmdFolder)
+    private Result LinkSteamclient(string homeFolder, string steamcmdFolder)
     {
         const string steamclientSoName = "steamclient.so";
+        var steamClientSrcPath = Path.Combine(steamcmdFolder, "linux64", steamclientSoName);
         var steamClientDestFolder = Path.Combine(homeFolder, ".steam", "sdk64");
         var steamClientDestPath = Path.Combine(steamClientDestFolder, steamclientSoName);
 
-        var file = new FileInfo(steamClientDestPath);
-        if (file.LinkTarget != null)
-        {
-            return Result.Ok();
-        }
+        logger.LogInformation("Creating symbolic link for steamclient. {LinkDestPath} > {LinkSrcPath}",
+            steamClientDestPath, steamClientSrcPath);
 
-        var steamClientSrcPath = Path.Combine(steamcmdFolder, "linux64", steamclientSoName);
         if (File.Exists(steamClientSrcPath) == false)
         {
             return Result.Fail(
                 $"Steam client not found at \"{steamClientSrcPath}\". Run UpdateOrInstall to install steamclient");
         }
 
+        var file = new FileInfo(steamClientDestPath);
+        if (file.LinkTarget != null && file.LinkTarget.Equals(steamClientSrcPath))
+        {
+            return Result.Ok("Steamclient already linked");
+        }
+
         Directory.CreateDirectory(steamClientDestFolder);
         File.CreateSymbolicLink(steamClientDestPath, steamClientSrcPath);
         return Result.Ok();
+    }
+
+    private void LinkServerConfigs(string executingFolder, string serverFolder)
+    {
+        var srcConfigFolder = Path.Combine(executingFolder, "configs");
+        var destConfigFolder = Path.Combine(serverFolder, "game", "csgo", "cfg");
+        var srcConfigPaths = Directory.GetFiles(srcConfigFolder);
+        foreach (var srcConfigPath in srcConfigPaths)
+        {
+            var configName = Path.GetFileName(srcConfigPath);
+            var destConfigPath = Path.Combine(destConfigFolder, configName);
+
+            var fileInfo = new FileInfo(destConfigPath);
+            if (fileInfo is {Exists: true, LinkTarget: not null} && fileInfo.LinkTarget.Equals(srcConfigPath))
+            {
+                logger.LogInformation("Symbolic link for {ConfigName} already exists", configName);
+                continue;
+            }
+
+            logger.LogInformation(
+                "Creating symbolic link for {ConfigName} config file. {LinkDestPath} > {LinkSrcPath}",
+                configName, destConfigPath, srcConfigPath);
+            File.CreateSymbolicLink(destConfigPath, srcConfigPath);
+        }
     }
 
     private Result<Process> StartServerProcess(ServerStart serverStart, string executablePath, string serverFolder,
@@ -290,23 +333,27 @@ public partial class ServerService(
         }
     }
 
-    private void WriteLine(string text)
+    private Result WriteLine(string text)
     {
         try
         {
-            if (!statusService.ServerStarted || _process == null) return;
-
-            lock (_processLockObject)
             {
-                _process.StandardInput.WriteLine(text);
+                if (statusService.ServerStarted == false || _process == null)
+                {
+                    return Result.Fail($"Failed to write line \"{text}\". Server is not started");
+                }
+
+                lock (_processLockObject)
+                {
+                    _process.StandardInput.WriteLine(text);
+                }
             }
+
+            return Result.Ok();
         }
         catch (Exception e)
         {
-            using (logger.BeginScope(new Dictionary<string, object> {{nameof(text), text}}))
-            {
-                logger.LogError(e, "Exception");
-            }
+            return Result.Fail(e, $"Failed to write line \"{text}\"");
         }
     }
 
@@ -419,7 +466,11 @@ public partial class ServerService(
 
     private async Task<bool> StopNormal()
     {
-        WriteLine("quit");
+        var writeLine = WriteLine("quit");
+        if (writeLine.IsFailed)
+        {
+            return false;
+        }
 
         var sw = Stopwatch.StartNew();
         while (true)
@@ -491,17 +542,35 @@ public partial class ServerService(
     {
         Task.Run(async () =>
         {
-            while (true)
+            try
             {
-                await Task.Delay(10);
-                if (_process == null ||
-                    statusService.ServerStarted == false ||
-                    statusService.ServerStopping)
+                while (true)
                 {
-                    break;
-                }
+                    try
+                    {
+                        await Task.Delay(10);
+                        if (_process == null ||
+                            statusService.ServerStarted == false ||
+                            statusService.ServerStopping)
+                        {
+                            break;
+                        }
 
-                WriteLine(_process.StandardInput.NewLine);
+                        var writeLine = WriteLine(_process.StandardInput.NewLine);
+                        if (writeLine.IsFailed)
+                        {
+                            logger.LogWarning(writeLine.Exception, "Failed to write line to standard output");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogWarning(e, "Exception in OutputFlushBackgroundTask. Restarting...");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Exception in OutputFlushBackgroundTask");
             }
         });
     }

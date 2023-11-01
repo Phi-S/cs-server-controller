@@ -245,10 +245,17 @@ public partial class ServerService(
             var destConfigPath = Path.Combine(destConfigFolder, configName);
 
             var fileInfo = new FileInfo(destConfigPath);
-            if (fileInfo is {Exists: true, LinkTarget: not null} && fileInfo.LinkTarget.Equals(srcConfigPath))
+            if (fileInfo is {Exists: true})
             {
-                logger.LogInformation("Symbolic link for {ConfigName} already exists", configName);
-                continue;
+                if (string.IsNullOrWhiteSpace(fileInfo.LinkTarget) == false &&
+                    fileInfo.LinkTarget.Equals(srcConfigPath))
+                {
+                    logger.LogInformation("Symbolic link for {ConfigName} already exists", configName);
+                    continue;
+                }
+
+                logger.LogInformation("Deleting existing file {File}", fileInfo.FullName);
+                fileInfo.Delete();
             }
 
             logger.LogInformation(

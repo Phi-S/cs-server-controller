@@ -554,15 +554,21 @@ public partial class ServerService(
         {
             try
             {
+                logger.LogInformation("OutputFlushBackgroundTask started");
                 while (true)
                 {
                     try
                     {
                         await Task.Delay(50);
-                        if (_process == null ||
-                            statusService.ServerStarted == false ||
-                            statusService.ServerStopping)
+                        if (_process is null)
                         {
+                            logger.LogWarning("OutputFlushBackgroundTask break; process is not set");
+                            break;
+                        }
+                        
+                        if (statusService is {ServerStarted: false, ServerStarting: false})
+                        {
+                            logger.LogWarning("OutputFlushBackgroundTask break; Server is not started");
                             break;
                         }
 

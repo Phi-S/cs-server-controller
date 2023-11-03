@@ -1,6 +1,6 @@
 ﻿using DatabaseLib.Repos;
 using Microsoft.AspNetCore.Mvc;
-using SharedModelsLib;
+using SharedModelsLib.ApiModels;
 
 namespace Instance.Endpoints;
 
@@ -19,7 +19,7 @@ public static class LogsEndpoint
             var logsSinceDateTime = DateTimeOffset.FromUnixTimeMilliseconds(logsSince).DateTime;
             var logs = await serverRepo.GetSince(logsSinceDateTime);
             var response = logs.Select(
-                    log => new StartLogResponse(
+                    log => new ServerLogResponse(
                         log.ServerStart.Id,
                         log.Message,
                         log.CreatedAtUtc)

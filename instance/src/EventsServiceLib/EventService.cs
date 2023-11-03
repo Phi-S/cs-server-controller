@@ -1,7 +1,7 @@
 using DatabaseLib.Repos;
 using EventsServiceLib.EventArgs;
 using Microsoft.Extensions.Logging;
-using SharedModelsLib;
+using SharedModelsLib.ApiModels;
 
 namespace EventsServiceLib;
 
@@ -285,10 +285,20 @@ public sealed class EventService
 
     public event EventHandler<CustomEventArgPlayerDisconnected>? PlayerDisconnected;
 
-    public void OnPlayerDisconnected(string playerName, string disconnectReason)
+    public void OnPlayerDisconnected(
+        string connectionId,
+        string steamId64,
+        string ipPort,
+        string disconnectReasonCode,
+        string disconnectReason)
     {
         PlayerDisconnected?.Invoke(this,
-            new CustomEventArgPlayerDisconnected(Events.PLAYER_DISCONNECTED, playerName, disconnectReason));
+            new CustomEventArgPlayerDisconnected(Events.PLAYER_DISCONNECTED,
+                connectionId,
+                steamId64,
+                ipPort,
+                disconnectReasonCode,
+                disconnectReason));
     }
 
     #endregion PlayerConnected

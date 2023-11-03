@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Web;
 using AppOptionsLib;
 using Microsoft.Extensions.Options;
-using SharedModelsLib;
+using SharedModelsLib.ApiModels;
 using Throw;
 
 namespace InstanceApiServiceLib;
@@ -124,7 +124,7 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
 
     #region Logs
 
-    public async Task<List<StartLogResponse>> LogsServer(DateTimeOffset logsSince)
+    public async Task<List<ServerLogResponse>> LogsServer(DateTimeOffset logsSince)
     {
         var url = options.Value.INSTANCE_API_ENDPOINT + $"/logs/server?logsSince={logsSince.ToUnixTimeMilliseconds()}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -132,7 +132,7 @@ public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpCli
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var maps = JsonSerializer.Deserialize<List<StartLogResponse>>(json, _jsonOption);
+        var maps = JsonSerializer.Deserialize<List<ServerLogResponse>>(json, _jsonOption);
         maps.ThrowIfNull();
         return maps;
     }

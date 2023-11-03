@@ -1,17 +1,34 @@
 ﻿using System.Text;
 
-namespace SharedModelsLib;
+namespace SharedModelsLib.ApiModels;
 
-public record StartParameters(
-    string ServerHostname = "cs2 prac server",
-    string? ServerPassword = null,
-    int MaxPlayer = 10,
-    string StartMap = "de_anubis",
-    int GameMode = 1,
-    int GameType = 0,
-    string? LoginToken = null,
-    string? AdditionalStartParameters = null)
+public class StartParameters
 {
+    public StartParameters()
+    {
+    }
+
+    public StartParameters(string serverHostname, string? serverPassword, int maxPlayer, string startMap, int gameMode, int gameType, string? loginToken, string? additionalStartParameters)
+    {
+        ServerHostname = serverHostname;
+        ServerPassword = serverPassword;
+        MaxPlayer = maxPlayer;
+        StartMap = startMap;
+        GameMode = gameMode;
+        GameType = gameType;
+        LoginToken = loginToken;
+        AdditionalStartParameters = additionalStartParameters;
+    }
+
+    public string ServerHostname { get; set; } = "cs2 prac server";
+    public string? ServerPassword { get; set; }
+    public int MaxPlayer { get; set; } = 10;
+    public string StartMap { get; set; } = "de_anubis";
+    public int GameMode { get; set; } = 1;
+    public int GameType { get; set; } = 0;
+    public string? LoginToken { get; set; }
+    public string? AdditionalStartParameters { get; set; }
+
     public string GetString(string port, string? backupLoginToken)
     {
         var sb = new StringBuilder();
@@ -39,7 +56,7 @@ public record StartParameters(
     /// </summary>
     /// <param name="backupLoginToken"></param>
     /// <returns></returns>
-    private string GetLoginToken(string? backupLoginToken)
+    public string GetLoginToken(string? backupLoginToken)
     {
         if (string.IsNullOrWhiteSpace(LoginToken) == false)
         {

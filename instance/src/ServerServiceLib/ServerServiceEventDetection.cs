@@ -30,12 +30,10 @@ public partial class ServerService
             if (output.Output.Equals("Server is hibernating"))
             {
                 eventService.OnHibernationStarted();
-                logger.LogInformation("Hibernation started");
             }
             else if (output.Output.Equals("Server waking up from hibernation"))
             {
                 eventService.OnHibernationEnded();
-                logger.LogInformation("Hibernation ended");
             }
         }
         catch (Exception e)
@@ -59,7 +57,6 @@ public partial class ServerService
                 .Trim()
                 .Replace("(", "")
                 .Replace(")", "");
-            logger.LogInformation("Map changed to {NewMap}", newMap);
             eventService.OnMapChanged(newMap);
         }
         catch (Exception e)
@@ -91,8 +88,6 @@ public partial class ServerService
             var name = match.Groups[1].Value;
             var remote = match.Groups[2].Value;
 
-            logger.LogWarning("New player connected. Player name: {PlayerName} | Player IP: {PlayerIp}", name,
-                remote);
             eventService.OnPlayerConnected(name, remote);
         }
         catch (Exception e)
@@ -101,31 +96,28 @@ public partial class ServerService
         }
     }
 
-    [GeneratedRegex("Disconnect client '(.+?)'.+\\):\\s(.+)")]
+    [GeneratedRegex(
+        "Steam Net connection #(.+?) UDP steamid:(\\d+)@([0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?:[0-9]{1,5}) closed by peer, reason (\\d{4}): (.+)")]
     private static partial Regex PlayerDisconnectRegex();
 
-    // TODO: test player discconent
-    // Disconnect client 'PhiS' from server(59): NETWORK_DISCONNECT_EXITING
+    // Steam Net connection #2892143414 UDP steamid:76561198154417260@10.10.20.10:49347 closed by peer, reason 1002: NETWORK_DISCONNECT_DISCONNECT_BY_USER
     public void NewOutputPlayerDisconnectDetection(object? _, ServerOutputEventArg output)
     {
         try
         {
-            if (output.Output.StartsWith("SV: Disconnect client") == false)
-            {
-                return;
-            }
-
             var match = PlayerDisconnectRegex().Match(output.Output);
-            if (match.Groups.Count != 3)
+            if (match.Groups.Count != 6)
             {
                 return;
             }
 
-            var name = match.Groups[1].Value;
-            var disconnectReason = match.Groups[2].Value;
+            var connectionId = match.Groups[1].Value;
+            var steamId64 = match.Groups[2].Value;
+            var ipPort = match.Groups[3].Value;
+            var disconnectReasonCode = match.Groups[4].Value;
+            var disconnectReason = match.Groups[5].Value;
 
-            logger.LogWarning("Player disconnected: {PlayerName} |{DisconnectReason}", name, disconnectReason);
-            eventService.OnPlayerDisconnected(name, disconnectReason);
+            eventService.OnPlayerDisconnected(connectionId, steamId64, ipPort, disconnectReasonCode, disconnectReason);
         }
         catch (Exception e)
         {
@@ -158,7 +150,6 @@ public partial class ServerService
             var steamId3 = match.Groups[3].Value;
             var message = match.Groups[4].Value;
 
-            logger.LogWarning("{Chat} message from {Name}/{SteamId3}: {Message}", chat, name, steamId3, message);
             eventService.OnChatMessage(chat, name, steamId3, message);
         }
         catch (Exception e)

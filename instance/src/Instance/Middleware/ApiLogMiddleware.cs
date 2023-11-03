@@ -18,7 +18,7 @@ public class ApiLogMiddleware(ILogger<ApiLogMiddleware> logger) : IMiddleware
             var method = context.Request.Method;
             var path = context.Request.Path;
             var statusCode = context.Response.StatusCode;
-            logger.LogInformation(
+            logger.LogDebug(
                 "[{Protocol} {Method} {Path}] responded {StatusCode} in {ElapsedMilliseconds} ms",
                 protocol, method, path, statusCode, elapsedMilliseconds);
         }

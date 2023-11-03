@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using SharedModelsLib;
+using SharedModelsLib.ApiModels;
 
 namespace EventsServiceLib.EventArgs;
 

@@ -1,4 +1,4 @@
-﻿<component name="ProjectRunConfigurationManager">
+<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="../Dockerfile_instance" type="docker-deploy" factoryName="dockerfile" server-name="Docker">
     <deployment type="dockerfile">
       <settings>
@@ -8,7 +8,7 @@
           <list>
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:APP_NAME" />
-              <option name="value" value="cs-controller-instance" />
+              <option name="value" value="cs-controller-instance-dev" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:IP_OR_DOMAIN" />
@@ -21,6 +21,10 @@
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:PORT" />
               <option name="value" value="27015" />
+            </DockerEnvVarImpl>
+            <DockerEnvVarImpl>
+              <option name="name" value="APP_OPTIONS:SEQ_URL" />
+              <option name="value" value="http://192.168.1.20:5341" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:STEAM_PASSWORD" />

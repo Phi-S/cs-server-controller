@@ -6,7 +6,7 @@ using EventsServiceLib;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ResultLib;
-using SharedModelsLib;
+using SharedModelsLib.ApiModels;
 using StatusServiceLib;
 
 namespace ServerServiceLib;
@@ -320,7 +320,10 @@ public partial class ServerService(
     {
         try
         {
-            logger.LogInformation("Server: StartId: {StartID} | Output: {Output}", arg.ServerStart.Id, arg.Output);
+            using (logger.BeginScope(new Dictionary<string, object> {["StartId"] = arg.ServerStart.Id}))
+            {
+                logger.LogInformation("CS: {Output}", arg.Output);
+            }
         }
         catch (Exception e)
         {

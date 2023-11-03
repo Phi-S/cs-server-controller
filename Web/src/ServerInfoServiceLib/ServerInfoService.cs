@@ -1,6 +1,6 @@
 ﻿using InstanceApiServiceLib;
 using Microsoft.Extensions.Logging;
-using SharedModelsLib;
+using SharedModelsLib.ApiModels;
 
 namespace ServerInfoServiceLib;
 
@@ -189,13 +189,13 @@ public class ServerInfoService(ILogger<ServerInfoService> logger, InstanceApiSer
     #region ServerLogs
 
     private readonly object _serverLogsLock = new();
-    private List<StartLogResponse>? _serverLogs;
+    private List<ServerLogResponse>? _serverLogs;
     public event EventHandler? OnServerLogsChangedEvent;
 
     private volatile bool _serverLogsBackgroundTaskRunning;
     public CancellationTokenSource? ServerLogsBackgroundTaskCancellationTokenSource;
 
-    public List<StartLogResponse>? ServerLogs
+    public List<ServerLogResponse>? ServerLogs
     {
         get
         {
@@ -252,7 +252,7 @@ public class ServerInfoService(ILogger<ServerInfoService> logger, InstanceApiSer
                             continue;
                         }
 
-                        var newServerLogs = new List<StartLogResponse>();
+                        var newServerLogs = new List<ServerLogResponse>();
                         foreach (var log in newLogsFromInstance)
                         {
                             if (currentLogs.Any(currentLog => currentLog.Equals(log)) == false)

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using ServerInfoServiceLib;
-using SharedModelsLib;
+using SharedModelsLib.ApiModels;
 
 namespace web.Components.Pages;
 

@@ -2,7 +2,7 @@ using DatabaseLib;
 using DatabaseLib.Repos;
 using EventsServiceLib;
 using Microsoft.Extensions.DependencyInjection;
-using SharedModelsLib;
+using SharedModelsLib.ApiModels;
 using StatusServiceLib;
 using TestLoggerLib;
 using Xunit.Abstractions;
@@ -39,7 +39,7 @@ public class EventAndStatusServiceTest
     {
         _statusService.Reset();
         Assert.True(_statusService.ServerStarted == false);
-        _eventService.OnStartingServerDone(new StartParameters("test_server_name", "test_server_pw"));
+        _eventService.OnStartingServerDone(new StartParameters());
         Assert.True(_statusService.ServerStarted);
     }
 
@@ -66,7 +66,7 @@ public class EventAndStatusServiceTest
     public void TestServerExited()
     {
         _statusService.Reset();
-        _eventService.OnStartingServerDone(new StartParameters("test_server_name", "test_server_pw"));
+        _eventService.OnStartingServerDone(new StartParameters());
         Assert.True(_statusService.ServerStarted);
         _eventService.OnServerExited();
         Assert.True(_statusService.ServerStarted == false);
@@ -185,7 +185,7 @@ public class EventAndStatusServiceTest
         _statusService.Reset();
         _eventService.OnPlayerConnected("test", "test");
         Assert.True(_statusService.CurrentPlayerCount == 1);
-        _eventService.OnPlayerDisconnected("test", "test");
+        _eventService.OnPlayerDisconnected("test", "test", "test", "test", "test");
         Assert.True(_statusService.CurrentPlayerCount == 0);
     }
 }

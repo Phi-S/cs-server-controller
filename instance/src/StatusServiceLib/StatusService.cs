@@ -1,5 +1,5 @@
 using EventsServiceLib;
-using SharedModelsLib;
+using SharedModelsLib.ApiModels;
 
 namespace StatusServiceLib;
 

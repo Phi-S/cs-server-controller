@@ -6,6 +6,7 @@ using Serilog.Events;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
 using ServerInfoServiceLib;
+using StartParametersJsonServiceLib;
 using web.Components;
 
 var expressionTemplate = new ExpressionTemplate(
@@ -36,6 +37,7 @@ try
         configuration.Enrich.WithProperty("ApplicationName", options.Value.APP_NAME)
             .Enrich.FromLogContext()
             .WriteTo.Console(expressionTemplate)
+            .WriteTo.Seq(options.Value.SEQ_URL ?? string.Empty)
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning);
     });
@@ -43,6 +45,7 @@ try
     builder.Services.AddHttpClient();
     builder.Services.AddSingleton<InstanceApiService>();
     builder.Services.AddSingleton<ServerInfoService>();
+    builder.Services.AddSingleton<StartParametersJsonService>();
 
     builder.Services.AddRazorComponents()
         .AddInteractiveServerComponents();
@@ -54,7 +57,7 @@ try
 
     app.MapRazorComponents<App>()
         .AddInteractiveServerRenderMode();
-
+    
     await app.StartAsync();
     Log.Logger.Information("Server is running under: {Addresses}", string.Join(",", app.Urls));
     Log.Logger.Information("Application started");

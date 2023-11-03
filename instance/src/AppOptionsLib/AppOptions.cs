@@ -15,6 +15,8 @@ public class AppOptions
     [Required] public required string STEAM_PASSWORD { get; init; }
     [Required] public required string LOGIN_TOKEN { get; init; }
 
+    public string? SEQ_URL { get; set; }
+
     public string DATA_FOLDER { get; init; } = "/data";
     public string DATABASE_PATH => Path.Combine(DATA_FOLDER, "instance.db");
     public string SERVER_FOLDER => Path.Combine(DATA_FOLDER, "server");

@@ -2,7 +2,8 @@ using InstanceApiServiceLib;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using ServerInfoServiceLib;
-using SharedModelsLib;
+using SharedModelsLib.ApiModels;
+using StartParametersJsonServiceLib;
 using web.Helper;
 
 namespace web.Components.Custom;
@@ -15,9 +16,11 @@ public class ServerDisplayCompRazor : ComponentBase
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
     [Inject] protected InstanceApiService InstanceApiService { get; set; } = default!;
 
-    private readonly StartParameters _defaultStartParameters = new();
+    [Inject] private StartParametersJsonService StartParametersJsonService { get; set; } = default!;
+
+    private static readonly StartParameters DefaultStartParameters = new();
     protected InfoModel? ServerInfo => ServerInfoService.ServerInfo;
-    protected string Hostname => ServerInfo?.Hostname ?? _defaultStartParameters.ServerHostname;
+    protected string Hostname => ServerInfo?.Hostname ?? DefaultStartParameters.ServerHostname;
 
     protected override void OnInitialized()
     {
@@ -32,14 +35,14 @@ public class ServerDisplayCompRazor : ComponentBase
         }
     }
 
-    protected string GetConnectionString()
+    private string GetConnectionString()
     {
         if (ServerInfo is null)
         {
             return "";
         }
 
-        var passwordString = ServerInfo.ServerPassword is null ? "" : $"password {ServerInfo.ServerPassword}";
+        var passwordString = ServerInfo.ServerPassword is null ? "" : $"; password {ServerInfo.ServerPassword}";
         return $"connect {ServerInfo.IpOrDomain}:{ServerInfo.Port} {passwordString}";
     }
 
@@ -90,8 +93,8 @@ public class ServerDisplayCompRazor : ComponentBase
         try
         {
             Logger.LogInformation("Starting server");
-            // TODO: change default start parameters
-            await InstanceApiService.Start(new StartParameters());
+            var startParameters = StartParametersJsonService.Get();
+            await InstanceApiService.Start(startParameters);
         }
         catch (Exception e)
         {

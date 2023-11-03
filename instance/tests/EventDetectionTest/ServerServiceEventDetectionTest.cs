@@ -161,15 +161,18 @@ public class ServerServiceEventDetectionTest
                     StartedAtUtc = DateTime.UtcNow,
                     CreatedAtUtc = DateTime.UtcNow
                 },
-                "Disconnect client 'PhiS' from server(59): NETWORK_DISCONNECT_EXITING"));
+                "Steam Net connection #2892143414 UDP steamid:76561198154417260@10.10.20.10:49347 closed by peer, reason 1002: NETWORK_DISCONNECT_DISCONNECT_BY_USER"));
         var waitResult =
             await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
 
         Assert.True(waitResult.IsOk, waitResult.IsFailed ? waitResult.Exception.ToString() : "");
         Assert.True(arg is not null);
         Assert.True(arg.EventName == Events.PLAYER_DISCONNECTED);
-        Assert.Equal("PhiS", arg.PlayerName);
-        Assert.Equal("NETWORK_DISCONNECT_EXITING", arg.DisconnectReason);
+        Assert.Equal("2892143414", arg.ConnectionId);
+        Assert.Equal("76561198154417260", arg.SteamId64);
+        Assert.Equal("10.10.20.10:49347", arg.IpPort);
+        Assert.Equal("1002", arg.DisconnectReasonCode);
+        Assert.Equal("NETWORK_DISCONNECT_DISCONNECT_BY_USER", arg.DisconnectReason);
     }
 
     [Theory]

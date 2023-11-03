@@ -5,7 +5,7 @@ using Instance.Response;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using ServerServiceLib;
-using SharedModelsLib;
+using SharedModelsLib.ApiModels;
 using StatusServiceLib;
 using UpdateOrInstallServiceLib;
 

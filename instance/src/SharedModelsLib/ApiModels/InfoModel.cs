@@ -1,4 +1,4 @@
-﻿namespace SharedModelsLib;
+﻿namespace SharedModelsLib.ApiModels;
 
 public record InfoModel(
     string? Hostname,

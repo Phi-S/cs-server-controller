@@ -7,7 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\..\instance\src\SharedModelsLib\SharedModelsLib.csproj" />
       <ProjectReference Include="..\InstanceApiServiceLib\InstanceApiServiceLib.csproj" />
     </ItemGroup>
 

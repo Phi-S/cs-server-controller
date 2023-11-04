@@ -56,6 +56,7 @@ public class UpdateOrInstallService(
         try
         {
             await _updateOrInstallLock.WaitAsync();
+            logger.LogInformation("Starting updating or install the server");
             if (statusService.ServerUpdatingOrInstalling)
             {
                 logger.LogWarning(
@@ -113,7 +114,7 @@ public class UpdateOrInstallService(
         {
             eventService.OnUpdateOrInstallStarted(id);
             _cancellationTokenSource = new CancellationTokenSource();
-            logger.LogInformation("Starting to update or install server");
+            logger.LogInformation("UpdateOrInstallId: {UpdateOrInstallId}", id);
 
             #region install steamcmd
 
@@ -346,12 +347,14 @@ public class UpdateOrInstallService(
     {
         try
         {
-            logger.LogInformation("UpdateOrInstall: Id: {Id} | Output: {Output}",
-                arg.UpdateOrInstallId, arg.Message);
+            using (logger.BeginScope(new Dictionary<string, object> {["UpdateOrInstallId"] = arg.UpdateOrInstallId}))
+            {
+                logger.LogInformation("UpdateOrInstall: {Output}", arg.Message);
+            }
         }
         catch (Exception e)
         {
-            logger.LogWarning(e, "Exception");
+            logger.LogWarning(e, "Exception OnUpdateOrInstallOutputLog");
         }
     }
 
@@ -373,7 +376,7 @@ public class UpdateOrInstallService(
         }
         catch (Exception e)
         {
-            logger.LogWarning(e, "Exception");
+            logger.LogWarning(e, "Exception OnUpdateOrInstallOutputToDatabase");
         }
     }
 }

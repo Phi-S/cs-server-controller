@@ -59,6 +59,7 @@ public partial class ServerService(
 
             #region CopySteamclient
 
+            logger.LogInformation("Creating symbolic links for steam client");
             var homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var copySteamclient = LinkSteamclient(homeFolder, options.Value.STEAMCMD_FOLDER);
             if (copySteamclient.IsFailed)
@@ -66,6 +67,11 @@ public partial class ServerService(
                 eventService.OnStartingServerFailed();
                 logger.LogError(copySteamclient.Exception, "Failed to start server");
                 return Result.Fail(copySteamclient.Exception, "Failed to start server");
+            }
+            else
+            {
+                var okMessage = copySteamclient.OkMessage;
+                logger.LogInformation("{CopySteamclientOkMessage}", okMessage);
             }
 
             #endregion
@@ -85,7 +91,7 @@ public partial class ServerService(
             var startParameterString = startParameters.GetString(options.Value.PORT, options.Value.LOGIN_TOKEN);
 
             var serverStart = await serverRepo.AddStart(startParameterString, DateTime.UtcNow);
-
+            logger.LogInformation("Server start id: {ServerStartId}", serverStart.Id);
             logger.LogInformation("Starting server with command: \"{StartCommand}\"",
                 $"{executablePath} {startParameterString}");
             var startServerProcess = StartServerProcess(
@@ -214,9 +220,6 @@ public partial class ServerService(
         var steamClientDestFolder = Path.Combine(homeFolder, ".steam", "sdk64");
         var steamClientDestPath = Path.Combine(steamClientDestFolder, steamclientSoName);
 
-        logger.LogInformation("Creating symbolic link for steamclient. {LinkDestPath} > {LinkSrcPath}",
-            steamClientDestPath, steamClientSrcPath);
-
         if (File.Exists(steamClientSrcPath) == false)
         {
             return Result.Fail(
@@ -226,12 +229,12 @@ public partial class ServerService(
         var file = new FileInfo(steamClientDestPath);
         if (file.LinkTarget != null && file.LinkTarget.Equals(steamClientSrcPath))
         {
-            return Result.Ok("Steamclient already linked");
+            return Result.Ok($"Steamclient already linked. {steamClientDestPath} > {steamClientSrcPath}");
         }
 
         Directory.CreateDirectory(steamClientDestFolder);
         File.CreateSymbolicLink(steamClientDestPath, steamClientSrcPath);
-        return Result.Ok();
+        return Result.Ok($"Symbolic link for steamclient created. {steamClientDestPath} > {steamClientSrcPath}");
     }
 
     private void LinkServerConfigs(string executingFolder, string serverFolder)
@@ -565,7 +568,7 @@ public partial class ServerService(
                             logger.LogWarning("OutputFlushBackgroundTask break; process is not set");
                             break;
                         }
-                        
+
                         if (statusService is {ServerStarted: false, ServerStarting: false})
                         {
                             logger.LogWarning("OutputFlushBackgroundTask break; Server is not started");

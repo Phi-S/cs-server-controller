@@ -37,9 +37,13 @@ try
         configuration.Enrich.WithProperty("ApplicationName", options.Value.APP_NAME)
             .Enrich.FromLogContext()
             .WriteTo.Console(expressionTemplate)
-            .WriteTo.Seq(options.Value.SEQ_URL ?? string.Empty)
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning);
+
+        if (string.IsNullOrWhiteSpace(options.Value.SEQ_URL) == false)
+        {
+            configuration.WriteTo.Seq(options.Value.SEQ_URL);
+        }
     });
 
     builder.Services.AddHttpClient();
@@ -57,7 +61,7 @@ try
 
     app.MapRazorComponents<App>()
         .AddInteractiveServerRenderMode();
-    
+
     await app.StartAsync();
     Log.Logger.Information("Server is running under: {Addresses}", string.Join(",", app.Urls));
     Log.Logger.Information("Application started");

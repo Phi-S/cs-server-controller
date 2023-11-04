@@ -40,8 +40,12 @@ try
         configuration.Enrich.WithProperty("ApplicationName", options.Value.APP_NAME)
             .Enrich.FromLogContext()
             .WriteTo.Console(expressionTemplate)
-            .WriteTo.Seq(options.Value.SEQ_URL ?? string.Empty)
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning);
+
+        if (string.IsNullOrWhiteSpace(options.Value.SEQ_URL) == false)
+        {
+            configuration.WriteTo.Seq(options.Value.SEQ_URL);
+        }
     });
 
     builder.Services.AddDatabaseServices();

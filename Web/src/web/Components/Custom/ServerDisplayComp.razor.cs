@@ -4,6 +4,7 @@ using Microsoft.JSInterop;
 using ServerInfoServiceLib;
 using SharedModelsLib.ApiModels;
 using StartParametersJsonServiceLib;
+using Throw;
 using web.Helper;
 
 namespace web.Components.Custom;
@@ -35,22 +36,13 @@ public class ServerDisplayCompRazor : ComponentBase
         }
     }
 
-    private string GetConnectionString()
-    {
-        if (ServerInfo is null)
-        {
-            return "";
-        }
-
-        var passwordString = ServerInfo.ServerPassword is null ? "" : $"; password {ServerInfo.ServerPassword}";
-        return $"connect {ServerInfo.IpOrDomain}:{ServerInfo.Port} {passwordString}";
-    }
-
     protected async Task CopyConnectStringToClipboard()
     {
         try
         {
-            var connectionString = GetConnectionString();
+            ServerInfo.ThrowIfNull();
+            var passwordString = ServerInfo.ServerPassword is null ? "" : $"; password {ServerInfo.ServerPassword}";
+            var connectionString = $"connect {ServerInfo.IpOrDomain}:{ServerInfo.Port}{passwordString}";
             Logger.LogInformation("Coping connection \"{ConnectionString}\" string to clipboard", connectionString);
             await JsRuntimeHelper.CopyToClipboard(JsRuntime, connectionString);
         }

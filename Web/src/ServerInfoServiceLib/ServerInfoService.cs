@@ -144,7 +144,7 @@ public class ServerInfoService(ILogger<ServerInfoService> logger, InstanceApiSer
                         var currentEvents = Events;
                         if (currentEvents == null)
                         {
-                            Events = events;
+                            Events = events.OrderByDescending(e => e.TriggeredAtUtc).ToList();
                             continue;
                         }
 

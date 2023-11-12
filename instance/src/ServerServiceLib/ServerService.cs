@@ -36,7 +36,6 @@ public partial class ServerService(
 
     public async Task<Result> Start(StartParameters startParameters)
     {
-        Process? process = null;
         try
         {
             await _serverStartStopLock.WaitAsync();
@@ -109,7 +108,7 @@ public partial class ServerService(
 
             lock (_processLockObject)
             {
-                _process = process;
+                _process = startServerProcess.Value;
             }
 
             logger.LogInformation("Server process started");
@@ -149,12 +148,6 @@ public partial class ServerService(
         }
         catch (Exception e)
         {
-            lock (_processLockObject)
-            {
-                process?.Kill();
-                process?.Dispose();
-            }
-
             eventService.OnStartingServerFailed();
             logger.LogError(e, "Server failed to start with exception");
             return Result.Fail(e);

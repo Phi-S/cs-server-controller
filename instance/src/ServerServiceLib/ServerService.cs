@@ -94,7 +94,7 @@ public partial class ServerService(
             logger.LogInformation("Server start id: {ServerStartId}", serverStart.Id);
             logger.LogInformation("Starting server with command: \"{StartCommand}\"",
                 $"{executablePath} {startParameterString}");
-            var startServerProcess = StartServerProcess(
+            var startServerProcess = await StartServerProcess(
                 serverStart,
                 executablePath,
                 options.Value.SERVER_FOLDER,
@@ -107,19 +107,6 @@ public partial class ServerService(
                 return Result.Fail(startServerProcess.Exception, "Failed to start server");
             }
 
-            #endregion
-
-            #region WaitForServerToStart
-
-            process = startServerProcess.Value;
-            var waitForServerToStart = await WaitForServerToStart(process);
-            if (waitForServerToStart.IsFailed)
-            {
-                eventService.OnStartingServerFailed();
-                logger.LogError(waitForServerToStart.Exception, "Failed to start server");
-                return Result.Fail(waitForServerToStart.Exception, "Failed to start server");
-            }
-
             lock (_processLockObject)
             {
                 _process = process;
@@ -129,34 +116,35 @@ public partial class ServerService(
 
             #endregion
 
+
             #region StartOutputFlushBackgroundTask
 
+            logger.LogInformation("Starting background task to periodically write in StandardInput");
             StartOutputFlushBackgroundTask();
-            logger.LogInformation("Background task to periodically write in StandardInput started");
 
             #endregion
 
             #region RefreshMaps
 
-            if (string.IsNullOrWhiteSpace(startParameters.StartMap) == false)
-            {
-                eventService.OnMapChanged(startParameters.StartMap);
-            }
-
+            logger.LogInformation("Refreshing available maps");
             GetAllMaps(options.Value.SERVER_FOLDER, true);
-            logger.LogInformation("Available maps refreshed");
 
             #endregion
 
             #region RefreshConfigs
 
+            logger.LogInformation("Refreshing available configs");
             GetAvailableConfigs(options.Value.SERVER_FOLDER, true);
-            logger.LogInformation("Available configs refreshed");
 
             #endregion
 
-            logger.LogInformation("Server started");
+            logger.LogInformation("Adding event detection");
+            AddEventDetection();
             eventService.OnStartingServerDone(startParameters);
+            eventService.OnMapChanged(startParameters.StartMap);
+            eventService.OnHibernationStarted();
+
+            logger.LogInformation("Server started");
             return Result.Ok();
         }
         catch (Exception e)
@@ -268,7 +256,10 @@ public partial class ServerService(
         }
     }
 
-    private Result<Process> StartServerProcess(ServerStart serverStart, string executablePath, string serverFolder,
+    private async Task<Result<Process>> StartServerProcess(
+        ServerStart serverStart,
+        string executablePath,
+        string serverFolder,
         string startParameter)
     {
         var process = new Process
@@ -302,10 +293,13 @@ public partial class ServerService(
 
         ServerOutputEvent += ServerOutputLog;
         ServerOutputEvent += ServerOutputToDatabase;
-        AddEventDetection();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
-        return process;
+
+        var waitForServerToStart = await WaitForServerToStart(process);
+        return waitForServerToStart.IsFailed
+            ? Result<Process>.Fail($"Failed to start server process. {waitForServerToStart.Exception.Message}")
+            : process;
 
         void OnProcessOnOutputDataReceived(object _, DataReceivedEventArgs args)
         {
@@ -372,14 +366,20 @@ public partial class ServerService(
 
     private async Task<Result> WaitForServerToStart(Process process)
     {
-        EventHandler<ServerOutputEventArg>? serverStartedHandler = null;
+        DataReceivedEventHandler? serverStartedHandler = null;
         try
         {
             var serverStarted = false;
             var hostActivated = false;
-            serverStartedHandler = (_, serverOutputEventArg) =>
+
+            serverStartedHandler = (_, args) =>
             {
-                var message = serverOutputEventArg.Output;
+                var message = args.Data;
+                if (string.IsNullOrWhiteSpace(message))
+                {
+                    return;
+                }
+
                 if (message.StartsWith("Host activate: Loading"))
                 {
                     hostActivated = true;
@@ -400,8 +400,9 @@ public partial class ServerService(
                 serverStarted = true;
             };
 
+            process.OutputDataReceived += serverStartedHandler;
+            process.ErrorDataReceived += serverStartedHandler;
 
-            ServerOutputEvent += serverStartedHandler;
             var sw = Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds <= SERVER_START_TIMEOUT_MS)
             {
@@ -413,16 +414,15 @@ public partial class ServerService(
                     continue;
                 }
 
-                break;
+                return Result.Ok();
             }
 
-            return serverStarted
-                ? Result.Ok()
-                : Result.Fail($"Timout while waiting for the server to start after {SERVER_START_TIMEOUT_MS} ms");
+            return Result.Fail($"Timout while waiting for the server to start after {SERVER_START_TIMEOUT_MS} ms");
         }
         finally
         {
-            ServerOutputEvent -= serverStartedHandler;
+            process.OutputDataReceived -= serverStartedHandler;
+            process.ErrorDataReceived -= serverStartedHandler;
         }
     }
 

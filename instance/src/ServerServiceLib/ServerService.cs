@@ -563,10 +563,13 @@ public partial class ServerService(
                     try
                     {
                         await Task.Delay(50);
-                        if (_process is null)
+                        lock (_processLockObject)
                         {
-                            logger.LogWarning("OutputFlushBackgroundTask break; process is not set");
-                            break;
+                            if (_process is null)
+                            {
+                                logger.LogWarning("OutputFlushBackgroundTask break; process is not set");
+                                break;
+                            }
                         }
 
                         if (statusService is {ServerStarted: false, ServerStarting: false})
@@ -575,7 +578,10 @@ public partial class ServerService(
                             break;
                         }
 
-                        await _process.StandardInput.WriteAsync(_process.StandardInput.NewLine);
+                        lock (_processLockObject)
+                        {
+                            _process.StandardInput.Write(_process.StandardInput.NewLine);
+                        }
                     }
                     catch (Exception e)
                     {

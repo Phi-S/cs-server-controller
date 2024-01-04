@@ -1,0 +1,52 @@
+﻿@page "/start-settings"
+@inherits StartSettingsRazor
+@rendermode InteractiveServer
+
+@if (StartParameters is null)
+{
+    <LoadingComp/>
+}
+else
+{
+    <div class="p-1">
+        <form>
+            <h4 class="text-center">Start parameters</h4>
+            <div>
+                <label for="serverHostname" class="form-label">Server hostname</label>
+                <input type="text" class="form-control" id="serverHostname" @bind="@StartParameters.ServerHostname"/>
+            </div>
+            <div>
+                <label for="serverPassword" class="form-label">Server password</label>
+                <input type="text" class="form-control" id="serverPassword" @bind="@StartParameters.ServerPassword"/>
+            </div>
+            <div>
+                <label for="maxPlayers" class="form-label">Max players</label>
+                <input type="number" class="form-control" id="maxPlayers" @bind="@StartParameters.MaxPlayer"/>
+            </div>
+            <div>
+                <label for="startMap" class="form-label">Start map</label>
+                <input type="text" class="form-control" id="startMap" @bind="@StartParameters.StartMap"/>
+            </div>
+            <div>
+                <label for="gameMode" class="form-label">Game mode</label>
+                <input type="number" class="form-control" id="gameMode" @bind="@StartParameters.GameMode"/>
+            </div>
+            <div>
+                <label for="gameType" class="form-label">Game type</label>
+                <input type="number" class="form-control" id="gameType" @bind="@StartParameters.GameType"/>
+            </div>
+            <div>
+                <label for="loginToken" class="form-label">Login token</label>
+                <input type="text" class="form-control" id="loginToken" @bind="@StartParameters.LoginToken"/>
+            </div>
+            <div>
+                <label for="additionalStartParameters" class="form-label">Additional start parameters</label>
+                <input type="text" class="form-control" id="additionalStartParameters" @bind="@StartParameters.AdditionalStartParameters"/>
+            </div>
+            <div class="pt-2">
+                <button type="submit" class="btn btn-primary" @onclick="SaveStartParameters" title="A restart is required for the new start parameters to take effect">Save</button>
+                <button type="submit" class="btn btn-primary" @onclick="SaveStartParametersAndRestartServer">Save and restart</button>
+            </div>
+        </form>
+    </div>
+}

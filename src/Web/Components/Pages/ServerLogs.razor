@@ -1,0 +1,23 @@
+﻿@page "/server-logs"
+@inherits ServerLogsRazor
+@rendermode InteractiveServer
+
+@if (ServerLogs.Count == 0)
+{
+    <LoadingComp/>
+}
+else
+{
+    <table class="table table-sm table-striped">
+        <tbody>
+        @foreach (var e in ServerLogs)
+        {
+            <tr class="d-table-row">
+                <td nowrap class="pe-3">@e.Timestamp</td>
+                <td>@e.Message</td>
+            </tr>
+        }
+        </tbody>
+
+    </table>
+}

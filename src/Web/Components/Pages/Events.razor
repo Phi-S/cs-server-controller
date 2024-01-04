@@ -1,0 +1,19 @@
+﻿@page "/events"
+@inherits EventsRazor
+@rendermode InteractiveServer
+@if (EventLogs is null)
+{
+    <LoadingComp/>
+}
+else
+{
+    <table>
+        @foreach (var e in EventLogs)
+        {
+            <tr>
+                <td class="pe-3">@e.TriggeredAtUtc</td>
+                <td>@e.EventName</td>
+            </tr>
+        }
+    </table>
+}

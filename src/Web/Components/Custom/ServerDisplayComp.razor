@@ -1,0 +1,64 @@
+﻿@inherits ServerDisplayCompRazor
+@rendermode InteractiveServer
+
+@if (ServerInfo == null)
+{
+    <LoadingComp/>
+}
+else
+{
+    <div class="container container-md @GetBackgroundColor() rounded" style="max-width: 35rem; height: 3rem; font-size: large">
+        <div class="row h-100 align-items-center ps-1 pe-1">
+            <div class="col-7 btn @HostnameMdCol text-start m-0 p-0 text-truncate" @onclick="ConnectToServer">
+                <span class="text-decoration-underline" title="@Hostname">
+                    <strong>@Hostname</strong>
+                </span>
+            </div>
+
+            @if (ServerInfo.ServerStarted)
+            {
+                <div class="col-2 d-none d-sm-block text-start m-0 p-0">
+                    <span title="Player count: @ServerInfo.CurrentPlayerCount / @ServerInfo.MaxPlayerCount">@ServerInfo.CurrentPlayerCount / @ServerInfo.MaxPlayerCount</span>
+                </div>
+
+                <div class="col-2 d-none d-sm-block text-start m-0 p-0 text-truncate">
+                    <span title="Current map: @ServerInfo.CurrentMap">@ServerInfo.CurrentMap</span>
+                </div>
+            }
+
+            <div class="col-5 @ButtonsMdCol text-end m-0 p-0" style="font-size: x-large">
+                <button class="border-0 bg-transparent bi bi-copy" title="Copy IP" @onclick="CopyConnectStringToClipboard"></button>
+
+                <div class="dropdown d-inline">
+                    <button class="border-0 bg-transparent bi bi-map" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false" title="Changes map. The server needs to be online to do this"></button>
+                    <ul class="dropdown-menu position-absolute z-3" aria-labelledby="dropdownMenuButton1">
+                        @foreach (var map in ServerInfoService.Maps)
+                        {
+                            <li>
+                                <button class="dropdown-item" type="button" @onclick="() => ChangeMap(map)">@map</button>
+                            </li>
+                        }
+                    </ul>
+                </div>
+
+                <button class="border-0 bg-transparent bi bi-file-earmark-post" title="Logs" @onclick="NavigateToServerLogsPage"></button>
+                @if (ServerInfo.ServerStarted)
+                {
+                    <button class="border-0 bg-transparent bi-stop" title="Stop server" @onclick="StopServer"></button>
+                }
+                else if (ServerInfo.ServerStarting || ServerInfo.ServerUpdatingOrInstalling)
+                {
+                    <button class="border-0 bg-transparent">
+                        <div class="spinner-grow" title="@LoadingMessage" role="status" style="width: 1.3rem; height: 1.3rem">
+                            <span class="visually-hidden"></span>
+                        </div>
+                    </button>
+                }
+                else
+                {
+                    <button class="border-0 bg-transparent bi-play" title="Start server" @onclick="StartServer"></button>
+                }
+            </div>
+        </div>
+    </div>
+}

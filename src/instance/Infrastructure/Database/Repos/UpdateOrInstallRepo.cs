@@ -35,7 +35,7 @@ public class UpdateOrInstallRepo
         });
     }
 
-    public Task<List<UpdateOrInstallLog>> GetSince(DateTime logsSince)
+    public Task<List<UpdateOrInstallLog>> GetLogsSince(DateTime logsSince)
     {
         return Task.FromResult(_dbContext.UpdateOrInstallLogs.Where(log => log.CreatedAtUtc >= logsSince)
             .Include(log => log.UpdateOrInstallStart)

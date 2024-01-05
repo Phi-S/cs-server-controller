@@ -20,7 +20,7 @@ public partial class ServerService
 
         if (_statusService.ServerInstalled == false)
         {
-            return Errors.ServerIsNotInstalled();
+            return InstanceErrors.ServerIsNotInstalled();
         }
 
         var mapFolderPath = Path.Combine(serverFolder, "game", "csgo", "maps");

@@ -16,7 +16,6 @@ public class EventsRazor : ComponentBase
         try
         {
             ServerInfoService.OnEventsChangedEvent += async (_, _) => { await InvokeAsync(StateHasChanged); };
-            //ServerInfoService.StartEventsBackgroundTask();
         }
         catch (Exception e)
         {

@@ -1,0 +1,45 @@
+﻿@page "/chat-commands"
+@inherits ChatCommandRazor
+@rendermode InteractiveServer
+
+<table class="table table-sm table-striped align-middle text-center">
+    <thead>
+    <tr>
+        <th>Chat command</th>
+        <th>Server command</th>
+        <th >
+            <button class="btn btn-success" style="width: 3rem" @onclick="New">+</button>
+        </th>
+    </tr>
+    </thead>
+
+    <tbody>
+    @if (ShowNewRow)
+    {
+        <tr>
+            <td>
+                <input class="input-group-text w-100" type="text" @bind="NewChatCommand"/>
+            </td>
+            <td>
+                <input class="input-group-text w-100" type="text" @bind="NewServerCommand"/>
+            </td>
+            <td class="col-2">
+                <button class="btn btn-success" @onclick="SaveNew">Save</button>
+            </td>
+        </tr>
+    }
+
+    @foreach (var chatCommand in ChatCommandsList)
+    {
+        <tr>
+            <td>@chatCommand.ChatMessage</td>
+            <td>@chatCommand.ServerCommand</td>
+            <td>
+                <button class="btn btn-danger" style="width: 3rem" @onclick="() => Delete(chatCommand.ChatMessage)">-</button>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+<ConfirmDialog @ref="DeleteConfirmDialogRef"/>

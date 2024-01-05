@@ -2,23 +2,27 @@
 
 namespace Application.EventServiceFolder.EventArgs;
 
-public class CustomEventArgPlayerConnected(Events eventName, string playerName, string playerIp) : CustomEventArg(eventName)
+public class CustomEventArgPlayerConnected(Events eventName, string connectionId, string steamId, string ipPort)
+    : CustomEventArg(eventName)
 {
-    public string PlayerName { get; } = playerName;
-    public string PlayerIp { get; } = playerIp;
+    public string ConnectionId { get; } = connectionId;
+    public string SteamId { get; } = steamId;
+    public string IpPort { get; } = ipPort;
 
     public override string GetDataJson()
     {
         var data = new
         {
-            PlayerName,
-            PlayerIp
+            ConnectionId,
+            SteamId,
+            IpPort
         };
         return JsonSerializer.Serialize(data);
     }
 
     public override string ToString()
     {
-        return $"{base.ToString()}, {nameof(PlayerName)}: {PlayerName}, {nameof(PlayerIp)}: {PlayerIp}";
+        return
+            $"{base.ToString()}, {nameof(ConnectionId)}: {ConnectionId}, {nameof(SteamId)}: {SteamId}, {nameof(IpPort)}: {IpPort}";
     }
 }

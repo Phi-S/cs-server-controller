@@ -1,4 +1,5 @@
-﻿using Application.EventServiceFolder;
+﻿using Application.ChatCommandFolder;
+using Application.EventServiceFolder;
 using Application.ServerServiceFolder;
 using Application.StatusServiceFolder;
 using Application.UpdateOrInstallServiceFolder;
@@ -18,6 +19,7 @@ public static class ApplicationExtensionMethods
         serviceCollection.AddSingleton<StatusService>();
         serviceCollection.AddSingleton<UpdateOrInstallService>();
         serviceCollection.AddSingleton<ServerService>();
+        serviceCollection.AddHostedService<ChatCommandService>();
 
         serviceCollection.AddApplicationMediatR();
         return serviceCollection;

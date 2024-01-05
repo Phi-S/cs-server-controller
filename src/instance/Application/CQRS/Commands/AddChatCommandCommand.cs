@@ -1,23 +1,29 @@
-﻿using Application.ChatCommandsFolder;
-using ErrorOr;
+﻿using ErrorOr;
+using Infrastructure.Database;
 using MediatR;
 
 namespace Application.CQRS.Commands;
 
-public record AddChatCommandCommand(string ChatMessage, string Command) : IRequest<ErrorOr<Success>>;
+public record AddChatCommandCommand(string ChatMessage, string ServerCommand) : IRequest<ErrorOr<Success>>;
 
 public class AddChatCommandCommandHandler : IRequestHandler<AddChatCommandCommand, ErrorOr<Success>>
 {
-    private readonly ChatCommandService _chatCommandService;
+    private readonly UnitOfWork _unitOfWork;
 
-    public AddChatCommandCommandHandler(ChatCommandService chatCommandService)
+    public AddChatCommandCommandHandler(UnitOfWork unitOfWork)
     {
-        _chatCommandService = chatCommandService;
+        _unitOfWork = unitOfWork;
     }
 
-    public Task<ErrorOr<Success>> Handle(AddChatCommandCommand request, CancellationToken cancellationToken)
+    public async Task<ErrorOr<Success>> Handle(AddChatCommandCommand request, CancellationToken cancellationToken)
     {
-        _chatCommandService.AddNewCommand(request.ChatMessage, request.Command);
-        return Task.FromResult<ErrorOr<Success>>(Result.Success);
+        var addResult = await _unitOfWork.ChatCommandRepo.Add(request.ChatMessage, request.ServerCommand);
+        if (addResult.IsError)
+        {
+            return addResult.FirstError;
+        }
+
+        await _unitOfWork.Save();
+        return Result.Success;
     }
 }

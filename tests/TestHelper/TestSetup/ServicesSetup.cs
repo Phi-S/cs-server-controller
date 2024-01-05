@@ -10,18 +10,7 @@ namespace TestHelper.TestSetup;
 
 public static class ServicesSetup
 {
-    public static async Task<IServiceCollection> GetApiInfrastructureCollection(ITestOutputHelper outputHelper)
-    {
-        var (id, containerName, connectionString) = await PostgresContainer.StartNew(outputHelper);
-        var config = TestConfiguration.GetApiAppSettingsTest("DatabaseConnectionString", connectionString);
-        var serviceCollection = new ServiceCollection();
-        serviceCollection.AddTestLogger(outputHelper);
-        serviceCollection.AddSingleton(config);
-        serviceCollection.AddInfrastructure();
-        return serviceCollection;
-    }
-
-    public static async Task<IServiceCollection> GetApplicationCollection(ITestOutputHelper outputHelper)
+    public static Task<IServiceCollection> GetApplicationCollection(ITestOutputHelper outputHelper)
     {
         var folderGuid = Guid.NewGuid();
         var config = TestConfiguration.GetApiAppSettingsTest(
@@ -42,6 +31,6 @@ public static class ServicesSetup
         serviceCollection.AddSingleton(config);
         serviceCollection.AddApplication();
         outputHelper.WriteLine($"Guid: {folderGuid}");
-        return serviceCollection;
+        return Task.FromResult<IServiceCollection>(serviceCollection);
     }
 }

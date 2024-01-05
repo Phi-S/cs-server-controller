@@ -25,6 +25,7 @@ public class InstanceDbContext : DbContext
     public required DbSet<UpdateOrInstallStart> UpdateOrInstallStarts { get; set; }
     public required DbSet<UpdateOrInstallLog> UpdateOrInstallLogs { get; set; }
     public required DbSet<EventLog> EvenLogs { get; set; }
+    public required DbSet<ChatCommand> ChatCommands { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

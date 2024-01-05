@@ -8,6 +8,7 @@ using Infrastructure.Database.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Shared;
 using Shared.ApiModels;
 
 namespace Application.ServerServiceFolder;
@@ -130,7 +131,6 @@ public partial class ServerService
             _logger.LogInformation("Server process started");
 
             #endregion
-
 
             #region StartOutputFlushBackgroundTask
 

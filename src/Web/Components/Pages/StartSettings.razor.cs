@@ -6,8 +6,6 @@ namespace Web.Components.Pages;
 
 public class StartSettingsRazor : ComponentBase
 {
-    private static Guid? _currentUpdateOrInstallId;
-
     [Inject] private ILogger<StartSettingsRazor> Logger { get; set; } = default!;
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
     [Inject] private InstanceApiService InstanceApiService { get; set; } = default!;
@@ -17,7 +15,6 @@ public class StartSettingsRazor : ComponentBase
 
     protected override void OnInitialized()
     {
-        ServerInfoService.OnServerInfoChangedEvent += async (_, _) => await InvokeAsync(StateHasChanged);
         StartParameters = StartParametersJsonService.Get();
     }
 
@@ -46,7 +43,6 @@ public class StartSettingsRazor : ComponentBase
         {
             StartParameters.ThrowIfNull();
             ServerInfoService.ServerInfo.ThrowIfNull();
-
 
             StartParametersJsonService.Overwrite(StartParameters);
             var newStartParameters = StartParametersJsonService.Get();

@@ -4,6 +4,7 @@ using Application.ServerServiceFolder;
 using Domain;
 using Infrastructure.Database.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Shared;
 using TestHelper.TestSetup;
 using TestHelper.WaitUtilFolder;
 using Xunit.Abstractions;

@@ -281,9 +281,10 @@ public sealed class EventService
 
     public event EventHandler<CustomEventArgPlayerConnected>? PlayerConnected;
 
-    public void OnPlayerConnected(string playerName, string playerIp)
+    public void OnPlayerConnected(string connectionId, string steamId, string ipPort)
     {
-        PlayerConnected?.Invoke(this, new CustomEventArgPlayerConnected(Events.PlayerConnected, playerName, playerIp));
+        PlayerConnected?.Invoke(this,
+            new CustomEventArgPlayerConnected(Events.PlayerConnected, connectionId, steamId, ipPort));
     }
 
     #endregion PlayerConnected
@@ -300,7 +301,8 @@ public sealed class EventService
         string disconnectReason)
     {
         PlayerDisconnected?.Invoke(this,
-            new CustomEventArgPlayerDisconnected(Events.PlayerDisconnected,
+            new CustomEventArgPlayerDisconnected(
+                Events.PlayerDisconnected,
                 connectionId,
                 steamId64,
                 ipPort,

@@ -1,5 +1,5 @@
-﻿using Domain;
-using ErrorOr;
+﻿using ErrorOr;
+using Shared;
 
 namespace TestHelper.WaitUtilFolder;
 

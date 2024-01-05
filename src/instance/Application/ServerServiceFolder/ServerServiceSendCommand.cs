@@ -3,6 +3,7 @@ using System.Text;
 using Domain;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
+using Shared;
 
 namespace Application.ServerServiceFolder;
 
@@ -25,17 +26,17 @@ public partial class ServerService
 
         if (_currentlyExecutingCommand)
         {
-            return Errors.ServerIsBusy(Errors.ServerBusyTypes.ExecutingCommand);
+            return InstanceErrors.ServerIsBusy(InstanceErrors.ServerBusyTypes.ExecutingCommand);
         }
 
         if (_statusService.ServerUpdatingOrInstalling)
         {
-            return Errors.ServerIsBusy(Errors.ServerBusyTypes.UpdatingOrInstalling);
+            return InstanceErrors.ServerIsBusy(InstanceErrors.ServerBusyTypes.UpdatingOrInstalling);
         }
 
         if (_statusService.ServerStopping)
         {
-            return Errors.ServerIsBusy(Errors.ServerBusyTypes.Stopping);
+            return InstanceErrors.ServerIsBusy(InstanceErrors.ServerBusyTypes.Stopping);
         }
 
         return Result.Success;

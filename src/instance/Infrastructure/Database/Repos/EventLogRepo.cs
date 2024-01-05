@@ -22,12 +22,12 @@ public class EventLogRepo
         });
     }
 
-    public Task<List<EventLog>> GetAllSince(DateTime since)
+    public Task<List<EventLog>> GetLogsSince(DateTime since)
     {
         return Task.FromResult(_dbContext.EvenLogs.Where(log => log.TriggeredAtUtc >= since).ToList());
     }
 
-    public Task<List<EventLog>> GetAllSince(DateTime since, string eventName)
+    public Task<List<EventLog>> GetLogsSince(DateTime since, string eventName)
     {
         return Task.FromResult(_dbContext.EvenLogs.Where(log => log.TriggeredAtUtc >= since && log.Name.Equals(eventName))
             .ToList());

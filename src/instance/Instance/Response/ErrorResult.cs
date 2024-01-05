@@ -1,6 +1,7 @@
 ﻿using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
+using Shared.ApiModels;
 
 namespace Instance.Response;
 
@@ -9,20 +10,15 @@ internal static class ResultsExtensions
     public static IResult InternalServerError(this IResultExtensions resultExtensions, string message)
     {
         ArgumentNullException.ThrowIfNull(resultExtensions);
-        return new ErrorResponse(StatusCodes.Status500InternalServerError, message);
+        return new ErrorResult(StatusCodes.Status500InternalServerError, message);
     }
 }
 
-public class ErrorResponse(int statusCode, string message) : IResult
+public class ErrorResult(int statusCode, string message) : IResult
 {
     private string GetJson(string traceId)
     {
-        var resultObject = new
-        {
-            TraceId = traceId,
-            Message = message,
-        };
-
+        var resultObject = new ErrorResponse(traceId, message);
         return JsonSerializer.Serialize(resultObject);
     }
 

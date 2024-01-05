@@ -2,63 +2,69 @@
 @inherits HomeRazor
 @rendermode InteractiveServer
 
-@if (ServerInfoService.ServerInfo is null || StartParameters is null)
+@if (ServerInfoService.ServerInfo is null)
 {
     <LoadingComp/>
 }
 else
 {
-    <div class="container p-0 m-0">
-        <div class="row">
-            <div class="col text-nowrap pb-3">
+    <div class="container-fluid p-0 m-0">
+        <div class="row text-center">
+            <div class="col-6 text-nowrap pb-3">
                 <div class="p-1">
                     @if (ServerInfoService.ServerInfo.ServerStarted == false)
                     {
-                        <button disabled="@ServerInfoService.ServerInfo?.ServerUpdatingOrInstalling" title="Start server" @onclick="@Start">Start server</button>
+                        <button class="btn btn-outline-info" disabled="@ServerInfoService.ServerInfo?.ServerUpdatingOrInstalling" title="Start server" @onclick="@Start">Start server</button>
                     }
                     else
                     {
-                        <button title="Stop server" @onclick="@Stop">Stop server</button>
+                        <button class="btn btn-outline-info" title="Stop server" @onclick="@Stop">Stop server</button>
                     }
                 </div>
 
                 <div class="p-1">
                     @if (ServerInfoService.ServerInfo?.ServerUpdatingOrInstalling == false)
                     {
-                        <button title="Update server" @onclick="@StartUpdateOrInstall">Update server</button>
+                        <button class="btn btn-outline-info" title="Update server" @onclick="@StartUpdateOrInstall">Update server</button>
                     }
                     else
                     {
-                        <button title="Cancel server update" @onclick="@CancelUpdateOrInstall">Cancel server update</button>
+                        <button class="btn btn-outline-info" title="Cancel server update" @onclick="@CancelUpdateOrInstall">Cancel server update</button>
                     }
                 </div>
 
                 <div class="dropdown p-1">
-                    <button disabled="@DisabledWhenServerIsOffline" type="button" id="changeMapDropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Changes map. The server needs to be online to do this">
+                    <button class="btn btn-outline-info" disabled="@DisabledWhenServerIsOffline" type="button" id="changeMapDropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Changes map. The server needs to be online to do this">
                         Change map
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="changeMapDropdownMenuButton">
                         @foreach (var map in ServerInfoService.Maps)
                         {
                             <li>
-                                <button disabled="@DisabledWhenServerIsOffline" class="dropdown-item" type="button" @onclick="() => ChangeMap(map)">@map</button>
+                                <button class="dropdown-item" disabled="@DisabledWhenServerIsOffline" type="button" @onclick="() => ChangeMap(map)">@map</button>
                             </li>
                         }
                     </ul>
                 </div>
 
                 <div class="dropdown p-1">
-                    <button disabled="@DisabledWhenServerIsOffline" type="button" id="executeConfigDropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Executing config. The server needs to be online to do this">
+                    <button class="btn btn-outline-info" disabled="@DisabledWhenServerIsOffline" type="button" id="executeConfigDropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Executing config. The server needs to be online to do this">
                         Execute config
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="executeConfigDropdownMenuButton">
                         @foreach (var config in ServerInfoService.Configs)
                         {
                             <li>
-                                <button disabled="@DisabledWhenServerIsOffline" class="dropdown-item" type="button" @onclick="() => ExecuteConfig(config)">@config</button>
+                                <button class="dropdown-item" disabled="@DisabledWhenServerIsOffline" type="button" @onclick="() => ExecuteConfig(config)">@config</button>
                             </li>
                         }
                     </ul>
+                </div>
+                <div class="p-1">
+                    <div class="input-group justify-content-center d-flex">
+                        <input class="input-group-text" placeholder="Server command" @bind="SendCommandBind"/>
+                        <button class="btn btn-outline-info" @onclick="SendCommand">Send</button>
+                    </div>
                 </div>
             </div>
         </div>

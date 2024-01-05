@@ -4,6 +4,7 @@ using Application.ServerServiceFolder;
 using Domain;
 using Infrastructure.Database.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Shared;
 using TestHelper.TestSetup;
 using TestHelper.WaitUtilFolder;
 using Xunit.Abstractions;
@@ -36,7 +37,23 @@ public class PlayerDisconnectDetectionTests
         "2055",
         "NETWORK_DISCONNECT_LOOPDEACTIVATE")
     ]
-    public async Task TestNewOutputPlayerDisconnectDetection(
+    [InlineData(
+        "[#3000669907 UDP steamid:76561198044941665@172.17.0.1:54196] closed by app, entering linger state (2158) NETWORK_DISCONNECT_KICKED_IDLE",
+        "3000669907",
+        "76561198044941665",
+        "172.17.0.1:54196",
+        "2158",
+        "NETWORK_DISCONNECT_KICKED_IDLE")
+    ]
+    [InlineData(
+        "[#2292360458 UDP steamid:76561198044941665@172.17.0.1:33160] closed by app, entering linger state (2039) NETWORK_DISCONNECT_KICKED",
+        "2292360458",
+        "76561198044941665",
+        "172.17.0.1:33160",
+        "2039",
+        "NETWORK_DISCONNECT_KICKED")
+    ]
+    public async Task TestNewOutputPlayerDisconnectByPeerDetection(
         string rawMessage,
         string shouldBeConnectionId,
         string shouldBeSteamId64,

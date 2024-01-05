@@ -3,6 +3,7 @@ using Application.UpdateOrInstallServiceFolder;
 using Domain;
 using ErrorOr;
 using MediatR;
+using Shared;
 using Shared.ApiModels;
 
 namespace Application.CQRS.Commands;

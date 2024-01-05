@@ -1,186 +1,318 @@
 using Application.EventServiceFolder;
 using Application.StatusServiceFolder;
+using Microsoft.Extensions.DependencyInjection;
+using Shared.ApiModels;
+using TestHelper.TestSetup;
+using Xunit.Abstractions;
 
 namespace ApplicationTests;
 
 public class EventAndStatusServiceTest
 {
-    private readonly EventService _eventService;
-    private readonly StatusService _statusService;
+    private readonly ITestOutputHelper _output;
 
-    /*
     public EventAndStatusServiceTest(ITestOutputHelper output)
     {
-        var serviceCollection = new ServiceCollection();
-        serviceCollection.AddInfrastructure();
-        var scope = serviceCollection.BuildServiceProvider();
-        
-        _eventService = new EventService(new XunitLogger<EventService>(output), scope);
-        _statusService = new StatusService(_eventService);
+        _output = output;
     }
 
     [Fact]
-    public void TestStartingServer()
+    public async Task TestStartingServer()
     {
-        _statusService.Reset();
-        Assert.True(_statusService.ServerStarting == false);
-        _eventService.OnStartingServer();
-        Assert.True(_statusService.ServerStarting);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        Assert.True(statusService.ServerStarting == false);
+        eventService.OnStartingServer();
+
+        // Assert
+        Assert.True(statusService.ServerStarting);
     }
 
     [Fact]
-    public void TestStartingServerDone()
+    public async Task TestStartingServerDone()
     {
-        _statusService.Reset();
-        Assert.True(_statusService.ServerStarted == false);
-        _eventService.OnStartingServerDone(new StartParameters());
-        Assert.True(_statusService.ServerStarted);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        Assert.True(statusService.ServerStarted == false);
+
+        // Assert
+        eventService.OnStartingServerDone(new StartParameters());
+        Assert.True(statusService.ServerStarted);
     }
 
     [Fact]
-    public void TestStartingServerFailed()
+    public async Task TestStartingServerFailed()
     {
-        _statusService.Reset();
-        _eventService.OnStartingServer();
-        Assert.True(_statusService.ServerStarting);
-        _eventService.OnStartingServerFailed();
-        Assert.True(_statusService.ServerStarting == false);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        eventService.OnStartingServer();
+        Assert.True(statusService.ServerStarting);
+        eventService.OnStartingServerFailed();
+
+        // Assert
+        Assert.True(statusService.ServerStarting == false);
     }
 
     [Fact]
-    public void TestStoppingServer()
+    public async Task TestStoppingServer()
     {
-        _statusService.Reset();
-        Assert.True(_statusService.ServerStopping == false);
-        _eventService.OnStoppingServer();
-        Assert.True(_statusService.ServerStopping);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        Assert.True(statusService.ServerStopping == false);
+        eventService.OnStoppingServer();
+
+        // Assert
+        Assert.True(statusService.ServerStopping);
     }
 
     [Fact]
-    public void TestServerExited()
+    public async Task TestServerExited()
     {
-        _statusService.Reset();
-        _eventService.OnStartingServerDone(new StartParameters());
-        Assert.True(_statusService.ServerStarted);
-        _eventService.OnServerExited();
-        Assert.True(_statusService.ServerStarted == false);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        eventService.OnStartingServerDone(new StartParameters());
+        Assert.True(statusService.ServerStarted);
+        eventService.OnServerExited();
+
+        // Assert
+        Assert.True(statusService.ServerStarted == false);
     }
 
     [Fact]
-    public void TestUpdateOrInstallStarted()
+    public async Task TestUpdateOrInstallStarted()
     {
-        _statusService.Reset();
-        Assert.True(_statusService.ServerUpdatingOrInstalling == false);
-        _eventService.OnUpdateOrInstallStarted(Guid.NewGuid());
-        Assert.True(_statusService.ServerUpdatingOrInstalling);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        Assert.True(statusService.ServerUpdatingOrInstalling == false);
+        eventService.OnUpdateOrInstallStarted(Guid.NewGuid());
+
+        // Assert
+        Assert.True(statusService.ServerUpdatingOrInstalling);
     }
 
 
     [Fact]
-    public void TestUpdateOrInstallDone()
+    public async Task TestUpdateOrInstallDone()
     {
-        _statusService.Reset();
-        _eventService.OnUpdateOrInstallStarted(Guid.NewGuid());
-        Assert.True(_statusService.ServerUpdatingOrInstalling);
-        _eventService.OnUpdateOrInstallDone(Guid.NewGuid());
-        Assert.True(_statusService.ServerUpdatingOrInstalling == false);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        eventService.OnUpdateOrInstallStarted(Guid.NewGuid());
+        Assert.True(statusService.ServerUpdatingOrInstalling);
+        eventService.OnUpdateOrInstallDone(Guid.NewGuid());
+
+        // Assert
+        Assert.True(statusService.ServerUpdatingOrInstalling == false);
     }
 
     [Fact]
-    public void TestUpdateOrInstallCancelled()
+    public async Task TestUpdateOrInstallCancelled()
     {
-        _statusService.Reset();
-        _eventService.OnUpdateOrInstallStarted(Guid.NewGuid());
-        Assert.True(_statusService.ServerUpdatingOrInstalling);
-        _eventService.OnUpdateOrInstallCancelled(Guid.NewGuid());
-        Assert.True(_statusService.ServerUpdatingOrInstalling == false);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        eventService.OnUpdateOrInstallStarted(Guid.NewGuid());
+        Assert.True(statusService.ServerUpdatingOrInstalling);
+        eventService.OnUpdateOrInstallCancelled(Guid.NewGuid());
+
+        // Assert
+        Assert.True(statusService.ServerUpdatingOrInstalling == false);
     }
 
     [Fact]
-    public void TestUpdateOrInstallFailed()
+    public async Task TestUpdateOrInstallFailed()
     {
-        _statusService.Reset();
-        _eventService.OnUpdateOrInstallStarted(Guid.NewGuid());
-        Assert.True(_statusService.ServerUpdatingOrInstalling);
-        _eventService.OnUpdateOrInstallFailed(Guid.NewGuid());
-        Assert.True(_statusService.ServerUpdatingOrInstalling == false);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        eventService.OnUpdateOrInstallStarted(Guid.NewGuid());
+        Assert.True(statusService.ServerUpdatingOrInstalling);
+        eventService.OnUpdateOrInstallFailed(Guid.NewGuid());
+
+        // Assert
+        Assert.True(statusService.ServerUpdatingOrInstalling == false);
     }
 
     [Fact]
-    public void TestUploadDemoStarted()
+    public async Task TestUploadDemoStarted()
     {
-        _statusService.Reset();
-        Assert.True(_statusService.DemoUploading == false);
-        _eventService.OnUploadDemoStarted("test");
-        Assert.True(_statusService.DemoUploading);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        Assert.True(statusService.DemoUploading == false);
+        eventService.OnUploadDemoStarted("test");
+
+        // Assert
+        Assert.True(statusService.DemoUploading);
     }
 
     [Fact]
-    public void TestUploadDemoDone()
+    public async Task TestUploadDemoDone()
     {
-        _statusService.Reset();
-        _eventService.OnUploadDemoStarted("test");
-        Assert.True(_statusService.DemoUploading);
-        _eventService.OnUploadDemoDone("test");
-        Assert.True(_statusService.DemoUploading == false);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        eventService.OnUploadDemoStarted("test");
+        Assert.True(statusService.DemoUploading);
+        eventService.OnUploadDemoDone("test");
+
+        // Assert
+        Assert.True(statusService.DemoUploading == false);
     }
 
     [Fact]
-    public void TestUploadDemoFailed()
+    public async Task TestUploadDemoFailed()
     {
-        _statusService.Reset();
-        _eventService.OnUploadDemoStarted("test");
-        Assert.True(_statusService.DemoUploading);
-        _eventService.OnUploadDemoFailed("test");
-        Assert.True(_statusService.DemoUploading == false);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        eventService.OnUploadDemoStarted("test");
+        Assert.True(statusService.DemoUploading);
+        eventService.OnUploadDemoFailed("test");
+
+        // Assert
+        Assert.True(statusService.DemoUploading == false);
     }
 
     [Fact]
-    public void TestHibernationStarted()
+    public async Task TestHibernationStarted()
     {
-        _statusService.Reset();
-        Assert.True(_statusService.ServerHibernating == false);
-        _eventService.OnHibernationStarted();
-        Assert.True(_statusService.ServerHibernating);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        Assert.True(statusService.ServerHibernating == false);
+        eventService.OnHibernationStarted();
+
+        // Assert
+        Assert.True(statusService.ServerHibernating);
     }
 
     [Fact]
-    public void TestHibernationEnded()
+    public async Task TestHibernationEnded()
     {
-        _statusService.Reset();
-        _eventService.OnHibernationStarted();
-        Assert.True(_statusService.ServerHibernating);
-        _eventService.OnHibernationEnded();
-        Assert.True(_statusService.ServerHibernating == false);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        eventService.OnHibernationStarted();
+        Assert.True(statusService.ServerHibernating);
+        eventService.OnHibernationEnded();
+
+        // Assert
+        Assert.True(statusService.ServerHibernating == false);
     }
 
     [Fact]
-    public void TestMapChanged()
+    public async Task TestMapChanged()
     {
-        _statusService.Reset();
-        Assert.True(string.IsNullOrWhiteSpace(_statusService.CurrentMap));
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        Assert.True(string.IsNullOrWhiteSpace(statusService.CurrentMap));
         var map = "asdf";
-        _eventService.OnMapChanged(map);
-        Assert.Equal(_statusService.CurrentMap, map);
+        eventService.OnMapChanged(map);
+
+        // Assert
+        Assert.Equal(statusService.CurrentMap, map);
     }
 
     [Fact]
-    public void TestPlayerConnected()
+    public async Task TestPlayerConnected()
     {
-        _statusService.Reset();
-        Assert.True(_statusService.CurrentPlayerCount == 0);
-        _eventService.OnPlayerConnected("test", "test");
-        Assert.True(_statusService.CurrentPlayerCount == 1);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        Assert.True(statusService.CurrentPlayerCount == 0);
+        eventService.OnPlayerConnected("test", "test", "test");
+
+        // Assert
+        Assert.True(statusService.CurrentPlayerCount == 1);
     }
 
     [Fact]
-    public void TestPlayerDisconnected()
+    public async Task TestPlayerDisconnected()
     {
-        _statusService.Reset();
-        _eventService.OnPlayerConnected("test", "test");
-        Assert.True(_statusService.CurrentPlayerCount == 1);
-        _eventService.OnPlayerDisconnected("test", "test", "test", "test", "test");
-        Assert.True(_statusService.CurrentPlayerCount == 0);
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var eventService = provider.GetRequiredService<EventService>();
+        var statusService = provider.GetRequiredService<StatusService>();
+
+        // Act
+        eventService.OnPlayerConnected("test", "test", "test");
+        Assert.True(statusService.CurrentPlayerCount == 1);
+        eventService.OnPlayerDisconnected("test", "test", "test", "test", "test");
+
+        // Assert
+        Assert.True(statusService.CurrentPlayerCount == 0);
     }
-    */
 }

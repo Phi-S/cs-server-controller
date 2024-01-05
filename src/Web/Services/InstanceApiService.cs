@@ -1,180 +1,304 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using System.Web;
+using ErrorOr;
 using Microsoft.Extensions.Options;
+using Shared;
 using Shared.ApiModels;
-using Throw;
+using Web.Helper;
 using Web.Options;
+using Success = ErrorOr.Success;
 
 namespace Web.Services;
 
-public class InstanceApiService(IOptions<AppOptions> options, HttpClient httpClient)
+public class InstanceApiService
 {
     private readonly JsonSerializerOptions _jsonOption = new(JsonSerializerDefaults.Web);
 
-    #region Server
+    private readonly IOptions<AppOptions> _options;
+    private readonly HttpClient _httpClient;
 
-    public async Task<ServerStatusResponse> Info()
+    public InstanceApiService(IOptions<AppOptions> options, HttpClient httpClient)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + "/server/info";
-        var json = await httpClient.GetStringAsync(url);
-        json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var result = JsonSerializer.Deserialize<ServerStatusResponse>(json, _jsonOption);
-        result.ThrowIfNull();
-        return result;
+        _options = options;
+        _httpClient = httpClient;
     }
 
-    public async Task<List<string>> Events()
-    {
-        var url = options.Value.INSTANCE_API_ENDPOINT + "/server/events";
-        var json = await httpClient.GetStringAsync(url);
-        json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var result = JsonSerializer.Deserialize<List<string>>(json, _jsonOption);
-        result.ThrowIfNull();
-        return result;
-    }
+    #region Send
 
-    public async Task<Guid> StartUpdatingOrInstalling(StartParameters? startParameters)
+    private async Task<ErrorOr<Success>> SendWithoutResponse(HttpRequestMessage requestMessage)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + "/server/start-updating-or-installing";
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        if (startParameters is not null)
+        try
         {
-            request.Content = JsonContent.Create(startParameters);
+            var response = await _httpClient.SendAsync(requestMessage);
+            if (response.IsSuccessStatusCode)
+            {
+                return Result.Success;
+            }
+
+            if (response.StatusCode != HttpStatusCode.InternalServerError)
+            {
+                return Errors.Fail($"Request failed with status code {response.StatusCode}");
+            }
+
+            var errorResponseJson = await response.Content.ReadAsStringAsync();
+            return Errors.Fail(
+                $"Request failed with status code {response.StatusCode} and ErrorResponse: {errorResponseJson}");
+        }
+        catch (Exception e)
+        {
+            return Errors.Fail($"Request failed with exception \"{e.Message}\"");
+        }
+    }
+
+    private async Task<ErrorOr<string>> Send(HttpRequestMessage requestMessage)
+    {
+        try
+        {
+            var response = await _httpClient.SendAsync(requestMessage);
+            if (response.IsSuccessStatusCode)
+            {
+                var resultJson = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(resultJson))
+                {
+                    return Errors.Fail($"Request failed. Failed to read content.");
+                }
+
+                return resultJson;
+            }
+
+            if (response.StatusCode != HttpStatusCode.InternalServerError)
+            {
+                return Errors.Fail($"Request failed with status code {response.StatusCode}");
+            }
+
+            var errorResponseJson = await response.Content.ReadAsStringAsync();
+            return Errors.Fail(
+                $"Request failed with status code {response.StatusCode} and ErrorResponse: {errorResponseJson}");
+        }
+        catch (Exception e)
+        {
+            return Errors.Fail($"Request failed with exception \"{e.Message}\"");
+        }
+    }
+
+    private async Task<ErrorOr<TR>> Send<TR>(HttpRequestMessage requestMessage)
+    {
+        var responseJson = await Send(requestMessage);
+        if (responseJson.IsError)
+        {
+            return responseJson.FirstError;
         }
 
-        var response = await httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
-        json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var result = JsonSerializer.Deserialize<Guid>(json, _jsonOption);
-        result.ThrowIfNull();
+        var response = JsonSerializer.Deserialize<TR>(responseJson.Value, _jsonOption);
+        if (response is null)
+        {
+            return Errors.Fail("Failed to deserialize response");
+        }
+
+        return response;
+    }
+
+    private HttpRequestMessage RequestMessage(HttpMethod httpMethod, string endpoint)
+    {
+        var uri = new Uri(_options.Value.INSTANCE_API_ENDPOINT + endpoint);
+        var request = new HttpRequestMessage
+        {
+            Method = httpMethod,
+            RequestUri = uri
+        };
+        return request;
+    }
+
+    private HttpRequestMessage RequestMessage<T>(HttpMethod httpMethod, string endpoint, T jsonContent)
+    {
+        var uri = new Uri(_options.Value.INSTANCE_API_ENDPOINT + endpoint);
+        var request = new HttpRequestMessage
+        {
+            Content = JsonContent.Create(jsonContent),
+            Method = httpMethod,
+            RequestUri = uri
+        };
+        return request;
+    }
+
+    private HttpRequestMessage RequestMessage(HttpMethod httpMethod, string endpoint,
+        List<KeyValuePair<string, string>> queryParameters)
+    {
+        var uri = new Uri(_options.Value.INSTANCE_API_ENDPOINT + endpoint);
+        foreach (var queryParameter in queryParameters)
+        {
+            var keyUrlEncoded = HttpUtility.UrlEncode(queryParameter.Key);
+            var valueUrlEncoded = HttpUtility.UrlEncode(queryParameter.Value);
+            uri = uri.AddParameter(keyUrlEncoded, valueUrlEncoded);
+        }
+
+        var request = new HttpRequestMessage
+        {
+            Method = httpMethod,
+            RequestUri = uri
+        };
+        return request;
+    }
+
+    private HttpRequestMessage GetRequestMessage(string endpoint) => RequestMessage(HttpMethod.Get, endpoint);
+
+    private HttpRequestMessage GetRequestMessage(string endpoint, string queryParameterKey, string queryParameterValue)
+    {
+        return RequestMessage(HttpMethod.Get, endpoint,
+            [new KeyValuePair<string, string>(queryParameterKey, queryParameterValue)]);
+    }
+
+    private HttpRequestMessage PostRequestMessage<T>(string endpoint, T jsonContent) =>
+        RequestMessage(HttpMethod.Post, endpoint, jsonContent);
+
+    private HttpRequestMessage PostRequestMessage(string endpoint) => RequestMessage(HttpMethod.Post, endpoint);
+
+    private HttpRequestMessage PostRequestMessage(string endpoint, List<KeyValuePair<string, string>> queryParameters)
+    {
+        return RequestMessage(HttpMethod.Post, endpoint, queryParameters);
+    }
+
+    private HttpRequestMessage PostRequestMessage(string endpoint, string queryParameterKey, string queryParameterValue)
+    {
+        return PostRequestMessage(endpoint, [new KeyValuePair<string, string>(queryParameterKey, queryParameterValue)]);
+    }
+
+    #endregion
+
+
+    #region Server
+
+    public async Task<ErrorOr<ServerStatusResponse>> Info()
+    {
+        var requestMessage = GetRequestMessage("/server/info");
+        var result = await Send<ServerStatusResponse>(requestMessage);
         return result;
     }
 
-    public async Task<Guid> CancelUpdatingOrInstalling(Guid id)
+    public async Task<ErrorOr<List<string>>> Events()
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + $"/server/cancel-updating-or-installing?id={id.ToString()}";
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        var response = await httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
-        json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var result = JsonSerializer.Deserialize<Guid>(json, _jsonOption);
-        result.ThrowIfNull();
+        var requestMessage = GetRequestMessage("/server/events");
+        var result = await Send<List<string>>(requestMessage);
         return result;
     }
 
-    public async Task Start(StartParameters startParameters)
+    public async Task<ErrorOr<Guid>> StartUpdatingOrInstalling(StartParameters? startParameters)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + "/server/start";
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Content = JsonContent.Create(startParameters);
-        var response = await httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
+        const string endpoint = "/server/start-updating-or-installing";
+
+        var requestMessage = startParameters is null
+            ? PostRequestMessage(endpoint)
+            : PostRequestMessage(endpoint, startParameters);
+
+        var response = await Send<Guid>(requestMessage);
+        return response;
     }
 
-    public async Task Stop()
+    public async Task<ErrorOr<Success>> CancelUpdatingOrInstalling(Guid id)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + "/server/stop";
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        var response = await httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
+        var requestMessage = PostRequestMessage("/server/cancel-updating-or-installing", "id", id.ToString());
+        var response = await SendWithoutResponse(requestMessage);
+        return response;
     }
 
-    public async Task<string> SendCommand(string command)
+    public async Task<ErrorOr<Success>> Start(StartParameters startParameters)
     {
-        var commandUrlEncoded = HttpUtility.HtmlEncode(command);
-        var url = $"{options.Value.INSTANCE_API_ENDPOINT}/server/send-command?command={commandUrlEncoded}";
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Content = new StringContent(command);
-        var response = await httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        var commandResponse = await response.Content.ReadAsStringAsync();
-        return commandResponse;
+        var requestMessage = PostRequestMessage("/server/start", startParameters);
+        var response = await SendWithoutResponse(requestMessage);
+        return response;
     }
-    
-    public async Task<List<string>> Maps()
+
+    public async Task<ErrorOr<Success>> Stop()
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + "/server/maps";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        var response = await httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
-        json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var maps = JsonSerializer.Deserialize<List<string>>(json, _jsonOption);
-        maps.ThrowIfNull();
-        return maps;
+        var requestMessage = PostRequestMessage("/server/stop");
+        var response = await SendWithoutResponse(requestMessage);
+        return response;
     }
-    
-    public async Task<List<string>> Configs()
+
+    public async Task<ErrorOr<string>> SendCommand(string command)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + "/server/configs";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        var response = await httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
-        json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var configs = JsonSerializer.Deserialize<List<string>>(json, _jsonOption);
-        configs.ThrowIfNull();
-        return configs;
+        var requestMessage = PostRequestMessage("/server/send-command", "command", command);
+        var result = await Send<string>(requestMessage);
+        return result;
+    }
+
+    public async Task<ErrorOr<List<string>>> Maps()
+    {
+        var requestMessage = GetRequestMessage("/server/maps");
+        var result = await Send<List<string>>(requestMessage);
+        return result;
+    }
+
+    public async Task<ErrorOr<List<string>>> Configs()
+    {
+        var requestMessage = GetRequestMessage("/server/configs");
+        var result = await Send<List<string>>(requestMessage);
+        return result;
+    }
+
+    public async Task<ErrorOr<List<ChatCommandResponse>>> ChatCommands()
+    {
+        var requestMessage = GetRequestMessage("/server/chat-command/all");
+        var result = await Send<List<ChatCommandResponse>>(requestMessage);
+        return result;
+    }
+
+    public async Task<ErrorOr<Success>> NewChatCommand(string chatMessage, string serverCommand)
+    {
+        var requestMessage = PostRequestMessage("/server/chat-command/new",
+        [
+            new KeyValuePair<string, string>("chatMessage", chatMessage),
+            new KeyValuePair<string, string>("serverCommand", serverCommand)
+        ]);
+        var result = await SendWithoutResponse(requestMessage);
+        return result;
+    }
+
+    public async Task<ErrorOr<Success>> DeleteChatCommand(string chatMessage)
+    {
+        var requestMessage = PostRequestMessage(
+            "/server/chat-command/delete",
+            "chatMessage",
+            chatMessage);
+        var result = await SendWithoutResponse(requestMessage);
+        return result;
     }
 
     #endregion
 
     #region Logs
 
-    public async Task<List<ServerLogResponse>> LogsServer(DateTimeOffset logsSince)
+    public async Task<ErrorOr<List<ServerLogResponse>>> LogsServer(DateTimeOffset logsSince)
     {
-        var url = options.Value.INSTANCE_API_ENDPOINT + $"/logs/server?logsSince={logsSince.ToUnixTimeMilliseconds()}";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        var response = await httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
-        json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var maps = JsonSerializer.Deserialize<List<ServerLogResponse>>(json, _jsonOption);
-        maps.ThrowIfNull();
-        return maps;
+        var requestMessage =
+            GetRequestMessage("/logs/server", "logsSince", logsSince.ToUnixTimeMilliseconds().ToString());
+        var result = await Send<List<ServerLogResponse>>(requestMessage);
+        return result;
     }
 
-    public async Task<List<UpdateOrInstallLogResponse>> LogsUpdateOrInstall(DateTimeOffset logsSince)
+    public async Task<ErrorOr<List<UpdateOrInstallLogResponse>>> LogsUpdateOrInstall(DateTimeOffset logsSince)
     {
-        var url =
-            $"{options.Value.INSTANCE_API_ENDPOINT}/logs/update-or-install?logsSince={logsSince.ToUnixTimeMilliseconds()}";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        var response = await httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
-        json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var maps = JsonSerializer.Deserialize<List<UpdateOrInstallLogResponse>>(json, _jsonOption);
-        maps.ThrowIfNull();
-        return maps;
+        var requestMessage = GetRequestMessage("/logs/update-or-install", "logsSince",
+            logsSince.ToUnixTimeMilliseconds().ToString());
+        var result = await Send<List<UpdateOrInstallLogResponse>>(requestMessage);
+        return result;
     }
 
-    public async Task<List<EventLogResponse>> LogsEvents(DateTimeOffset logsSince)
+    public async Task<ErrorOr<List<EventLogResponse>>> LogsEvents(DateTimeOffset logsSince)
     {
-        var url = $"{options.Value.INSTANCE_API_ENDPOINT}/logs/events?logsSince={logsSince.ToUnixTimeMilliseconds()}";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        var response = await httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
-        json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var maps = JsonSerializer.Deserialize<List<EventLogResponse>>(json, _jsonOption);
-        maps.ThrowIfNull();
-        return maps;
+        var requestMessage =
+            GetRequestMessage("/logs/events", "logsSince", logsSince.ToUnixTimeMilliseconds().ToString());
+        var result = await Send<List<EventLogResponse>>(requestMessage);
+        return result;
     }
 
-    public async Task<List<EventLogResponse>> LogsEvents(string eventName, DateTimeOffset logsSince)
+    public async Task<ErrorOr<List<EventLogResponse>>> LogsEvents(string eventName, DateTimeOffset logsSince)
     {
-        var url =
-            $"{options.Value.INSTANCE_API_ENDPOINT}/logs/events/{eventName}?logsSince={logsSince.ToUnixTimeMilliseconds()}";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        var response = await httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
-        json.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        var maps = JsonSerializer.Deserialize<List<EventLogResponse>>(json, _jsonOption);
-        maps.ThrowIfNull();
-        return maps;
+        var requestMessage = GetRequestMessage($"/logs/events/{eventName}", "logsSince",
+            logsSince.ToUnixTimeMilliseconds().ToString());
+        var result = await Send<List<EventLogResponse>>(requestMessage);
+        return result;
     }
 
     #endregion

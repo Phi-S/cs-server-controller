@@ -94,8 +94,15 @@ public sealed class StatusService
 
         _eventService.MapChanged += (_, customEventArgMapChanged) => { CurrentMap = customEventArgMapChanged.MapName; };
 
-        _eventService.PlayerConnected += (_, _) => { CurrentPlayerCount += 1; };
-        _eventService.PlayerDisconnected += (_, _) => { CurrentPlayerCount -= 1; };
+        _eventService.PlayerConnected += (_,customEventArgPlayerConnected ) =>
+        {
+            CurrentPlayerCount += 1;
+            //CurrentPlayers = CurrentPlayers.Add(new PlayerInfoModel(customEventArgPlayerConnected.))
+        };
+        _eventService.PlayerDisconnected += (_, _) =>
+        {
+            CurrentPlayerCount -= 1;
+        };
     }
 
     #endregion
@@ -120,6 +127,7 @@ public sealed class StatusService
             {
                 _serverInstalled = value;
             }
+
             OnServerStatusChanged();
         }
     }
@@ -146,6 +154,7 @@ public sealed class StatusService
             {
                 _serverStartParameters = value;
             }
+
             OnServerStatusChanged();
         }
     }
@@ -172,6 +181,7 @@ public sealed class StatusService
             {
                 _serverStarted = value;
             }
+
             OnServerStatusChanged();
         }
     }
@@ -199,6 +209,7 @@ public sealed class StatusService
             {
                 _serverStarting = value;
             }
+
             OnServerStatusChanged();
         }
     }
@@ -225,6 +236,7 @@ public sealed class StatusService
             {
                 _serverStopping = value;
             }
+
             OnServerStatusChanged();
         }
     }
@@ -251,6 +263,7 @@ public sealed class StatusService
             {
                 _serverUpdatingOrInstalling = value;
             }
+
             OnServerStatusChanged();
         }
     }
@@ -277,6 +290,7 @@ public sealed class StatusService
             {
                 _demoUploading = value;
             }
+
             OnServerStatusChanged();
         }
     }
@@ -303,6 +317,7 @@ public sealed class StatusService
             {
                 _serverHibernating = value;
             }
+
             OnServerStatusChanged();
         }
     }
@@ -329,6 +344,35 @@ public sealed class StatusService
             {
                 _currentMap = value;
             }
+
+            OnServerStatusChanged();
+        }
+    }
+
+    #endregion
+
+    #region CurrentPlayers
+
+    private List<PlayerInfoModel> _currentPlayers = [];
+    private readonly object _currentPlayersLock = new();
+
+    public List<PlayerInfoModel> CurrentPlayers
+    {
+        get
+        {
+            lock (_currentPlayersLock)
+            {
+                return _currentPlayers;
+            }
+        }
+        private set
+        {
+            lock (_currentPlayersLock)
+            {
+                _currentPlayers = value;
+            }
+
+            _eventService.OnPlayerCountChanged(value.Count);
             OnServerStatusChanged();
         }
     }

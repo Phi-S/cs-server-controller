@@ -1,37 +1,47 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using BlazorBootstrap;
+using Microsoft.AspNetCore.Components;
+using Shared;
+using Throw;
+using Web.BlazorExtensions;
 using Web.Services;
 
 namespace Web.Components.Pages;
 
 public class HomeRazor : ComponentBase
 {
-    private static Guid? _currentUpdateOrInstallId;
-
+    [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] private ILogger<HomeRazor> Logger { get; set; } = default!;
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
     [Inject] private InstanceApiService InstanceApiService { get; set; } = default!;
     [Inject] private StartParametersJsonService StartParametersJsonService { get; set; } = default!;
 
-    protected Shared.ApiModels.StartParameters? StartParameters;
+
+    private static Guid? _currentUpdateOrInstallId;
+    protected string SendCommandBind = "";
 
     protected override void OnInitialized()
     {
         ServerInfoService.OnServerInfoChangedEvent += async (_, _) => await InvokeAsync(StateHasChanged);
-        StartParameters = StartParametersJsonService.Get();
     }
 
     protected async Task Start()
     {
         try
         {
-            Logger.LogInformation("Starting server");
             var startParameters = StartParametersJsonService.Get();
-            await InstanceApiService.Start(startParameters);
-            Logger.LogInformation("Server started");
+            var startResult = await InstanceApiService.Start(startParameters);
+            if (startResult.IsError)
+            {
+                Logger.LogError("Failed to start server. {Error}", startResult.ErrorMessage());
+                ToastService.Error($"Failed to start server. {startResult.ErrorMessage()}");
+            }
+
+            ToastService.Info("Server started");
         }
         catch (Exception e)
         {
             Logger.LogError(e, "Failed to start server");
+            ToastService.Error($"Failed to start server");
         }
     }
 
@@ -39,13 +49,19 @@ public class HomeRazor : ComponentBase
     {
         try
         {
-            Logger.LogInformation("Stopping server");
-            await InstanceApiService.Stop();
-            Logger.LogInformation("Server stopped");
+            var stopResult = await InstanceApiService.Stop();
+            if (stopResult.IsError)
+            {
+                Logger.LogError("Failed to stop server. {Error}", stopResult.ErrorMessage());
+                ToastService.Error($"Failed to stop server. {stopResult.ErrorMessage()}");
+            }
+
+            ToastService.Info("Server started");
         }
         catch (Exception e)
         {
             Logger.LogError(e, "Failed to stop server");
+            ToastService.Error($"Failed to stop server");
         }
     }
 
@@ -53,13 +69,24 @@ public class HomeRazor : ComponentBase
     {
         try
         {
-            Logger.LogInformation("Starting server update or install");
-            _currentUpdateOrInstallId = await InstanceApiService.StartUpdatingOrInstalling(null);
+            var startUpdateOrInstallResult = await InstanceApiService.StartUpdatingOrInstalling(null);
+            if (startUpdateOrInstallResult.IsError)
+            {
+                Logger.LogError("Start update or install server failed with error {Error}",
+                    startUpdateOrInstallResult.ErrorMessage());
+                ToastService.Error(
+                    $"Failed to update server. {startUpdateOrInstallResult.ErrorMessage()}");
+                return;
+            }
+
+            _currentUpdateOrInstallId = startUpdateOrInstallResult.Value;
             Logger.LogInformation("Update or install started");
+            ToastService.Info("Server update started");
         }
         catch (Exception e)
         {
             Logger.LogError(e, "Failed to update server");
+            ToastService.Error("Failed to update server");
         }
     }
 
@@ -67,18 +94,26 @@ public class HomeRazor : ComponentBase
     {
         try
         {
-            Logger.LogInformation("Cancelling Update or install");
-            if (_currentUpdateOrInstallId is null)
+            _currentUpdateOrInstallId.ThrowIfNull();
+
+            var cancelUpdatingOrInstalling =
+                await InstanceApiService.CancelUpdatingOrInstalling(_currentUpdateOrInstallId.Value);
+            if (cancelUpdatingOrInstalling.IsError)
             {
+                Logger.LogError("Failed to cancel server update. {Error}",
+                    cancelUpdatingOrInstalling.ErrorMessage());
+                ToastService.Error(
+                    $"Failed to cancel server update. {cancelUpdatingOrInstalling.ErrorMessage()}");
                 return;
             }
 
-            await InstanceApiService.CancelUpdatingOrInstalling(_currentUpdateOrInstallId.Value);
-            Logger.LogInformation("Update or install cancelled");
+            Logger.LogInformation("Server update cancelled");
+            ToastService.Info("Server update cancelled");
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Failed to cancel update");
+            Logger.LogError(e, "Failed to cancel server update");
+            ToastService.Error("Failed to cancel server update");
         }
     }
 
@@ -86,13 +121,20 @@ public class HomeRazor : ComponentBase
     {
         try
         {
-            Logger.LogInformation("Changing map to {Map}", map);
-            await InstanceApiService.SendCommand($"changelevel {map}");
+            var mapChangeResult = await InstanceApiService.SendCommand($"changelevel {map}");
+            if (mapChangeResult.IsError)
+            {
+                Logger.LogError("Failed to change map to {Map}. {Error}", map, mapChangeResult.ErrorMessage());
+                ToastService.Error($"Failed to change map to {map}. {mapChangeResult.ErrorMessage()}");
+            }
+
             Logger.LogInformation("Map changed to {Map}", map);
+            ToastService.Info($"Map changed to {map}");
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Failed to change map {Map}", map);
+            Logger.LogError(e, "Failed to change map to {Map}", map);
+            ToastService.Error($"Failed to change map to {map}");
         }
     }
 
@@ -100,13 +142,43 @@ public class HomeRazor : ComponentBase
     {
         try
         {
-            Logger.LogInformation("Executing config {Config}", config);
-            await InstanceApiService.SendCommand($"exec {config}");
-            Logger.LogInformation("Config {Config} executed", config);
+            var sendCommand = await InstanceApiService.SendCommand($"exec {config}");
+            if (sendCommand.IsError)
+            {
+                Logger.LogError("Failed to execute config \"{Config}\". {Error}", config, sendCommand.ErrorMessage());
+                ToastService.Error($"Failed to execute config \"{config}\". {sendCommand.ErrorMessage()}");
+            }
+
+            Logger.LogInformation("Config \"{Config}\" executed", config);
+            ToastService.Info($"Config \"{config}\" executed");
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Failed to execute config {Config}", config);
+            Logger.LogError(e, "Failed to execute config \"{Config}\"", config);
+            ToastService.Error($"Failed to execute config \"{config}\"");
+        }
+    }
+
+    protected async Task SendCommand()
+    {
+        try
+        {
+            var sendCommand = await InstanceApiService.SendCommand(SendCommandBind);
+            if (sendCommand.IsError)
+            {
+                Logger.LogError("Failed to execute command \"{Command}\". {Error}", SendCommandBind,
+                    sendCommand.ErrorMessage());
+                ToastService.Error($"Failed to execute command \"{SendCommandBind}\". {sendCommand.ErrorMessage()}");
+            }
+
+            Logger.LogInformation("Command executed \"{Command}\" executed", SendCommandBind);
+            ToastService.Info($"Command executed \"{SendCommandBind}\" executed");
+            SendCommandBind = "";
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Failed to execute command \"{Command}\"", SendCommandBind);
+            ToastService.Error($"Failed to execute command \"{SendCommandBind}\"");
         }
     }
 
@@ -120,32 +192,6 @@ public class HomeRazor : ComponentBase
             }
 
             return ServerInfoService.ServerInfo.ServerStarted == false;
-        }
-    }
-
-    protected bool DisabledWhenServerIsUpdatingOrInstalling
-    {
-        get
-        {
-            if (ServerInfoService.ServerInfo is null)
-            {
-                return false;
-            }
-
-            return ServerInfoService.ServerInfo.ServerUpdatingOrInstalling;
-        }
-    }
-
-    protected bool DisabledWhenServerIsNotUpdatingOrInstalling
-    {
-        get
-        {
-            if (ServerInfoService.ServerInfo is null)
-            {
-                return false;
-            }
-
-            return ServerInfoService.ServerInfo.ServerUpdatingOrInstalling == false;
         }
     }
 }

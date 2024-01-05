@@ -3,6 +3,7 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
+using Shared;
 using Web.Components;
 using Web.Options;
 using Web.Services;
@@ -44,6 +45,7 @@ try
         }
     });
 
+    builder.Services.AddBlazorBootstrap();
     builder.Services.AddHttpClient();
     builder.Services.AddSingleton<InstanceApiService>();
     builder.Services.AddSingleton<ServerInfoService>();
@@ -55,8 +57,21 @@ try
     var app = builder.Build();
 
     var serverInfoService = app.Services.GetRequiredService<ServerInfoService>();
-    await serverInfoService.StartSignalRConnection();
-    
+    while (true)
+    {
+        var startSignalRConnection = await serverInfoService.StartSignalRConnection();
+        if (startSignalRConnection.IsError)
+        {
+            Log.Logger.Warning("Failed to start signalr connection with error: {Error}",
+                startSignalRConnection.ErrorMessage());
+            Log.Logger.Information("Retrying signalr connection...");
+            await Task.Delay(1000);
+            continue;
+        }
+
+        break;
+    }
+
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseStaticFiles();
     app.UseAntiforgery();

@@ -5,6 +5,7 @@ using Domain;
 using Instance.Response;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Shared;
 using Shared.ApiModels;
 
 namespace Instance.Endpoints;
@@ -104,11 +105,31 @@ public static class ServerEndpoint
                 : Results.Ok(result.Value);
         });
 
-        group.MapPost("chat-command",
-            async (IMediator mediator, [FromQuery] string chatMessage, [FromQuery] string command) =>
+        group.MapGet("chat-command/all", async (IMediator mediator) =>
+        {
+            var command = new GetAllChatCommandsQuery();
+            var result = await mediator.Send(command);
+            return Results.Ok(result);
+        });
+
+        group.MapPost("chat-command/new",
+            async (IMediator mediator, [FromQuery] string chatMessage, [FromQuery] string serverCommand) =>
             {
+                var urlDecodedChatMessage = HttpUtility.UrlDecode(chatMessage);
+                var urlDecodedServerCommand = HttpUtility.UrlDecode(serverCommand);
                 var mediatorCommand =
-                    new AddChatCommandCommand(HttpUtility.UrlDecode(chatMessage), HttpUtility.UrlDecode(command));
+                    new AddChatCommandCommand(urlDecodedChatMessage, urlDecodedServerCommand);
+                var result = await mediator.Send(mediatorCommand);
+                return result.IsError
+                    ? Results.Extensions.InternalServerError(result.ErrorMessage())
+                    : Results.Ok();
+            });
+
+        group.MapPost("chat-command/delete",
+            async (IMediator mediator, [FromQuery] string chatMessage) =>
+            {
+                var urlDecodedChatMessage = HttpUtility.UrlDecode(chatMessage);
+                var mediatorCommand = new DeleteChatCommandCommand(urlDecodedChatMessage);
                 var result = await mediator.Send(mediatorCommand);
                 return result.IsError
                     ? Results.Extensions.InternalServerError(result.ErrorMessage())

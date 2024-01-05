@@ -22,7 +22,7 @@ public class
         CancellationToken cancellationToken)
     {
         var logsSinceDateTime = DateTimeOffset.FromUnixTimeMilliseconds(request.LongsSinceUnixMilliseconds).DateTime;
-        var logs = await _unitOfWork.UpdateOrInstallRepo.GetSince(logsSinceDateTime);
+        var logs = await _unitOfWork.UpdateOrInstallRepo.GetLogsSince(logsSinceDateTime);
         var response = logs.Select(
                 log => new UpdateOrInstallLogResponse(
                     log.UpdateOrInstallStart.Id,

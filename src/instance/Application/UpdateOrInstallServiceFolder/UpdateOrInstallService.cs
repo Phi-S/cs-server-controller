@@ -12,6 +12,7 @@ using Infrastructure.Database.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Shared;
 
 namespace Application.UpdateOrInstallServiceFolder;
 

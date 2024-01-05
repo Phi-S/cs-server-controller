@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Shared.ApiModels;
@@ -18,14 +19,19 @@ public class ServerDisplayCompRazor : ComponentBase
     [Inject] private StartParametersJsonService StartParametersJsonService { get; set; } = default!;
 
     private static readonly StartParameters DefaultStartParameters = new();
-    protected ServerStatusResponse? ServerInfo => ServerInfoService.ServerInfo;
+    protected ServerStatusResponse? ServerInfo;
     protected string Hostname => ServerInfo?.Hostname ?? DefaultStartParameters.ServerHostname;
 
     protected override void OnInitialized()
     {
         try
         {
-            ServerInfoService.OnServerInfoChangedEvent += async (_, _) => await InvokeAsync(StateHasChanged);
+            ServerInfo = ServerInfoService.ServerInfo;
+            ServerInfoService.OnServerInfoChangedEvent += async (_, _) =>
+            {
+                ServerInfo = ServerInfoService.ServerInfo;
+                await InvokeAsync(StateHasChanged);
+            };
         }
         catch (Exception e)
         {
@@ -33,18 +39,27 @@ public class ServerDisplayCompRazor : ComponentBase
         }
     }
 
-    protected void ConnectToServer()
+    protected async Task ConnectToServer()
     {
         ServerInfo.ThrowIfNull();
-        var connectUrl = $"steam://connect/{ServerInfo.IpOrDomain}:{ServerInfo.Port}";
+        
+        var dnsResolve = await Dns.GetHostEntryAsync(ServerInfo.IpOrDomain);
+        var serverIp = dnsResolve.AddressList.First().MapToIPv4().ToString();
+        if (ServerInfo.IpOrDomain.Equals("localhost"))
+        {
+            serverIp = "127.0.0.1";
+        }
+
+        var connectUrl = $"steam://connect/{serverIp}:{ServerInfo.Port}";
         if (string.IsNullOrWhiteSpace(ServerInfo.ServerPassword) == false)
         {
-            connectUrl += $" password {ServerInfo.ServerPassword}";
+            connectUrl += $"/{ServerInfo.ServerPassword}";
         }
-        
-        NavigationManager.NavigateTo(connectUrl);
+
+        Console.WriteLine(connectUrl);
+        await JsRuntime.InvokeVoidAsync("open", connectUrl, "");
     }
-    
+
     protected async Task CopyConnectStringToClipboard()
     {
         try

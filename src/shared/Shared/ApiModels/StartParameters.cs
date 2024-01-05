@@ -8,7 +8,8 @@ public class StartParameters
     {
     }
 
-    public StartParameters(string serverHostname, string? serverPassword, int maxPlayer, string startMap, int gameMode, int gameType, string? loginToken, string? additionalStartParameters)
+    public StartParameters(string serverHostname, string? serverPassword, int maxPlayer, string startMap, int gameMode,
+        int gameType, string? loginToken, string? additionalStartParameters)
     {
         ServerHostname = serverHostname;
         ServerPassword = serverPassword;
@@ -39,6 +40,7 @@ public class StartParameters
             $"-port {port}",
             $"+hostname {ServerHostname}",
             string.IsNullOrWhiteSpace(ServerPassword) ? "" : $"+sv_password {ServerPassword}",
+            "+log on",
             $"-maxplayers {MaxPlayer}",
             $"+map {StartMap}",
             $"+game_type {GameType}",

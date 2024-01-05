@@ -19,7 +19,7 @@ public class
     public async Task<List<EventLogResponse>> Handle(GetAllTriggeredEventsSinceQuery request, CancellationToken cancellationToken)
     {
         var logsSinceDateTime = DateTimeOffset.FromUnixTimeMilliseconds(request.LongsSinceUnixMilliseconds).DateTime;
-        var logs = await _unitOfWork.EventLogRepo.GetAllSince(logsSinceDateTime);
+        var logs = await _unitOfWork.EventLogRepo.GetLogsSince(logsSinceDateTime);
         var response = logs.Select(
                 log => new EventLogResponse(
                     log.Name,

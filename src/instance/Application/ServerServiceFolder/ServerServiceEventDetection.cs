@@ -42,7 +42,7 @@ public partial class ServerService
         }
     }
 
-    [GeneratedRegex("(.+)Changelevel \\((.+)\\)")]
+    [GeneratedRegex(@"Host activate: Changelevel \((.+)\)")]
     private static partial Regex MapChangeRegex();
 
     // Changelevel to de_nukeh
@@ -51,9 +51,12 @@ public partial class ServerService
         try
         {
             var matches = MapChangeRegex().Match(output.Output);
-            if (!matches.Success || matches.Groups.Count != 3) return;
+            if (matches.Success == false || matches.Groups.Count != 2)
+            {
+                return;
+            }
 
-            var newMap = matches.Groups[2]
+            var newMap = matches.Groups[1]
                 .ToString()
                 .Trim();
             _eventService.OnMapChanged(newMap);
@@ -65,29 +68,31 @@ public partial class ServerService
     }
 
     [GeneratedRegex(
-        @"CNetworkGameServerBase::ConnectClient\(\sname='(.+?)',\sremote='([0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?:[0-9]{1,5})'")]
+        @"Accepting Steam Net connection #(\d+) UDP steamid:(\d+)@((?:\d{1,3}[.|:]){4}(?:[\d]{5}))"
+    )]
     private static partial Regex PlayerConnectRegex();
 
-    // CNetworkGameServerBase::ConnectClient( name='PhiS', remote='10.10.20.10:57143' )
+    // Accepting Steam Net connection #3000669907 UDP steamid:76561198044941665@172.17.0.1:54196
     public void NewOutputPlayerConnectDetection(object? _, ServerOutputEventArg output)
     {
         try
         {
-            if (output.Output.StartsWith("CNetworkGameServerBase::ConnectClient(") == false)
+            if (output.Output.StartsWith("Accepting Steam Net connection") == false)
             {
                 return;
             }
 
             var match = PlayerConnectRegex().Match(output.Output);
-            if (match.Groups.Count != 3)
+            if (match.Groups.Count != 4)
             {
                 return;
             }
 
-            var name = match.Groups[1].Value;
-            var remote = match.Groups[2].Value;
+            var connectionId = match.Groups[1].Value;
+            var stemId = match.Groups[2].Value;
+            var ipPort = match.Groups[3].Value;
 
-            _eventService.OnPlayerConnected(name, remote);
+            _eventService.OnPlayerConnected(connectionId, stemId, ipPort);
         }
         catch (Exception e)
         {
@@ -95,20 +100,37 @@ public partial class ServerService
         }
     }
 
-    [GeneratedRegex(
-        @"Steam Net connection #(.+?) UDP steamid:(\d+)@([0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?.[0-9][0-9]?[0-9]?:[0-9]{1,5}) closed by peer, reason (\d{4}): (.+)")]
-    private static partial Regex PlayerDisconnectRegex();
 
     // Steam Net connection #2892143414 UDP steamid:76561198154417260@10.10.20.10:49347 closed by peer, reason 1002: NETWORK_DISCONNECT_DISCONNECT_BY_USER
+    [GeneratedRegex(
+        @"Steam Net connection #(\d+) UDP steamid:(\d+)@((?:\d{1,3}[.|:]){4}(?:[\d]{5})) closed by peer, reason (\d+): (.+)"
+    )]
+    private static partial Regex PlayerDisconnectClosedByPeerRegex();
+
+    // [#3000669907 UDP steamid:76561198044941665@172.17.0.1:54196] closed by app, entering linger state (2158) NETWORK_DISCONNECT_KICKED_IDLE
+    // [#2292360458 UDP steamid:76561198044941665@172.17.0.1:33160] closed by app, entering linger state (2039) NETWORK_DISCONNECT_KICKED
+    [GeneratedRegex(
+        @"\[#(\d+) UDP steamid:(\d+)@((?:\d{1,3}[.|:]){4}(?:[\d]{5}))\] closed by app, entering linger state \((\d+)\) (.+)"
+    )]
+    private static partial Regex PlayerDisconnectClosedByAppRegex();
+
     public void NewOutputPlayerDisconnectDetection(object? _, ServerOutputEventArg output)
     {
         try
         {
-            var match = PlayerDisconnectRegex().Match(output.Output);
-            if (match.Groups.Count != 6)
+            if (output.Output.Contains("UDP steamid") == false)
             {
                 return;
             }
+
+            var matchClosedByApp = PlayerDisconnectClosedByAppRegex().Match(output.Output);
+            var matchClosedByPeer = PlayerDisconnectClosedByPeerRegex().Match(output.Output);
+            if (matchClosedByApp.Groups.Count != 6 && matchClosedByPeer.Groups.Count != 6)
+            {
+                return;
+            }
+
+            var match = matchClosedByApp.Groups.Count == 6 ? matchClosedByApp : matchClosedByPeer;
 
             var connectionId = match.Groups[1].Value;
             var steamId64 = match.Groups[2].Value;

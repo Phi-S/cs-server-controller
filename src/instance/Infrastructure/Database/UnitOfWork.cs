@@ -1,4 +1,5 @@
-﻿using Infrastructure.Database.Repos;
+﻿using Infrastructure.Database.Models;
+using Infrastructure.Database.Repos;
 
 namespace Infrastructure.Database;
 
@@ -8,6 +9,7 @@ public class UnitOfWork
     public UpdateOrInstallRepo UpdateOrInstallRepo { get; }
     public ServerRepo ServerRepo { get; }
     public EventLogRepo EventLogRepo { get; }
+    public ChatCommandRepo ChatCommandRepo { get; }
     
     public UnitOfWork(InstanceDbContext dbContext)
     {
@@ -15,6 +17,7 @@ public class UnitOfWork
         UpdateOrInstallRepo = new UpdateOrInstallRepo(dbContext);
         ServerRepo = new ServerRepo(dbContext);
         EventLogRepo = new EventLogRepo(dbContext);
+        ChatCommandRepo = new ChatCommandRepo(dbContext);
     }
 
     public async Task Save()

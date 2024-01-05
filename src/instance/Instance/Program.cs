@@ -1,4 +1,5 @@
 using Application;
+using Application.ChatCommandFolder;
 using Domain;
 using Instance.Endpoints;
 using Instance.Middleware;
@@ -63,7 +64,7 @@ try
         Log.Logger.Information("{Property}: {PropertyValue}",
             field.Name, field.GetValue(options.Value));
     }
-    
+
     app.UseMiddleware<ApiLogMiddleware>();
     app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
     app.UseSwagger();

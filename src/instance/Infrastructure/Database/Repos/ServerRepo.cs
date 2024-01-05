@@ -35,7 +35,7 @@ public class ServerRepo
         });
     }
 
-    public Task<List<ServerLog>> GetSince(DateTime since)
+    public Task<List<ServerLog>> GetLogsSince(DateTime since)
     {
         return Task.FromResult(_dbContext.ServerLogs.Where(log => log.CreatedAtUtc >= since)
             .Include(log => log.ServerStart)

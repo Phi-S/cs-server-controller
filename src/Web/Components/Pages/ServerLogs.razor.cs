@@ -17,9 +17,7 @@ public class ServerLogsRazor : ComponentBase
         try
         {
             ServerInfoService.OnServerLogsChangedEvent += async (_, _) => await InvokeAsync(StateHasChanged);
-            //ServerInfoService.StartServerLogsBackgroundTask();
             ServerInfoService.OnUpdateOrInstallLogsChangedEvent += async (_, _) => await InvokeAsync(StateHasChanged);
-            //ServerInfoService.StartUpdateOrInstallLogsBackgroundTask();
         }
         catch (Exception e)
         {

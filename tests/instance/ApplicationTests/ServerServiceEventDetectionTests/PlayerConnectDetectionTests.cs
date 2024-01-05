@@ -1,9 +1,11 @@
-﻿using Application.EventServiceFolder;
+﻿using System.Runtime.InteropServices;
+using Application.EventServiceFolder;
 using Application.EventServiceFolder.EventArgs;
 using Application.ServerServiceFolder;
 using Domain;
 using Infrastructure.Database.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Shared;
 using TestHelper.TestSetup;
 using TestHelper.WaitUtilFolder;
 using Xunit.Abstractions;
@@ -19,8 +21,27 @@ public class PlayerConnectDetectionTests
         _output = output;
     }
 
-    [Fact]
-    public async Task PlayerConnectDetectionTest()
+    [Theory]
+    [InlineData(
+        "Accepting Steam Net connection #3000669907 UDP steamid:76561198044941665@172.17.0.1:54196",
+        "3000669907",
+        "76561198044941665",
+        "172.17.0.1:54196"
+    )]
+    [InlineData(
+        "Accepting Steam Net connection #2413188280 UDP steamid:76561198044941665@172.17.0.1:45632",
+        "2413188280",
+        "76561198044941665",
+        "172.17.0.1:45632"
+    )]
+    [InlineData(
+        "Accepting Steam Net connection #1674795556 UDP steamid:76561198044941665@172.17.0.1:40588",
+        "1674795556",
+        "76561198044941665",
+        "172.17.0.1:40588"
+    )]
+    public async Task PlayerConnectDetectionTest(string log, string shouldBeConnectionId, string shouldBeStemId,
+        string shouldBeIpPort)
     {
         // Arrange
         var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
@@ -42,7 +63,7 @@ public class PlayerConnectDetectionTests
                     StartedAtUtc = DateTime.UtcNow,
                     CreatedAtUtc = DateTime.UtcNow
                 },
-                "CNetworkGameServerBase::ConnectClient( name='PhiS', remote='10.10.20.10:57143' )")
+                log)
         );
         var waitResult =
             await WaitUtil.WaitUntil(TimeSpan.FromSeconds(1), () => arg is not null, _output.WriteLine);
@@ -51,7 +72,8 @@ public class PlayerConnectDetectionTests
         Assert.True(waitResult.IsError == false, waitResult.IsError ? waitResult.ErrorMessage() : "");
         Assert.True(arg is not null);
         Assert.True(arg.EventName == Events.PlayerConnected);
-        Assert.Equal("PhiS", arg.PlayerName);
-        Assert.Equal("10.10.20.10:57143", arg.PlayerIp);
+        Assert.Equal(shouldBeConnectionId, arg.ConnectionId);
+        Assert.Equal(shouldBeStemId, arg.SteamId);
+        Assert.Equal(shouldBeIpPort, arg.IpPort);
     }
 }

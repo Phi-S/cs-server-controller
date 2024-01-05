@@ -18,7 +18,7 @@ public class GetServerLogsSinceQueryHandler : IRequestHandler<GetServerLogsSince
     public async Task<List<ServerLogResponse>> Handle(GetServerLogsSinceQuery request, CancellationToken cancellationToken)
     {
         var logsSinceDateTime = DateTimeOffset.FromUnixTimeMilliseconds(request.LongsSinceUnixMilliseconds).DateTime;
-        var logs = await _unitOfWork.ServerRepo.GetSince(logsSinceDateTime);
+        var logs = await _unitOfWork.ServerRepo.GetLogsSince(logsSinceDateTime);
         var response = logs.Select(
                 log => new ServerLogResponse(
                     log.ServerStart.Id,

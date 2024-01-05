@@ -1,9 +1,9 @@
-﻿FROM mcr.microsoft.com/dotnet/runtime-deps:8.0.0-rc.2-bookworm-slim-amd64 as runtime
+﻿FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-bookworm-slim-amd64 as runtime
 WORKDIR /app
 RUN groupadd -g 1001 user
 RUN useradd -m user -g 1001 -u 1001
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0.100-rc.2-bookworm-slim-amd64 AS publish
+FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim-amd64 AS publish
 WORKDIR /src
 
 COPY . .

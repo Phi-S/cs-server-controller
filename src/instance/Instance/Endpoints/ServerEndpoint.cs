@@ -1,7 +1,6 @@
 ﻿using System.Web;
 using Application.CQRS.Commands;
 using Application.CQRS.Query;
-using Domain;
 using Instance.Response;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

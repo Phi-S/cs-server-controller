@@ -1,5 +1,4 @@
 using Application;
-using Application.ChatCommandFolder;
 using Domain;
 using Instance.Endpoints;
 using Instance.Middleware;

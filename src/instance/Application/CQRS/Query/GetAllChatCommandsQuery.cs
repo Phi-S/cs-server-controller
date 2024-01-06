@@ -1,5 +1,4 @@
 ﻿using Infrastructure.Database;
-using Infrastructure.Database.Models;
 using MediatR;
 using Shared.ApiModels;
 

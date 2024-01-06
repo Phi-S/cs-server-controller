@@ -1,4 +1,5 @@
-﻿using ErrorOr;
+﻿using Application.ChatCommandFolder;
+using ErrorOr;
 using Infrastructure.Database;
 using MediatR;
 
@@ -9,10 +10,12 @@ public record DeleteChatCommandCommand(string ChatMessage) : IRequest<ErrorOr<De
 public class DeleteChatCommandCommandHandler : IRequestHandler<DeleteChatCommandCommand, ErrorOr<Deleted>>
 {
     private readonly UnitOfWork _unitOfWork;
+    private readonly ChatCommandsCache _chatCommandsCache;
 
-    public DeleteChatCommandCommandHandler(UnitOfWork unitOfWork)
+    public DeleteChatCommandCommandHandler(UnitOfWork unitOfWork, ChatCommandsCache chatCommandsCache)
     {
         _unitOfWork = unitOfWork;
+        _chatCommandsCache = chatCommandsCache;
     }
 
     public async Task<ErrorOr<Deleted>> Handle(DeleteChatCommandCommand request,
@@ -25,6 +28,7 @@ public class DeleteChatCommandCommandHandler : IRequestHandler<DeleteChatCommand
         }
 
         await _unitOfWork.Save();
+        await _chatCommandsCache.RefreshCache();
         return Result.Deleted;
     }
 }

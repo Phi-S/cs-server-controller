@@ -1,6 +1,5 @@
 ﻿using Application.ServerServiceFolder;
 using Application.UpdateOrInstallServiceFolder;
-using Domain;
 using ErrorOr;
 using MediatR;
 using Shared;

@@ -1,8 +1,6 @@
-﻿using System.Runtime.InteropServices;
-using Application.EventServiceFolder;
+﻿using Application.EventServiceFolder;
 using Application.EventServiceFolder.EventArgs;
 using Application.ServerServiceFolder;
-using Domain;
 using Infrastructure.Database.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Shared;

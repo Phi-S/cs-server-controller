@@ -100,19 +100,15 @@ public partial class ServerService
         }
     }
 
-
-    // Steam Net connection #2892143414 UDP steamid:76561198154417260@10.10.20.10:49347 closed by peer, reason 1002: NETWORK_DISCONNECT_DISCONNECT_BY_USER
     [GeneratedRegex(
-        @"Steam Net connection #(\d+) UDP steamid:(\d+)@((?:\d{1,3}[.|:]){4}(?:[\d]{5})) closed by peer, reason (\d+): (.+)"
+        @"\[#(\d+) UDP steamid:(\d+)@((?:\d{1,3}[.|:]){4}(?:[\d]{0,5}))\] closed by (?:app|peer)(?:, entering linger state)? \((\d+)\):? (.+)"
     )]
-    private static partial Regex PlayerDisconnectClosedByPeerRegex();
+    private static partial Regex PlayerDisconnectRegex();
 
     // [#3000669907 UDP steamid:76561198044941665@172.17.0.1:54196] closed by app, entering linger state (2158) NETWORK_DISCONNECT_KICKED_IDLE
     // [#2292360458 UDP steamid:76561198044941665@172.17.0.1:33160] closed by app, entering linger state (2039) NETWORK_DISCONNECT_KICKED
-    [GeneratedRegex(
-        @"\[#(\d+) UDP steamid:(\d+)@((?:\d{1,3}[.|:]){4}(?:[\d]{5}))\] closed by app, entering linger state \((\d+)\) (.+)"
-    )]
-    private static partial Regex PlayerDisconnectClosedByAppRegex();
+    // [#2330728174 UDP steamid:76561198154417260@10.10.20.10:50819] closed by peer (1059): NETWORK_DISCONNECT_EXITING
+    // [#1570318589 UDP steamid:76561198158337634@95.91.227.226:1103] closed by peer (1002): NETWORK_DISCONNECT_DISCONNECT_BY_USER
 
     public void NewOutputPlayerDisconnectDetection(object? _, ServerOutputEventArg output)
     {
@@ -123,14 +119,11 @@ public partial class ServerService
                 return;
             }
 
-            var matchClosedByApp = PlayerDisconnectClosedByAppRegex().Match(output.Output);
-            var matchClosedByPeer = PlayerDisconnectClosedByPeerRegex().Match(output.Output);
-            if (matchClosedByApp.Groups.Count != 6 && matchClosedByPeer.Groups.Count != 6)
+            var match = PlayerDisconnectRegex().Match(output.Output);
+            if (match.Groups.Count != 6)
             {
                 return;
             }
-
-            var match = matchClosedByApp.Groups.Count == 6 ? matchClosedByApp : matchClosedByPeer;
 
             var connectionId = match.Groups[1].Value;
             var steamId64 = match.Groups[2].Value;

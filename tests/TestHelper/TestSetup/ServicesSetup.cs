@@ -1,7 +1,5 @@
 ﻿using Application;
-using Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
-using TestHelper.DockerContainerFolder;
 using TestHelper.TestConfigurationFolder;
 using TestHelper.TestLoggerFolder;
 using Xunit.Abstractions;

@@ -1,11 +1,6 @@
-﻿using System.Collections.Concurrent;
-using Application.CQRS.Commands;
-using Application.EventServiceFolder;
+﻿using Application.EventServiceFolder;
 using Application.EventServiceFolder.EventArgs;
-using Infrastructure.Database;
-using Infrastructure.Database.Models;
-using MediatR;
-using Microsoft.Extensions.DependencyInjection;
+using Application.ServerServiceFolder;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -14,91 +9,56 @@ namespace Application.ChatCommandFolder;
 public class ChatCommandService : BackgroundService
 {
     private readonly ILogger<ChatCommandService> _logger;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ChatCommandsCache _chatCommandsCache;
     private readonly EventService _eventService;
-    private readonly IMediator _mediator;
+    private readonly ServerService _serverService;
 
     public ChatCommandService(
         ILogger<ChatCommandService> logger,
-        IServiceProvider serviceProvider,
+        ChatCommandsCache chatCommandsCache,
         EventService eventService,
-        IMediator mediator)
+        ServerService serverService)
     {
         _logger = logger;
-        _serviceProvider = serviceProvider;
+        _chatCommandsCache = chatCommandsCache;
         _eventService = eventService;
-        _mediator = mediator;
+        _serverService = serverService;
     }
-
-    private readonly SemaphoreSlim _chatCommandsLock = new(1, 1);
-    private readonly ConcurrentBag<ChatCommand> _chatCommands = [];
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await UpdateCommands();
-        _eventService.StartingServerDone += async (_, _) => { await UpdateCommands(); };
-        _eventService.ChatMessage += EventServiceOnChatMessage;
+        await _chatCommandsCache.RefreshCache();
+        _eventService.ChatMessage += OnChatMessageChatCommands;
     }
 
-    private async void EventServiceOnChatMessage(object? sender, CustomEventArgChatMessage e)
+    private async void OnChatMessageChatCommands(object? sender, CustomEventArgChatMessage e)
     {
-        var chatMessage = e.Message.ToLower().Trim();
-        _logger.LogInformation("Checking for chat message command with chat message: \"{ChatMessage}\"", chatMessage);
-
-        await _chatCommandsLock.WaitAsync();
         try
         {
-            foreach (var chatCommand in _chatCommands)
+            var chatMessage = e.Message.ToLower().Trim();
+            var chatCommandResult = await _chatCommandsCache.GetByChatMessage(chatMessage);
+            if (chatCommandResult.IsError)
             {
-                if (!chatMessage.Equals(chatCommand.ChatMessage.ToLower()))
-                {
-                    continue;
-                }
-
-                _logger.LogInformation("Chat command found {@ChatCommand}", chatCommand);
-                var mediatorCommand = new SendCommandCommand(chatCommand.Command);
-                var result = await _mediator.Send(mediatorCommand);
-                if (result.IsError)
-                {
-                    _logger.LogError("Failed to execute chat command \"{Command}\" for chat message \"{ChatMessage}\"",
-                        chatCommand.Command, chatMessage);
-                }
-                else
-                {
-                    _logger.LogInformation("chat command \"{Command}\" executed for chat message \"{ChatMessage}\"",
-                        chatCommand.Command, chatMessage);
-                }
-
                 return;
             }
-        }
-        finally
-        {
-            _chatCommandsLock.Release();
-        }
-    }
 
-
-    public async Task UpdateCommands()
-    {
-        using var scope = _serviceProvider.CreateScope();
-        var unitOfWork = scope.GetUnitOfWork();
-        var allCommands = await unitOfWork.ChatCommandRepo.GetAll();
-
-        try
-        {
-            await _chatCommandsLock.WaitAsync();
-            _chatCommands.Clear();
-            foreach (var command in allCommands)
+            var chatCommand = chatCommandResult.Value;
+            _logger.LogInformation("Chat command \"{ChatMessage}\" is being processed", chatMessage);
+            var result = await _serverService.ExecuteCommand(chatCommand.Command);
+            if (result.IsError)
             {
-                _chatCommands.Add(command);
+                _logger.LogError("Failed to execute server command \"{Command}\" for chat message \"{ChatMessage}\"",
+                    chatCommand.Command, chatMessage);
+            }
+            else
+            {
+                _logger.LogInformation("Server command \"{Command}\" executed for chat message \"{ChatMessage}\"",
+                    chatCommand.Command, chatMessage);
             }
         }
-        finally
+        catch (Exception exception)
         {
-            _chatCommandsLock.Release();
+            _logger.LogError(exception, "Exception while trying to process chat command \"{ChatMessage}\"", e);
         }
-
-        _logger.LogInformation("Available chat commands updated");
     }
 }

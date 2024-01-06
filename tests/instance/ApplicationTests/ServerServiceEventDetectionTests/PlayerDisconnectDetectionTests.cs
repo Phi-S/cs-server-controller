@@ -1,7 +1,6 @@
 ﻿using Application.EventServiceFolder;
 using Application.EventServiceFolder.EventArgs;
 using Application.ServerServiceFolder;
-using Domain;
 using Infrastructure.Database.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Shared;
@@ -22,22 +21,6 @@ public class PlayerDisconnectDetectionTests
 
     [Theory]
     [InlineData(
-        "Steam Net connection #2892143414 UDP steamid:76561198154417260@10.10.20.10:49347 closed by peer, reason 1002: NETWORK_DISCONNECT_DISCONNECT_BY_USER",
-        "2892143414",
-        "76561198154417260",
-        "10.10.20.10:49347",
-        "1002",
-        "NETWORK_DISCONNECT_DISCONNECT_BY_USER")
-    ]
-    [InlineData(
-        "Steam Net connection #516036333 UDP steamid:76561198044941665@172.17.0.1:54767 closed by peer, reason 2055: NETWORK_DISCONNECT_LOOPDEACTIVATE",
-        "516036333",
-        "76561198044941665",
-        "172.17.0.1:54767",
-        "2055",
-        "NETWORK_DISCONNECT_LOOPDEACTIVATE")
-    ]
-    [InlineData(
         "[#3000669907 UDP steamid:76561198044941665@172.17.0.1:54196] closed by app, entering linger state (2158) NETWORK_DISCONNECT_KICKED_IDLE",
         "3000669907",
         "76561198044941665",
@@ -53,6 +36,22 @@ public class PlayerDisconnectDetectionTests
         "2039",
         "NETWORK_DISCONNECT_KICKED")
     ]
+    [InlineData(
+        "[#2330728174 UDP steamid:76561198154417260@10.10.20.10:50819] closed by peer (1059): NETWORK_DISCONNECT_EXITING",
+        "2330728174",
+        "76561198154417260",
+        "10.10.20.10:50819",
+        "1059",
+        "NETWORK_DISCONNECT_EXITING"
+    )]
+    [InlineData(
+        "[#1570318589 UDP steamid:76561198158337634@95.91.227.226:1103] closed by peer (1002): NETWORK_DISCONNECT_DISCONNECT_BY_USER",
+        "1570318589",
+        "76561198158337634",
+        "95.91.227.226:1103",
+        "1002",
+        "NETWORK_DISCONNECT_DISCONNECT_BY_USER"
+    )]
     public async Task TestNewOutputPlayerDisconnectByPeerDetection(
         string rawMessage,
         string shouldBeConnectionId,

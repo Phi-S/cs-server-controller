@@ -1,5 +1,4 @@
-﻿using Infrastructure.Database.Models;
-using Infrastructure.Database.Repos;
+﻿using Infrastructure.Database.Repos;
 
 namespace Infrastructure.Database;
 

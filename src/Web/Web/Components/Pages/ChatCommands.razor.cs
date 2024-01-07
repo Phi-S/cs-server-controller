@@ -9,7 +9,7 @@ namespace Web.Components.Pages;
 
 public class ChatCommandRazor : ComponentBase
 {
-    [Inject] private ILogger<ServerLogsRazor> Logger { get; set; } = default!;
+    [Inject] private ILogger<ChatCommandRazor> Logger { get; set; } = default!;
     [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] private InstanceApiService InstanceApiService { get; set; } = default!;
 

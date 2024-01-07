@@ -6,10 +6,8 @@ namespace Web.Components.Pages;
 
 public class EventsRazor : ComponentBase
 {
-    [Inject] private ILogger<ServerLogsRazor> Logger { get; set; } = default!;
-    [Inject] private ServerInfoService ServerInfoService { get; set; } = default!;
-
-    protected List<EventLogResponse>? EventLogs => ServerInfoService.Events;
+    [Inject] private ILogger<EventsRazor> Logger { get; set; } = default!;
+    [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
 
     protected override void OnInitialized()
     {

@@ -1,6 +1,7 @@
 ﻿using Application.ChatCommandFolder;
 using Application.DefaultConfigFolder;
 using Application.EventServiceFolder;
+using Application.ServerPluginsFolder;
 using Application.ServerServiceFolder;
 using Application.StatusServiceFolder;
 using Application.UpdateOrInstallServiceFolder;
@@ -21,6 +22,7 @@ public static class ApplicationExtensionMethods
         serviceCollection.AddSingleton<UpdateOrInstallService>();
         serviceCollection.AddSingleton<ServerService>();
         serviceCollection.AddSingleton<ChatCommandsCache>();
+        serviceCollection.AddSingleton<ServerPluginsService>();
         serviceCollection.AddHostedService<ChatCommandService>();
         serviceCollection.AddHostedService<DefaultConfigService>();
 

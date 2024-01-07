@@ -1,5 +1,6 @@
 using System.Text;
 using Application.EventServiceFolder;
+using Application.ServerPluginsFolder;
 using Application.StatusServiceFolder;
 using CliWrap;
 using CliWrap.Buffered;
@@ -23,6 +24,7 @@ public class UpdateOrInstallService
     private readonly StatusService _statusService;
     private readonly EventService _eventService;
     private readonly HttpClient _httpClient;
+    private readonly ServerPluginsService _serverPluginsService;
     private readonly IServiceProvider _services;
 
     #region Properties
@@ -58,6 +60,7 @@ public class UpdateOrInstallService
         StatusService statusService,
         EventService eventService,
         HttpClient httpClient,
+        ServerPluginsService serverPluginsService,
         IServiceProvider services
     )
     {
@@ -66,6 +69,7 @@ public class UpdateOrInstallService
         _statusService = statusService;
         _eventService = eventService;
         _httpClient = httpClient;
+        _serverPluginsService = serverPluginsService;
         _services = services;
     }
 
@@ -196,6 +200,15 @@ public class UpdateOrInstallService
             if (afterUpdateOrInstallSuccessfulAction != null)
             {
                 await afterUpdateOrInstallSuccessfulAction.Invoke();
+            }
+
+            var installPluginsResult = await _serverPluginsService.InstallBase();
+            if (installPluginsResult.IsError)
+            {
+                _logger.LogError("Failed to update or install server. {Error}",
+                    executeUpdateOrInstallProcess.FirstError.Description);
+                _eventService.OnUpdateOrInstallFailed(id);
+                return;
             }
 
             _eventService.OnUpdateOrInstallDone(id);

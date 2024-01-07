@@ -1,3 +1,7 @@
+* {
+    font-family: monospace
+}
+
 html, body {
     font-family: monospace, 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }

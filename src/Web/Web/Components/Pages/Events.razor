@@ -1,14 +1,14 @@
 ﻿@page "/events"
 @inherits EventsRazor
 @rendermode InteractiveServer
-@if (EventLogs is null)
+@if (ServerInfoService.Events is null)
 {
     <LoadingComp/>
 }
 else
 {
     <table>
-        @foreach (var e in EventLogs)
+        @foreach (var e in ServerInfoService.Events.OrderByDescending(l => l.TriggeredAtUtc))
         {
             <tr>
                 <td class="pe-3">@e.TriggeredAtUtc</td>

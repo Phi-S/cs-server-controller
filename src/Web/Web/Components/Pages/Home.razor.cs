@@ -210,8 +210,8 @@ public class HomeRazor : ComponentBase
                 return;
             }
 
-            Logger.LogInformation("Command executed \"{Command}\" executed", SendCommandBind);
-            ToastService.Info($"Command executed \"{SendCommandBind}\" executed");
+            Logger.LogInformation("Command \"{Command}\" executed", SendCommandBind);
+            ToastService.Info($"Command \"{SendCommandBind}\" executed");
             SendCommandBind = "";
         }
         catch (Exception e)

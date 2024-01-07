@@ -195,22 +195,20 @@ public class UpdateOrInstallService
 
             #endregion
 
-            _logger.LogInformation("Done updating or installing server");
+            var installPluginsResult = await _serverPluginsService.InstallBase();
+            if (installPluginsResult.IsError)
+            {
+                _logger.LogError("Failed to install server plugins. {Error}",
+                    installPluginsResult.FirstError.Description);
+                _eventService.OnUpdateOrInstallFailed(id);
+            }
 
             if (afterUpdateOrInstallSuccessfulAction != null)
             {
                 await afterUpdateOrInstallSuccessfulAction.Invoke();
             }
 
-            var installPluginsResult = await _serverPluginsService.InstallBase();
-            if (installPluginsResult.IsError)
-            {
-                _logger.LogError("Failed to update or install server. {Error}",
-                    executeUpdateOrInstallProcess.FirstError.Description);
-                _eventService.OnUpdateOrInstallFailed(id);
-                return;
-            }
-
+            _logger.LogInformation("Done updating or installing server");
             _eventService.OnUpdateOrInstallDone(id);
         }
         catch (Exception e)
@@ -271,7 +269,6 @@ public class UpdateOrInstallService
             const string successMessage = "Success! App '730' fully installed.";
 
             var successMessageReceived = false;
-
             var cli = await Cli.Wrap("python3")
                 .WithArguments(command)
                 .WithStandardOutputPipe(PipeTarget.ToDelegate(output =>

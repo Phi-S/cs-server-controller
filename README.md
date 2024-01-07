@@ -1,6 +1,6 @@
 # cs-server-controller
 ```
-dotnet watch run --project .\src\Web\Web.csproj
+dotnet watch run --project .\src\web\Web\Web.csproj
 ```
 
 ```

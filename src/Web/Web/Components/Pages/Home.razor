@@ -8,65 +8,70 @@
 }
 else
 {
-    <div class="container-fluid p-0 m-0">
-        <div class="row text-center">
-            <div class="col-6 text-nowrap pb-3">
-                <div class="p-1">
-                    @if (ServerInfoService.ServerInfo.ServerStarted == false)
-                    {
-                        <button class="btn btn-outline-info" disabled="@ServerInfoService.ServerInfo?.ServerUpdatingOrInstalling" title="Start server" @onclick="@Start">Start server</button>
-                    }
-                    else
-                    {
-                        <button class="btn btn-outline-info" title="Stop server" @onclick="@Stop">Stop server</button>
-                    }
-                </div>
+    <div>
+        <div class="text-nowrap align-items-center d-flex justify-content-center">
+            <div class="input-group flex-nowrap w-50">
+                @if (ServerInfoService.ServerInfo.ServerStarted == false)
+                {
+                    <button class="input-group btn btn-outline-info" disabled="@ServerInfoService.ServerInfo?.ServerUpdatingOrInstalling" title="Start server" @onclick="@Start">Start</button>
+                }
+                else
+                {
+                    <button class="input-group btn btn-outline-info" title="Stop server" @onclick="@Stop">Stop</button>
+                }
+                <button class="input-group btn btn-outline-info" disabled="@ServerInfoService.ServerInfo?.ServerUpdatingOrInstalling" @onclick="Restart">Restart</button>
+                @if (ServerInfoService.ServerInfo?.ServerUpdatingOrInstalling == false)
+                {
+                    <button class="input-group btn btn-outline-info" title="Update server" @onclick="@StartUpdateOrInstall">Update</button>
+                }
+                else
+                {
+                    <button class="input-group btn btn-outline-info" title="Cancel server update" @onclick="@CancelUpdateOrInstall">Cancel update</button>
+                }
 
-                <div class="p-1">
-                    @if (ServerInfoService.ServerInfo?.ServerUpdatingOrInstalling == false)
+                <button class="input-group btn btn-outline-primary dropdown" disabled="@DisabledWhenServerIsOffline" type="button" id="changeMapDropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Changes map. The server needs to be online to do this">
+                    Change map
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="changeMapDropdownMenuButton">
+                    @foreach (var map in ServerInfoService.Maps)
                     {
-                        <button class="btn btn-outline-info" title="Update server" @onclick="@StartUpdateOrInstall">Update server</button>
+                        <li>
+                            <button class="dropdown-item" disabled="@DisabledWhenServerIsOffline" type="button" @onclick="() => ChangeMap(map)">@map</button>
+                        </li>
                     }
-                    else
+                </ul>
+
+                <button class="input-group btn btn-outline-primary dropdown" disabled="@DisabledWhenServerIsOffline" type="button" id="executeConfigDropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Executing config. The server needs to be online to do this">
+                    Execute config
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="executeConfigDropdownMenuButton">
+                    @foreach (var config in ServerInfoService.Configs)
                     {
-                        <button class="btn btn-outline-info" title="Cancel server update" @onclick="@CancelUpdateOrInstall">Cancel server update</button>
+                        <li>
+                            <button class="dropdown-item" disabled="@DisabledWhenServerIsOffline" type="button" @onclick="() => ExecuteConfig(config)">@config</button>
+                        </li>
                     }
-                </div>
-
-                <div class="dropdown p-1">
-                    <button class="btn btn-outline-info" disabled="@DisabledWhenServerIsOffline" type="button" id="changeMapDropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Changes map. The server needs to be online to do this">
-                        Change map
-                    </button>
-                    <ul class="dropdown-menu" aria-labelledby="changeMapDropdownMenuButton">
-                        @foreach (var map in ServerInfoService.Maps)
-                        {
-                            <li>
-                                <button class="dropdown-item" disabled="@DisabledWhenServerIsOffline" type="button" @onclick="() => ChangeMap(map)">@map</button>
-                            </li>
-                        }
-                    </ul>
-                </div>
-
-                <div class="dropdown p-1">
-                    <button class="btn btn-outline-info" disabled="@DisabledWhenServerIsOffline" type="button" id="executeConfigDropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Executing config. The server needs to be online to do this">
-                        Execute config
-                    </button>
-                    <ul class="dropdown-menu" aria-labelledby="executeConfigDropdownMenuButton">
-                        @foreach (var config in ServerInfoService.Configs)
-                        {
-                            <li>
-                                <button class="dropdown-item" disabled="@DisabledWhenServerIsOffline" type="button" @onclick="() => ExecuteConfig(config)">@config</button>
-                            </li>
-                        }
-                    </ul>
-                </div>
-                <div class="p-1">
-                    <div class="input-group justify-content-center d-flex">
-                        <input class="input-group-text" placeholder="Server command" @bind="SendCommandBind"/>
-                        <button class="btn btn-outline-info" @onclick="SendCommand">Send</button>
-                    </div>
-                </div>
+                </ul>
             </div>
+        </div>
+        <div class="text-nowrap align-items-center d-flex justify-content-center pb-1 pt-1">
+            <div class="input-group justify-content-center d-flex w-100">
+                <input class="input-group-text" style="width: 90%" placeholder="Server command" @bind="SendCommandBind" @bind:event="oninput" @onkeydown="OnEnter"/>
+                <button class="btn btn-outline-info" disabled="@DisabledWhenServerIsOffline" style="width: 10%" @onclick="SendCommand">Send</button>
+            </div>
+        </div>
+        <div class="overflow-scroll overflow-x-hidden rounded-3 border border-2" style="height: 80vh">
+            <table class="table table-sm">
+                <tbody>
+                @foreach (var e in ServerInfoService.AllLogs.OrderByDescending(l => l.TimestampUtc))
+                {
+                    <tr>
+                        <td class="pe-2 text-nowrap">@e.TimestampUtc</td>
+                        <td>@e.Message</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
         </div>
     </div>
 }

@@ -1,5 +1,6 @@
 ﻿using BlazorBootstrap;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Shared;
 using Throw;
 using Web.BlazorExtensions;
@@ -15,13 +16,13 @@ public class HomeRazor : ComponentBase
     [Inject] private InstanceApiService InstanceApiService { get; set; } = default!;
     [Inject] private StartParametersJsonService StartParametersJsonService { get; set; } = default!;
 
-
     private static Guid? _currentUpdateOrInstallId;
     protected string SendCommandBind = "";
 
     protected override void OnInitialized()
     {
         ServerInfoService.OnServerInfoChangedEvent += async (_, _) => await InvokeAsync(StateHasChanged);
+        ServerInfoService.OnAllLogsChangedEvent += async (_, _) => { await InvokeAsync(StateHasChanged); };
     }
 
     protected async Task Start()
@@ -45,6 +46,36 @@ public class HomeRazor : ComponentBase
         }
     }
 
+    protected async Task Restart()
+    {
+        try
+        {
+            var stopResult = await InstanceApiService.Stop();
+            if (stopResult.IsError)
+            {
+                Logger.LogError("Failed to restart server. {Error}", stopResult.ErrorMessage());
+                ToastService.Error($"Failed to restart server. {stopResult.ErrorMessage()}");
+                return;
+            }
+
+            var startParameters = StartParametersJsonService.Get();
+            var startResult = await InstanceApiService.Start(startParameters);
+            if (startResult.IsError)
+            {
+                Logger.LogError("Failed to restart server. {Error}", startResult.ErrorMessage());
+                ToastService.Error($"Failed to restart server. {startResult.ErrorMessage()}");
+                return;
+            }
+
+            ToastService.Info("Server restarted");
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Failed to restart server");
+            ToastService.Error($"Failed to restart server");
+        }
+    }
+
     protected async Task Stop()
     {
         try
@@ -55,8 +86,10 @@ public class HomeRazor : ComponentBase
                 Logger.LogError("Failed to stop server. {Error}", stopResult.ErrorMessage());
                 ToastService.Error($"Failed to stop server. {stopResult.ErrorMessage()}");
             }
-
-            ToastService.Info("Server started");
+            else
+            {
+                ToastService.Info("Server stopped");
+            }
         }
         catch (Exception e)
         {
@@ -163,12 +196,18 @@ public class HomeRazor : ComponentBase
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(SendCommandBind))
+            {
+                return;
+            }
+
             var sendCommand = await InstanceApiService.SendCommand(SendCommandBind);
             if (sendCommand.IsError)
             {
                 Logger.LogError("Failed to execute command \"{Command}\". {Error}", SendCommandBind,
                     sendCommand.ErrorMessage());
-                ToastService.Error($"Failed to execute command \"{SendCommandBind}\". {sendCommand.ErrorMessage()}");
+                ToastService.Error(sendCommand.ErrorMessage());
+                return;
             }
 
             Logger.LogInformation("Command executed \"{Command}\" executed", SendCommandBind);
@@ -181,6 +220,15 @@ public class HomeRazor : ComponentBase
             ToastService.Error($"Failed to execute command \"{SendCommandBind}\"");
         }
     }
+
+    protected async Task OnEnter(KeyboardEventArgs args)
+    {
+        if (args.Key.Equals("Enter"))
+        {
+            await SendCommand();
+        }
+    }
+
 
     protected bool DisabledWhenServerIsOffline
     {

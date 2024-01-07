@@ -8,6 +8,8 @@ using Web.Options;
 
 namespace Web.Services;
 
+public record LogEntry(DateTime TimestampUtc, string Message);
+
 public class ServerInfoService
 {
     private readonly ILogger<ServerInfoService> _logger;
@@ -50,6 +52,7 @@ public class ServerInfoService
                         addSignalrRHandlerReconnected.ErrorMessage());
                     return;
                 }
+
                 _logger.LogInformation("Successfully reconnected");
             };
 
@@ -101,10 +104,12 @@ public class ServerInfoService
         }
 
         ServerInfo = serverInfo.Value;
-        ServerLogs = serverLogs.Value.OrderByDescending(l => l.MessageReceivedAtUt)
-            .ToList();
-        Events = events.Value.OrderByDescending(l => l.TriggeredAtUtc).ToList();
-        UpdateOrInstallLogs = updateOrInstallLogs.Value.OrderByDescending(l => l.MessageReceivedAtUt).ToList();
+        Events = events.Value;
+        ServerLogs = serverLogs.Value;
+        UpdateOrInstallLogs = updateOrInstallLogs.Value;
+        var allLogs = serverLogs.Value.Select(l => new LogEntry(l.MessageReceivedAtUt, l.Message)).ToList();
+        allLogs.AddRange(updateOrInstallLogs.Value.Select(l => new LogEntry(l.MessageReceivedAtUt, l.Message)));
+        AllLogs = allLogs;
         Maps = maps.Value;
         Configs = configs.Value;
 
@@ -140,20 +145,21 @@ public class ServerInfoService
             ServerInfo = response;
         });
 
-        connection.OnServerLog(response =>
-        {
-            ServerLogs ??= [];
-            ServerLogs.Add(response);
-            ServerLogs =
-                ServerLogs.OrderByDescending(l => l.MessageReceivedAtUt).ToList();
-            return Task.CompletedTask;
-        });
 
         connection.OnEvent(response =>
         {
             Events ??= [];
             Events.Add(response);
-            Events = Events.OrderByDescending(l => l.TriggeredAtUtc).ToList();
+            OnEventsChangedEvent?.Invoke(this, EventArgs.Empty);
+            return Task.CompletedTask;
+        });
+
+        connection.OnServerLog(response =>
+        {
+            ServerLogs ??= [];
+            ServerLogs.Add(response);
+            AllLogs.Add(new LogEntry(response.MessageReceivedAtUt, response.Message));
+            OnAllLogsChangedEvent?.Invoke(this, EventArgs.Empty);
             return Task.CompletedTask;
         });
 
@@ -161,8 +167,8 @@ public class ServerInfoService
         {
             UpdateOrInstallLogs ??= [];
             UpdateOrInstallLogs.Add(response);
-            UpdateOrInstallLogs = UpdateOrInstallLogs
-                .OrderByDescending(l => l.MessageReceivedAtUt).ToList();
+            AllLogs.Add(new LogEntry(response.MessageReceivedAtUt, response.Message));
+            OnAllLogsChangedEvent?.Invoke(this, EventArgs.Empty);
             return Task.CompletedTask;
         });
 
@@ -228,6 +234,34 @@ public class ServerInfoService
 
     #endregion
 
+    #region AllLogs
+
+    private readonly object _allLogsLock = new();
+    private List<LogEntry> _allLogs = [];
+    public event EventHandler? OnAllLogsChangedEvent;
+
+    public List<LogEntry> AllLogs
+    {
+        get
+        {
+            lock (_allLogsLock)
+            {
+                return _allLogs;
+            }
+        }
+        private set
+        {
+            lock (_allLogsLock)
+            {
+                _allLogs = value;
+            }
+
+            OnAllLogsChangedEvent?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    #endregion
+
     #region ServerLogs
 
     private readonly object _serverLogsLock = new();
@@ -245,14 +279,14 @@ public class ServerInfoService
         }
         private set
         {
+            lock (_serverLogsLock)
             {
-                lock (_serverLogsLock)
-                {
-                    _serverLogs = value;
-                }
-
-                OnServerLogsChangedEvent?.Invoke(this, EventArgs.Empty);
+                _serverLogs = value is null
+                    ? value
+                    : value.OrderByDescending(l => l.MessageReceivedAtUt).ToList();
             }
+
+            OnServerLogsChangedEvent?.Invoke(this, EventArgs.Empty);
         }
     }
 

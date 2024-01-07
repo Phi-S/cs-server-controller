@@ -73,8 +73,10 @@ public class InstanceApiService
             }
 
             var errorResponseJson = await response.Content.ReadAsStringAsync();
-            return Errors.Fail(
-                $"Request failed with status code {response.StatusCode} and ErrorResponse: {errorResponseJson}");
+            var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(errorResponseJson);
+            return Errors.Fail(errorResponse is null
+                ? $"Request failed with status code {response.StatusCode}"
+                : $"{errorResponse.Message}");
         }
         catch (Exception e)
         {

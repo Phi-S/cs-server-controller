@@ -14,8 +14,6 @@ public class ServerPluginsService
     private readonly IOptions<AppOptions> _options;
     private readonly HttpClient _httpClient;
 
-    private string CsgoFolder => Path.Combine(_options.Value.SERVER_FOLDER, "game", "csgo");
-    private string AddonsFolder => Path.Combine(CsgoFolder, "addons");
     private const string MetamodUrl = "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1278-linux.tar.gz";
 
     private const string CounterStrikeSharpUrl =
@@ -32,21 +30,25 @@ public class ServerPluginsService
     public async Task<ErrorOr<Success>> InstallBase()
     {
         _logger.LogInformation("Installing server plugins");
-        if (Directory.Exists(AddonsFolder))
+
+        var csgoFolder = Path.Combine(_options.Value.SERVER_FOLDER, "game", "csgo");
+        var addonsFolder = Path.Combine(csgoFolder, "addons");
+
+        if (Directory.Exists(addonsFolder))
         {
-            Directory.Delete(AddonsFolder, true);
+            Directory.Delete(addonsFolder, true);
         }
 
-        Directory.CreateDirectory(AddonsFolder);
+        Directory.CreateDirectory(addonsFolder);
 
-        var downloadMetamod = await DownloadMetamod();
+        var downloadMetamod = await DownloadMetamod(csgoFolder);
         if (downloadMetamod.IsError)
         {
             _logger.LogError("Failed to install metamod. {Error}", downloadMetamod.ErrorMessage());
             return downloadMetamod.FirstError;
         }
 
-        var downloadCounterStrikeSharp = await DownloadCounterStrikeSharp();
+        var downloadCounterStrikeSharp = await DownloadCounterStrikeSharp(csgoFolder);
         if (downloadCounterStrikeSharp.IsError)
         {
             _logger.LogError("Failed to install CounterStrikeSharp. {Error}",
@@ -54,8 +56,103 @@ public class ServerPluginsService
             return downloadCounterStrikeSharp.FirstError;
         }
 
+
+        var addMetamodEntry = await AddMetamodEntryToGameinfoGi(csgoFolder);
+        if (addMetamodEntry.IsError)
+        {
+            _logger.LogError("Failed to install CounterStrikeSharp. {Error}",
+                addMetamodEntry.ErrorMessage());
+            return addMetamodEntry.FirstError;
+        }
+
+        _logger.LogInformation("Server plugins installed");
+        return Result.Success;
+    }
+
+    public async Task<ErrorOr<Success>> DownloadMetamod(string csgoFolder)
+    {
+        var downloadPath = Path.Combine(csgoFolder, "addons", "metamod.tar.gz");
+        var downLoadResult = await Download(MetamodUrl, downloadPath);
+        if (downLoadResult.IsError)
+        {
+            return downLoadResult.FirstError;
+        }
+
+        Directory.CreateDirectory(csgoFolder);
+        await using (var gzip = new GZipStream(File.OpenRead(downloadPath), CompressionMode.Decompress))
+        {
+            using var unzippedStream = new MemoryStream();
+            await gzip.CopyToAsync(unzippedStream);
+            unzippedStream.Seek(0, SeekOrigin.Begin);
+
+
+            await using var reader = new TarReader(unzippedStream);
+            while (await reader.GetNextEntryAsync() is { } entry)
+            {
+                var entryPath = Path.Combine(
+                    csgoFolder,
+                    entry.Name.Replace("/", Path.DirectorySeparatorChar.ToString()
+                    ));
+
+                if (entry.EntryType == TarEntryType.Directory)
+                {
+                    Directory.CreateDirectory(entryPath);
+                }
+                else
+                {
+                    await entry.ExtractToFileAsync(entryPath, true);
+                }
+            }
+        }
+
+        File.Delete(downloadPath);
+        return Result.Success;
+    }
+
+    public async Task<ErrorOr<Success>> DownloadCounterStrikeSharp(string csgoFolder)
+    {
+        var downloadPath = Path.Combine(csgoFolder, "addons", "counterstrikesharp-with-runtime.zip");
+        var downLoadResult = await Download(CounterStrikeSharpUrl, Path.Combine(downloadPath));
+        if (downLoadResult.IsError)
+        {
+            return downLoadResult.FirstError;
+        }
+
+        Directory.CreateDirectory(csgoFolder);
+
+        await using (var fileStream = File.OpenRead(downloadPath))
+        {
+            ZipFile.ExtractToDirectory(fileStream, csgoFolder);
+        }
+
+        File.Delete(downloadPath);
+        return Result.Success;
+    }
+
+    public async Task<ErrorOr<Success>> Download(string downloadUrl, string downloadPath)
+    {
+        await using var downloadStream = await _httpClient.GetStreamAsync(downloadUrl);
+        await using var fileStream = new FileStream(downloadPath, FileMode.OpenOrCreate);
+        await downloadStream.CopyToAsync(fileStream);
+
+        if (File.Exists(downloadPath))
+        {
+            return Result.Success;
+        }
+
+        return Errors.Fail($"Failed to download \"{downloadUrl}\"");
+    }
+
+    public async Task<ErrorOr<Success>> AddMetamodEntryToGameinfoGi(string csgoFolder)
+    {
         const string metamodEntry = "			Game csgo/addons/metamod";
-        var gameinfoGiPath = Path.Combine(CsgoFolder, "gameinfo.gi");
+        var gameinfoGiPath = Path.Combine(csgoFolder, "gameinfo.gi");
+        if (File.Exists(gameinfoGiPath) == false)
+        {
+            _logger.LogInformation("Failed to find gameinfo.gi at \"{GameinfoGiPath}\"", gameinfoGiPath);
+            return Errors.Fail($"Failed to find gameinfo.gi at \"{gameinfoGiPath}\"");
+        }
+
         var fileLines = await File.ReadAllLinesAsync(gameinfoGiPath);
         if (fileLines.Any(l => l.Trim().Equals(metamodEntry.Trim())))
         {
@@ -76,75 +173,6 @@ public class ServerPluginsService
         await streamWriter.FlushAsync();
         streamWriter.Close();
         _logger.LogInformation("Added metamod entry to gameinfo.gi");
-        _logger.LogInformation("Server plugins installed");
         return Result.Success;
-    }
-
-    private async Task<ErrorOr<Success>> DownloadMetamod()
-    {
-        var downloadPath = Path.Combine(AddonsFolder, "metamod.tar.gz");
-        var downLoadResult = await Download(MetamodUrl, downloadPath);
-        if (downLoadResult.IsError)
-        {
-            return downLoadResult.FirstError;
-        }
-
-        var extractedFolderPath = Path.Combine(CsgoFolder);
-        Directory.CreateDirectory(extractedFolderPath);
-
-        await using var gzip = new GZipStream(File.OpenRead(downloadPath), CompressionMode.Decompress);
-        using var unzippedStream = new MemoryStream();
-        await gzip.CopyToAsync(unzippedStream);
-        unzippedStream.Seek(0, SeekOrigin.Begin);
-
-        await using var reader = new TarReader(unzippedStream);
-        while (await reader.GetNextEntryAsync() is { } entry)
-        {
-            var entryPath = Path.Combine(
-                extractedFolderPath,
-                entry.Name.Replace("/", Path.DirectorySeparatorChar.ToString()
-                ));
-
-            if (entry.EntryType == TarEntryType.Directory)
-            {
-                Directory.CreateDirectory(entryPath);
-            }
-            else
-            {
-                await entry.ExtractToFileAsync(entryPath, true);
-            }
-        }
-
-        return Result.Success;
-    }
-
-    private async Task<ErrorOr<Success>> DownloadCounterStrikeSharp()
-    {
-        var downloadPath = Path.Combine(AddonsFolder, "counterstrikesharp-with-runtime.zip");
-        var downLoadResult = await Download(CounterStrikeSharpUrl, Path.Combine(downloadPath));
-        if (downLoadResult.IsError)
-        {
-            return downLoadResult.FirstError;
-        }
-
-        var extractedFolderPath = Path.Combine(CsgoFolder);
-        Directory.CreateDirectory(extractedFolderPath);
-
-        ZipFile.ExtractToDirectory(File.OpenRead(downloadPath), extractedFolderPath);
-        return Result.Success;
-    }
-
-    public async Task<ErrorOr<Success>> Download(string downloadUrl, string downloadPath)
-    {
-        await using var downloadStream = await _httpClient.GetStreamAsync(downloadUrl);
-        await using var fileStream = new FileStream(downloadPath, FileMode.OpenOrCreate);
-        await downloadStream.CopyToAsync(fileStream);
-
-        if (File.Exists(downloadPath))
-        {
-            return Result.Success;
-        }
-
-        return Errors.Fail($"Failed to download \"{downloadUrl}\"");
     }
 }

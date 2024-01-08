@@ -31,7 +31,6 @@
     private string IsCurrent(string shouldBeUrl)
     {
         var currentUrl = NavigationManager.Uri.Split("/").Last();
-        Console.WriteLine(currentUrl);
         return shouldBeUrl.Equals(currentUrl) ? "active" : "";
     }
 

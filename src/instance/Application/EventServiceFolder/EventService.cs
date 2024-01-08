@@ -330,10 +330,16 @@ public sealed class EventService
 
     public event EventHandler<CustomEventArgChatMessage>? ChatMessage;
 
-    public void OnChatMessage(string chat, string playerName, string steamId3, string message)
+    public void OnChatMessage(
+        string playerName,
+        int userId,
+        string steamId,
+        Team team,
+        Chat chat,
+        string message)
     {
         ChatMessage?.Invoke(this,
-            new CustomEventArgChatMessage(Events.ChatMessage, chat, playerName, steamId3, message));
+            new CustomEventArgChatMessage(Events.ChatMessage, playerName, userId, steamId, team, chat, message));
     }
 
     #endregion

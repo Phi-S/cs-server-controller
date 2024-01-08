@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using Application.EventServiceFolder.EventArgs;
 using Microsoft.Extensions.Logging;
 
 namespace Application.ServerServiceFolder;
@@ -139,32 +140,72 @@ public partial class ServerService
         }
     }
 
-    [GeneratedRegex(@"\[(.*?)\]\[(.*?)\s\((\d+?)\)]:\s(.+)")]
+    [GeneratedRegex("""
+                    "(.+)<(\d)><\[(.+)\]><(.+)>" (say_team|say) "(.+)"
+                    """)]
     private static partial Regex ChatRegex();
 
-    // [All Chat][PhiS (194151532)]: ezz
-    // [All Chat][PhiS (194151532)]: noob
+    // L 01/08/2024 - 19:31:36: "PhiS :)<2><[U:1:84675937]><TERRORIST>" say "jasdkfjaskdj"
+    // L 01/08/2024 - 19:32:46: "PhiS :)<2><[U:1:84675937]><CT>" say ".fasdfa"
+    // L 01/08/2024 - 19:32:48: "PhiS :)<2><[U:1:84675937]><CT>" say_team "gfggrr"
+    // L 01/08/2024 - 19:36:59: "PhiS > :) < --L<2><[U:1:84675937]><TERRORIST>" say_team "kjkoo"
+    // L 01/08/2024 - 19:36:57: "PhiS > :) < --L<2><[U:1:84675937]><TERRORIST>" say "iklikdf"
+    // L 01/08/2024 - 19:36:45: "PhiS > :) < --L<2><[U:1:84675937]><CT>" say "1fgg"
+    // L 01/08/2024 - 19:36:48: "PhiS > :) < --L<2><[U:1:84675937]><CT>" say_team "ll"
     public void NewOutputAllChatDetection(object? _, ServerOutputEventArg output)
     {
         try
         {
-            if (output.Output.StartsWith("[") == false)
+            if (output.Output.StartsWith("L") == false)
             {
                 return;
             }
 
             var match = ChatRegex().Match(output.Output);
-            if (match.Groups.Count != 5)
+            if (match.Groups.Count != 7)
             {
                 return;
             }
 
-            var chat = match.Groups[1].Value;
-            var name = match.Groups[2].Value;
-            var steamId3 = match.Groups[3].Value;
-            var message = match.Groups[4].Value;
+            var playerName = match.Groups[1].Value;
+            var userIdString = match.Groups[2].Value;
+            var userId = int.Parse(userIdString);
 
-            _eventService.OnChatMessage(chat, name, steamId3, message);
+            var steamId = match.Groups[3].Value;
+            var teamString = match.Groups[4].Value;
+            Team team;
+            if (teamString.Equals("TERRORIST"))
+            {
+                team = Team.T;
+            }
+            else if (teamString.Equals("CT"))
+            {
+                team = Team.CT;
+            }
+            else
+            {
+                throw new Exception($"\"{teamString}\" is not a valid team");
+            }
+
+
+            var chatString = match.Groups[5].Value;
+            Chat chat;
+            if (chatString.Equals("say_team"))
+            {
+                chat = Chat.Team;
+            }
+            else if (chatString.Equals("say"))
+            {
+                chat = Chat.All;
+            }
+            else
+            {
+                throw new Exception($"\"{chatString}\" is not a valid chat");
+            }
+
+            var message = match.Groups[6].Value;
+
+            _eventService.OnChatMessage(playerName, userId, steamId, team, chat, message);
         }
         catch (Exception e)
         {

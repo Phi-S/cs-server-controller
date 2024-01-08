@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Components;
-using Shared.ApiModels;
 using Web.Services;
 
 namespace Web.Components.Pages;

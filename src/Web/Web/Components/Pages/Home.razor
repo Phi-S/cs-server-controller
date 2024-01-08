@@ -59,17 +59,15 @@ else
                 <button class="btn btn-outline-info" disabled="@DisabledWhenServerIsOffline" style="width: 30%" @onclick="SendCommand">Send</button>
             </div>
         </div>
-        <div class="overflow-scroll rounded-3 border border-2" style="height: 80vh">
-            <table class="table table-sm">
-                <tbody>
-                @foreach (var e in ServerInfoService.AllLogs.OrderByDescending(l => l.TimestampUtc))
+        <div class="overflow-scroll overflow-x-hidden rounded-3 border border-2" style="height: 80vh">
+            <table class="table table-sm table-striped">
+                @foreach (var e in ServerInfoService.AllLogs.OrderByDescending(l => l.TimestampUtc).Take(1000))
                 {
-                    <tr>
-                        <td class="pe-2 text-nowrap">@e.TimestampUtc</td>
-                        <td>@e.Message</td>
+                    <tr class="border-bottom row m-0 p-0 flex-nowrap" style="width: 95vw">
+                        <td class="m-0 p-0 ms-1 me-2" style="width: 20%">@e.TimestampUtc:</td>
+                        <td class="m-0 p-0" style="width: 80%; word-wrap: break-word">@e.Message</td>
                     </tr>
                 }
-                </tbody>
             </table>
         </div>
     </div>

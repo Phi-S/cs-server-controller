@@ -2,21 +2,45 @@
 
 namespace Application.EventServiceFolder.EventArgs;
 
-public class CustomEventArgChatMessage(Events eventName, string chat, string playerName, string steamId3,
-    string message) : CustomEventArg(eventName)
+public enum Chat
 {
-    public string Chat { get; } = chat;
+    Team,
+    All
+}
+
+public enum Team
+{
+    // ReSharper disable once InconsistentNaming
+    CT,
+    T
+}
+
+public class CustomEventArgChatMessage(
+    Events eventName,
+    string playerName,
+    int userId,
+    string steamId,
+    Team team,
+    Chat chat,
+    string message
+) : CustomEventArg(eventName)
+{
     public string PlayerName { get; } = playerName;
-    public string SteamId3 { get; } = steamId3;
+    public int UserId { get; } = userId;
+    public string SteamId { get; } = steamId;
+    public Team Team { get; } = team;
+    public Chat Chat { get; } = chat;
     public string Message { get; } = message;
 
     public override string GetDataJson()
     {
         var data = new
         {
-            Chat,
             PlayerName,
-            SteamId3,
+            UserId,
+            SteamId,
+            Team,
+            Chat,
             Message
         };
         return JsonSerializer.Serialize(data);
@@ -24,6 +48,7 @@ public class CustomEventArgChatMessage(Events eventName, string chat, string pla
 
     public override string ToString()
     {
-        return $"{base.ToString()}, {nameof(Chat)}: {Chat}, {nameof(PlayerName)}: {PlayerName}, {nameof(SteamId3)}: {SteamId3}, {nameof(Message)}: {Message}";
+        return
+            $"{base.ToString()}, {nameof(PlayerName)}: {PlayerName}, {nameof(UserId)}: {UserId}, {nameof(SteamId)}: {SteamId}, {nameof(Team)}: {Team}, {nameof(Chat)}: {Chat}, {nameof(Message)}: {Message}";
     }
 }

@@ -1,10 +1,14 @@
 ﻿using System.Formats.Tar;
 using System.IO.Compression;
+using System.Text.RegularExpressions;
+using Application.ServerServiceFolder;
+using CustomCommandsPlugin;
 using Domain;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shared;
+using SharedPluginLib;
 
 namespace Application.ServerPluginsFolder;
 
@@ -13,19 +17,119 @@ public class ServerPluginsService
     private readonly ILogger<ServerPluginsService> _logger;
     private readonly IOptions<AppOptions> _options;
     private readonly HttpClient _httpClient;
+    private readonly ServerService _serverService;
 
     private const string MetamodUrl = "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1278-linux.tar.gz";
 
     private const string CounterStrikeSharpUrl =
         "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v142/counterstrikesharp-with-runtime-build-142-linux-7b45a88.zip";
 
-    public ServerPluginsService(ILogger<ServerPluginsService> logger, IOptions<AppOptions> options,
-        HttpClient httpClient)
+    public ServerPluginsService(
+        ILogger<ServerPluginsService> logger,
+        IOptions<AppOptions> options,
+        HttpClient httpClient,
+        ServerService serverService)
     {
         _logger = logger;
         _options = options;
         _httpClient = httpClient;
+        _serverService = serverService;
     }
+
+    public async Task<ErrorOr<PlayerPosition>> GetPlayerPosition(int userId)
+    {
+        var commandResponse = await _serverService.ExecuteCommand($"get_player_position {userId}");
+        if (commandResponse.IsError)
+        {
+            return commandResponse.FirstError;
+        }
+
+        var pluginResponse = PluginResponse.GetFromJson(commandResponse.Value);
+        if (pluginResponse is null)
+        {
+            return Errors.Fail("Failed deserialize plugin response");
+        }
+
+        if (pluginResponse.Success == false)
+        {
+            return Errors.Fail($"Command executed but failed with error {pluginResponse.DataJson}");
+        }
+
+        Console.WriteLine(pluginResponse);
+        var tryGetData = pluginResponse.TryGetData(out PlayerPosition? playerPosition);
+        if (tryGetData == false || playerPosition is null)
+        {
+            return Errors.Fail("Failed to get data from plugin response");
+        }
+
+        return playerPosition;
+    }
+
+    public async Task<ErrorOr<Success>> PlaceBotOnPlayerPosition(int userId, string side)
+    {
+        side = side.ToLower();
+        if (side.Equals("t") == false && side.Equals("ct") == false)
+        {
+            return Errors.Fail("Bots can only be placed on ct or t side");
+        }
+
+        var playerPositionResult = await GetPlayerPosition(userId);
+        if (playerPositionResult.IsError)
+        {
+            return playerPositionResult.FirstError;
+        }
+
+        var botAddResponse = await _serverService.ExecuteCommand($"bot_add {side}");
+        if (botAddResponse.IsError)
+        {
+            return botAddResponse.FirstError;
+        }
+
+        var addedBotRegex = @"L (?:\d{2}\/\d{2}\/\d{4}) - (?:\d{2}:){3} ""(?:.+)<(\d{1,2})><BOT><>"" entered the game";
+        var botAddMatch = Regex.Match(botAddResponse.Value, addedBotRegex);
+        if (botAddMatch.Groups.Count != 2)
+        {
+            return Errors.Fail("Failed to get valid response from add bot command");
+        }
+
+        var playerPosition = playerPositionResult.Value;
+        var userIdOfNewBot = botAddMatch.Groups[1].Value;
+        var commandResponse = await _serverService.ExecuteCommand(
+            $"move_player" +
+            $" {userIdOfNewBot}" +
+            $" {playerPosition.PositionX}" +
+            $" {playerPosition.PositionY}" +
+            $" {playerPosition.PositionZ}" +
+            $" {playerPosition.AngleX}" +
+            $" {playerPosition.AngleY}" +
+            $" {playerPosition.AngleZ}");
+        if (commandResponse.IsError)
+        {
+            return commandResponse.FirstError;
+        }
+
+        return Result.Success;
+    }
+
+    #region Install
+
+    public async Task<ErrorOr<Success>> Install()
+    {
+        var installBaseResult = await InstallBase();
+        if (installBaseResult.IsError)
+        {
+            return installBaseResult.FirstError;
+        }
+
+        var installPluginsResult = await InstallPlugins();
+        if (installPluginsResult.IsError)
+        {
+            return installBaseResult.FirstError;
+        }
+
+        return Result.Success;
+    }
+
 
     public async Task<ErrorOr<Success>> InstallBase()
     {
@@ -175,4 +279,27 @@ public class ServerPluginsService
         _logger.LogInformation("Added metamod entry to gameinfo.gi");
         return Result.Success;
     }
+
+    public Task<ErrorOr<Success>> InstallPlugins()
+    {
+        var pluginsSrc = Path.Combine(_options.Value.EXECUTING_FOLDER, "ServerPluginsFolder", "plugins");
+        var pluginsDest = Path.Combine(_options.Value.SERVER_FOLDER, "game", "csgo", "addons", "counterstrikesharp",
+            "plugins");
+
+        Directory.Delete(pluginsDest);
+
+        foreach (var dirPath in Directory.GetDirectories(pluginsSrc, "*", SearchOption.AllDirectories))
+        {
+            Directory.CreateDirectory(dirPath.Replace(pluginsSrc, pluginsDest));
+        }
+
+        foreach (var newPath in Directory.GetFiles(pluginsSrc, "*.*", SearchOption.AllDirectories))
+        {
+            File.Copy(newPath, newPath.Replace(pluginsSrc, pluginsDest), true);
+        }
+
+        return Task.FromResult<ErrorOr<Success>>(Result.Success);
+    }
+
+    #endregion
 }

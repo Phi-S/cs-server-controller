@@ -212,7 +212,6 @@ public class HomeRazor : ComponentBase
 
             Logger.LogInformation("Command \"{Command}\" executed", SendCommandBind);
             ToastService.Info($"Command \"{SendCommandBind}\" executed");
-            SendCommandBind = "";
         }
         catch (Exception e)
         {

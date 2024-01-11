@@ -349,7 +349,7 @@ public class ServerInfoService
             lock (_startParametersLock)
             {
                 _startParameters = value;
-                OnServerInfoChangedEvent?.Invoke(this, EventArgs.Empty);
+                OnStartParametersChangedEvent?.Invoke(this, EventArgs.Empty);
             }
         }
     }

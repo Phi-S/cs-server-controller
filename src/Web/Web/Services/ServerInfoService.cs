@@ -97,12 +97,6 @@ public class ServerInfoService
             return maps.FirstError;
         }
 
-        var configs = await _instanceApiService.Configs();
-        if (configs.IsError)
-        {
-            return configs.FirstError;
-        }
-
         ServerInfo = serverInfo.Value;
         Events = events.Value;
         ServerLogs = serverLogs.Value;
@@ -111,7 +105,6 @@ public class ServerInfoService
         allLogs.AddRange(updateOrInstallLogs.Value.Select(l => new LogEntry(l.MessageReceivedAtUt, l.Message)));
         AllLogs = allLogs;
         Maps = maps.Value;
-        Configs = configs.Value;
 
         connection.Remove(SignalRMethods.ServerStatusMethod);
         connection.Remove(SignalRMethods.ServerLogMethod);
@@ -131,15 +124,7 @@ public class ServerInfoService
                         mapsOnServerStart.ErrorMessage());
                 }
 
-                var configsOnServerStart = await _instanceApiService.Configs();
-                if (configsOnServerStart.IsError)
-                {
-                    _logger.LogError("Failed to get configs after server start. {Error}",
-                        configsOnServerStart.ErrorMessage());
-                }
-
                 Maps = mapsOnServerStart.Value;
-                Configs = configsOnServerStart.Value;
             }
 
             ServerInfo = response;
@@ -179,10 +164,10 @@ public class ServerInfoService
     #region ServerInfo
 
     private readonly object _serverInfoLock = new();
-    private ServerStatusResponse? _serverInfo;
+    private ServerInfoResponse? _serverInfo;
     public event EventHandler? OnServerInfoChangedEvent;
 
-    public ServerStatusResponse? ServerInfo
+    public ServerInfoResponse? ServerInfo
     {
         get
         {
@@ -196,9 +181,8 @@ public class ServerInfoService
             lock (_serverInfoLock)
             {
                 _serverInfo = value;
+                OnServerInfoChangedEvent?.Invoke(this, EventArgs.Empty);
             }
-
-            OnServerInfoChangedEvent?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -225,9 +209,8 @@ public class ServerInfoService
                 lock (_eventsLock)
                 {
                     _events = value;
+                    OnEventsChangedEvent?.Invoke(this, EventArgs.Empty);
                 }
-
-                OnEventsChangedEvent?.Invoke(this, EventArgs.Empty);
             }
         }
     }
@@ -254,9 +237,8 @@ public class ServerInfoService
             lock (_allLogsLock)
             {
                 _allLogs = value;
+                OnAllLogsChangedEvent?.Invoke(this, EventArgs.Empty);
             }
-
-            OnAllLogsChangedEvent?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -284,9 +266,8 @@ public class ServerInfoService
                 _serverLogs = value is null
                     ? value
                     : value.OrderByDescending(l => l.MessageReceivedAtUt).ToList();
+                OnServerLogsChangedEvent?.Invoke(this, EventArgs.Empty);
             }
-
-            OnServerLogsChangedEvent?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -313,9 +294,8 @@ public class ServerInfoService
                 lock (_updateOrInstallLogsLock)
                 {
                     _updateOrInstallLogs = value;
+                    OnUpdateOrInstallLogsChangedEvent?.Invoke(this, EventArgs.Empty);
                 }
-
-                OnUpdateOrInstallLogsChangedEvent?.Invoke(this, EventArgs.Empty);
             }
         }
     }
@@ -349,27 +329,27 @@ public class ServerInfoService
 
     #endregion
 
-    #region Configs
+    #region StartParameters
 
-    private readonly List<string> _configs = new();
-    private readonly object _configsLock = new();
+    private StartParameters _startParameters = new();
+    private readonly object _startParametersLock = new();
+    public event EventHandler? OnStartParametersChangedEvent;
 
-    public List<string> Configs
+    public StartParameters StartParameters
     {
         get
         {
-            lock (_configsLock)
+            lock (_startParametersLock)
             {
-                return _configs;
+                return _startParameters;
             }
         }
-        private set
+        set
         {
-            if (value.Count <= 0) return;
-            lock (_configsLock)
+            lock (_startParametersLock)
             {
-                _configs.Clear();
-                _configs.AddRange(value);
+                _startParameters = value;
+                OnServerInfoChangedEvent?.Invoke(this, EventArgs.Empty);
             }
         }
     }

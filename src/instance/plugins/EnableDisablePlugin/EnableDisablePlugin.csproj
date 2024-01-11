@@ -7,7 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Compile Remove="CustomCommand.cs" />
+        <PackageReference Include="CounterStrikeSharp.API" Version="1.0.143"/>
     </ItemGroup>
 
 </Project>

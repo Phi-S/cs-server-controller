@@ -8,41 +8,54 @@ using Web.Services;
 
 namespace Web.Components.Pages;
 
-public class HomeRazor : ComponentBase
+public class HomeRazor : ComponentBase, IDisposable
 {
-    [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] private ILogger<HomeRazor> Logger { get; set; } = default!;
+    [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
     [Inject] private InstanceApiService InstanceApiService { get; set; } = default!;
-    [Inject] private StartParametersJsonService StartParametersJsonService { get; set; } = default!;
 
     private static Guid? _currentUpdateOrInstallId;
     protected string SendCommandBind = "";
 
     protected override void OnInitialized()
     {
-        ServerInfoService.OnServerInfoChangedEvent += async (_, _) => await InvokeAsync(StateHasChanged);
-        ServerInfoService.OnAllLogsChangedEvent += async (_, _) => { await InvokeAsync(StateHasChanged); };
+        ServerInfoService.OnServerInfoChangedEvent += OnServerInfoOrLogsChangedEvent;
+        ServerInfoService.OnAllLogsChangedEvent += OnServerInfoOrLogsChangedEvent;
+    }
+
+    private async void OnServerInfoOrLogsChangedEvent(object? o, EventArgs eventArgs)
+    {
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Error in OnServerInfoOrLogsChangedEvent Method");
+        }
     }
 
     protected async Task Start()
     {
         try
         {
-            var startParameters = StartParametersJsonService.Get();
-            var startResult = await InstanceApiService.Start(startParameters);
+            var startResult = await InstanceApiService.Start();
             if (startResult.IsError)
             {
                 Logger.LogError("Failed to start server. {Error}", startResult.ErrorMessage());
                 ToastService.Error($"Failed to start server. {startResult.ErrorMessage()}");
             }
-
-            ToastService.Info("Server started");
+            else
+            {
+                Logger.LogInformation("Server started");
+                ToastService.Info("Server started");
+            }
         }
         catch (Exception e)
         {
             Logger.LogError(e, "Failed to start server");
-            ToastService.Error($"Failed to start server");
+            ToastService.Error("Failed to start server");
         }
     }
 
@@ -58,8 +71,7 @@ public class HomeRazor : ComponentBase
                 return;
             }
 
-            var startParameters = StartParametersJsonService.Get();
-            var startResult = await InstanceApiService.Start(startParameters);
+            var startResult = await InstanceApiService.Start();
             if (startResult.IsError)
             {
                 Logger.LogError("Failed to restart server. {Error}", startResult.ErrorMessage());
@@ -67,12 +79,13 @@ public class HomeRazor : ComponentBase
                 return;
             }
 
+            Logger.LogInformation("Server restarted");
             ToastService.Info("Server restarted");
         }
         catch (Exception e)
         {
             Logger.LogError(e, "Failed to restart server");
-            ToastService.Error($"Failed to restart server");
+            ToastService.Error("Failed to restart server");
         }
     }
 
@@ -88,6 +101,7 @@ public class HomeRazor : ComponentBase
             }
             else
             {
+                Logger.LogInformation("Server stopped");
                 ToastService.Info("Server stopped");
             }
         }
@@ -102,19 +116,20 @@ public class HomeRazor : ComponentBase
     {
         try
         {
-            var startUpdateOrInstallResult = await InstanceApiService.StartUpdatingOrInstalling(null);
+            var startUpdateOrInstallResult = await InstanceApiService.StartUpdatingOrInstalling();
             if (startUpdateOrInstallResult.IsError)
             {
                 Logger.LogError("Start update or install server failed with error {Error}",
                     startUpdateOrInstallResult.ErrorMessage());
                 ToastService.Error(
                     $"Failed to update server. {startUpdateOrInstallResult.ErrorMessage()}");
-                return;
             }
-
-            _currentUpdateOrInstallId = startUpdateOrInstallResult.Value;
-            Logger.LogInformation("Update or install started");
-            ToastService.Info("Server update started");
+            else
+            {
+                _currentUpdateOrInstallId = startUpdateOrInstallResult.Value;
+                Logger.LogInformation("Update or install started");
+                ToastService.Info("Server update started");
+            }
         }
         catch (Exception e)
         {
@@ -137,11 +152,12 @@ public class HomeRazor : ComponentBase
                     cancelUpdatingOrInstalling.ErrorMessage());
                 ToastService.Error(
                     $"Failed to cancel server update. {cancelUpdatingOrInstalling.ErrorMessage()}");
-                return;
             }
-
-            Logger.LogInformation("Server update cancelled");
-            ToastService.Info("Server update cancelled");
+            else
+            {
+                Logger.LogInformation("Server update cancelled");
+                ToastService.Info("Server update cancelled");
+            }
         }
         catch (Exception e)
         {
@@ -160,35 +176,16 @@ public class HomeRazor : ComponentBase
                 Logger.LogError("Failed to change map to {Map}. {Error}", map, mapChangeResult.ErrorMessage());
                 ToastService.Error($"Failed to change map to {map}. {mapChangeResult.ErrorMessage()}");
             }
-
-            Logger.LogInformation("Map changed to {Map}", map);
-            ToastService.Info($"Map changed to {map}");
+            else
+            {
+                Logger.LogInformation("Map changed to {Map}", map);
+                ToastService.Info($"Map changed to {map}");
+            }
         }
         catch (Exception e)
         {
             Logger.LogError(e, "Failed to change map to {Map}", map);
             ToastService.Error($"Failed to change map to {map}");
-        }
-    }
-
-    protected async Task ExecuteConfig(string config)
-    {
-        try
-        {
-            var sendCommand = await InstanceApiService.SendCommand($"exec {config}");
-            if (sendCommand.IsError)
-            {
-                Logger.LogError("Failed to execute config \"{Config}\". {Error}", config, sendCommand.ErrorMessage());
-                ToastService.Error($"Failed to execute config \"{config}\". {sendCommand.ErrorMessage()}");
-            }
-
-            Logger.LogInformation("Config \"{Config}\" executed", config);
-            ToastService.Info($"Config \"{config}\" executed");
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e, "Failed to execute config \"{Config}\"", config);
-            ToastService.Error($"Failed to execute config \"{config}\"");
         }
     }
 
@@ -207,11 +204,12 @@ public class HomeRazor : ComponentBase
                 Logger.LogError("Failed to execute command \"{Command}\". {Error}", SendCommandBind,
                     sendCommand.ErrorMessage());
                 ToastService.Error(sendCommand.ErrorMessage());
-                return;
             }
-
-            Logger.LogInformation("Command \"{Command}\" executed", SendCommandBind);
-            ToastService.Info($"Command \"{SendCommandBind}\" executed");
+            else
+            {
+                Logger.LogInformation("Command \"{Command}\" executed", SendCommandBind);
+                ToastService.Info($"Command \"{SendCommandBind}\" executed");
+            }
         }
         catch (Exception e)
         {
@@ -240,5 +238,11 @@ public class HomeRazor : ComponentBase
 
             return ServerInfoService.ServerInfo.ServerStarted == false;
         }
+    }
+
+    public void Dispose()
+    {
+        ServerInfoService.OnServerInfoChangedEvent -= OnServerInfoOrLogsChangedEvent;
+        ServerInfoService.OnAllLogsChangedEvent -= OnServerInfoOrLogsChangedEvent;
     }
 }

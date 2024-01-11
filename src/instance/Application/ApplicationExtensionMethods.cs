@@ -1,8 +1,8 @@
 ﻿using Application.ChatCommandFolder;
-using Application.DefaultConfigFolder;
 using Application.EventServiceFolder;
 using Application.ServerPluginsFolder;
 using Application.ServerServiceFolder;
+using Application.StartParameterFolder;
 using Application.StatusServiceFolder;
 using Application.UpdateOrInstallServiceFolder;
 using Infrastructure;
@@ -17,14 +17,16 @@ public static class ApplicationExtensionMethods
         serviceCollection.AddInfrastructure();
 
         serviceCollection.AddHttpClient();
+
         serviceCollection.AddSingleton<EventService>();
         serviceCollection.AddSingleton<StatusService>();
         serviceCollection.AddSingleton<UpdateOrInstallService>();
         serviceCollection.AddSingleton<ServerService>();
         serviceCollection.AddSingleton<ChatCommandsCache>();
         serviceCollection.AddSingleton<ServerPluginsService>();
+        serviceCollection.AddSingleton<StartParameterService>();
+
         serviceCollection.AddHostedService<ChatCommandService>();
-        serviceCollection.AddHostedService<DefaultConfigService>();
 
         serviceCollection.AddApplicationMediatR();
         return serviceCollection;

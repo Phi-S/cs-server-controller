@@ -3,7 +3,7 @@ using Web.Services;
 
 namespace Web.Components.Pages;
 
-public class EventsRazor : ComponentBase
+public class EventsRazor : ComponentBase, IDisposable
 {
     [Inject] private ILogger<EventsRazor> Logger { get; set; } = default!;
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
@@ -12,11 +12,21 @@ public class EventsRazor : ComponentBase
     {
         try
         {
-            ServerInfoService.OnEventsChangedEvent += async (_, _) => { await InvokeAsync(StateHasChanged); };
+            ServerInfoService.OnEventsChangedEvent += OnServerInfoServiceOnOnEventsChangedEvent;
         }
         catch (Exception e)
         {
             Logger.LogError(e, "Exception while initializing EventsPage");
         }
+    }
+
+    private async void OnServerInfoServiceOnOnEventsChangedEvent(object? o, EventArgs eventArgs)
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ServerInfoService.OnEventsChangedEvent -= OnServerInfoServiceOnOnEventsChangedEvent;
     }
 }

@@ -27,6 +27,24 @@ public class UpdateOrInstallService
     private readonly ServerPluginsService _serverPluginsService;
     private readonly IServiceProvider _services;
 
+    public UpdateOrInstallService(ILogger<UpdateOrInstallService> logger,
+        IOptions<AppOptions> options,
+        StatusService statusService,
+        EventService eventService,
+        HttpClient httpClient,
+        ServerPluginsService serverPluginsService,
+        IServiceProvider services
+    )
+    {
+        _logger = logger;
+        _options = options;
+        _statusService = statusService;
+        _eventService = eventService;
+        _httpClient = httpClient;
+        _serverPluginsService = serverPluginsService;
+        _services = services;
+    }
+
     #region Properties
 
     public event EventHandler<UpdateOrInstallOutputEventArg>? UpdateOrInstallOutput;
@@ -55,23 +73,6 @@ public class UpdateOrInstallService
 
     #endregion
 
-    public UpdateOrInstallService(ILogger<UpdateOrInstallService> logger,
-        IOptions<AppOptions> options,
-        StatusService statusService,
-        EventService eventService,
-        HttpClient httpClient,
-        ServerPluginsService serverPluginsService,
-        IServiceProvider services
-    )
-    {
-        _logger = logger;
-        _options = options;
-        _statusService = statusService;
-        _eventService = eventService;
-        _httpClient = httpClient;
-        _serverPluginsService = serverPluginsService;
-        _services = services;
-    }
 
     public async Task<ErrorOr<Guid>> StartUpdateOrInstall(Func<Task>? afterUpdateOrInstallSuccessfulAction = null)
     {

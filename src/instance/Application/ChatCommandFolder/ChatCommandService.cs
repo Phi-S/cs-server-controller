@@ -1,10 +1,8 @@
 ﻿using Application.EventServiceFolder;
 using Application.EventServiceFolder.EventArgs;
-using Application.ServerPluginsFolder;
 using Application.ServerServiceFolder;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Shared;
 
 namespace Application.ChatCommandFolder;
 
@@ -14,20 +12,17 @@ public class ChatCommandService : BackgroundService
     private readonly ChatCommandsCache _chatCommandsCache;
     private readonly EventService _eventService;
     private readonly ServerService _serverService;
-    private readonly ServerPluginsService _serverPluginsService;
 
     public ChatCommandService(
         ILogger<ChatCommandService> logger,
         ChatCommandsCache chatCommandsCache,
         EventService eventService,
-        ServerService serverService,
-        ServerPluginsService serverPluginsService)
+        ServerService serverService)
     {
         _logger = logger;
         _chatCommandsCache = chatCommandsCache;
         _eventService = eventService;
         _serverService = serverService;
-        _serverPluginsService = serverPluginsService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -41,21 +36,6 @@ public class ChatCommandService : BackgroundService
         try
         {
             var chatMessage = e.Message.ToLower().Trim();
-            if (chatMessage.Equals("!bot"))
-            {
-                var placeBotOnPlayerPosition =
-                    await _serverPluginsService.PlaceBotOnPlayerPosition(e.UserId, e.Team.ToString());
-                if (placeBotOnPlayerPosition.IsError)
-                {
-                    _logger.LogError("placeBotOnPlayerPosition failed {Error}",
-                        placeBotOnPlayerPosition.ErrorMessage());
-                    return;
-                }
-
-                _logger.LogError("placeBotOnPlayerPosition success");
-                return;
-            }
-
             var chatCommandResult = await _chatCommandsCache.GetByChatMessage(chatMessage);
             if (chatCommandResult.IsError)
             {

@@ -1,7 +1,9 @@
 ﻿using Application.ServerPluginsFolder;
 using Domain;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using TestHelper.TestLoggerFolder;
+using TestHelper.TestSetup;
 using Xunit.Abstractions;
 
 namespace ApplicationTests;
@@ -18,7 +20,6 @@ public class ServerPluginsServiceTests
     [Fact]
     public async Task TestMetamodDownload()
     {
-        /*
         // Arrange
         var folderGuid = Guid.NewGuid();
         _outputHelper.WriteLine($"FolderGuid: {folderGuid}");
@@ -55,13 +56,11 @@ public class ServerPluginsServiceTests
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "metamod")));
         Assert.True(File.Exists(Path.Combine(addonsFolder, "metamod", "metaplugins.ini")));
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "metamod", "bin")));
-        */
     }
 
     [Fact]
     public async Task TestCounterStrikeSharpDownload()
     {
-        /*
         // Arrange
         var folderGuid = Guid.NewGuid();
         _outputHelper.WriteLine($"FolderGuid: {folderGuid}");
@@ -101,6 +100,24 @@ public class ServerPluginsServiceTests
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "counterstrikesharp", "api")));
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "counterstrikesharp", "gamedata")));
         Assert.True(File.Exists(Path.Combine(addonsFolder, "counterstrikesharp", "gamedata", "gamedata.json")));
-        */
+    }
+
+    [Fact]
+    public async Task TestInstallPlugins()
+    {
+        // Arrange
+        var applicationServices = await ServicesSetup.GetApplicationCollection(_outputHelper);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var serverPluginsService = provider.GetRequiredService<ServerPluginsService>();
+        
+        // Act
+        var installPlugins = serverPluginsService.InstallPlugins();
+
+        // Assert
+        if (installPlugins.IsError)
+        {
+            _outputHelper.WriteLine($"Failed to install plugins. {installPlugins}");
+            Assert.Fail();
+        }
     }
 }

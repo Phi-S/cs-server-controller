@@ -8,7 +8,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Infrastructure\Infrastructure.csproj"/>
-        <ProjectReference Include="..\plugins\CustomCommandsPlugin\CustomCommandsPlugin.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -20,19 +19,14 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="ServerServiceFolder\configs\**">
+        <None Include="UpdateOrInstallServiceFolder\steamcmd.py">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
-        <None Update="UpdateOrInstallServiceFolder\steamcmd.py">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </None>
-        <None Include="ServerPluginsFolder\plugins\**">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </None>
-    </ItemGroup>
 
-    <ItemGroup>
-        <Folder Include="ServerPluginsFolder\plugins\"/>
+        <None Include="ServerPluginsFolder\plugins\**">
+            <ExcludeFromSingleFile>True</ExcludeFromSingleFile>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
 </Project>

@@ -10,7 +10,9 @@ def main():
     plugins_src_folder = os.path.join(instance_folder, "plugins")
     plugins_dest_folder = os.path.join(instance_folder, "Application", "ServerPluginsFolder", "plugins")
 
-    shutil.rmtree(plugins_dest_folder)
+    if os.path.isdir(plugins_dest_folder):
+        shutil.rmtree(plugins_dest_folder)
+
     plugins = os.listdir(plugins_src_folder)
     for plugin in plugins:
         if plugin == "SharedPluginLib":

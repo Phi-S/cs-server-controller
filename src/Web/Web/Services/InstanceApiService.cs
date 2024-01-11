@@ -171,10 +171,10 @@ public class InstanceApiService
 
     #region Server
 
-    public async Task<ErrorOr<ServerStatusResponse>> Info()
+    public async Task<ErrorOr<ServerInfoResponse>> Info()
     {
         var requestMessage = GetRequestMessage("/server/info");
-        var result = await Send<ServerStatusResponse>(requestMessage);
+        var result = await Send<ServerInfoResponse>(requestMessage);
         return result;
     }
 
@@ -185,14 +185,11 @@ public class InstanceApiService
         return result;
     }
 
-    public async Task<ErrorOr<Guid>> StartUpdatingOrInstalling(StartParameters? startParameters)
+    public async Task<ErrorOr<Guid>> StartUpdatingOrInstalling(bool startAfterUpdate = true)
     {
         const string endpoint = "/server/start-updating-or-installing";
 
-        var requestMessage = startParameters is null
-            ? PostRequestMessage(endpoint)
-            : PostRequestMessage(endpoint, startParameters);
-
+        var requestMessage = PostRequestMessage(endpoint, "startAfterUpdate", startAfterUpdate.ToString());
         var response = await Send<Guid>(requestMessage);
         return response;
     }
@@ -204,9 +201,9 @@ public class InstanceApiService
         return response;
     }
 
-    public async Task<ErrorOr<Success>> Start(StartParameters startParameters)
+    public async Task<ErrorOr<Success>> Start()
     {
-        var requestMessage = PostRequestMessage("/server/start", startParameters);
+        var requestMessage = PostRequestMessage("/server/start");
         var response = await SendWithoutResponse(requestMessage);
         return response;
     }
@@ -228,13 +225,6 @@ public class InstanceApiService
     public async Task<ErrorOr<List<string>>> Maps()
     {
         var requestMessage = GetRequestMessage("/server/maps");
-        var result = await Send<List<string>>(requestMessage);
-        return result;
-    }
-
-    public async Task<ErrorOr<List<string>>> Configs()
-    {
-        var requestMessage = GetRequestMessage("/server/configs");
         var result = await Send<List<string>>(requestMessage);
         return result;
     }
@@ -263,6 +253,20 @@ public class InstanceApiService
             "/server/chat-command/delete",
             "chatMessage",
             chatMessage);
+        var result = await SendWithoutResponse(requestMessage);
+        return result;
+    }
+
+    public async Task<ErrorOr<StartParameters>> GetStartParameters()
+    {
+        var requestMessage = GetRequestMessage("/server/start-parameters/get");
+        var result = await Send<StartParameters>(requestMessage);
+        return result;
+    }
+
+    public async Task<ErrorOr<Success>> SetStartParameters(StartParameters startParameters)
+    {
+        var requestMessage = PostRequestMessage("/server/start-parameters/set", startParameters);
         var result = await SendWithoutResponse(requestMessage);
         return result;
     }

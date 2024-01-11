@@ -37,9 +37,9 @@ public static class ServerEndpoint
         // If startParameters is set, the server will start automatically after the update or install process
         group.MapPost("start-updating-or-installing", async (
             IMediator mediator,
-            [FromBody] StartParameters? startParameters = null) =>
+            [FromBody] bool startAfterUpdate = true) =>
         {
-            var command = new StartUpdateOrInstallCommand(startParameters);
+            var command = new StartUpdateOrInstallCommand(startAfterUpdate);
             var result = await mediator.Send(command);
             return result.IsError
                 ? Results.Extensions.InternalServerError(result.ErrorMessage())
@@ -58,7 +58,7 @@ public static class ServerEndpoint
 
         group.MapPost("start", async (
             IMediator mediator,
-            [FromBody] StartParameters startParameters) =>
+            [FromBody] StartParameters? startParameters = null) =>
         {
             var command = new StartServerCommand(startParameters);
             var result = await mediator.Send(command);
@@ -95,15 +95,6 @@ public static class ServerEndpoint
                 : Results.Ok(result.Value);
         });
 
-        group.MapGet("configs", async (IMediator mediator) =>
-        {
-            var command = new GetAllAvailableServerConfigsQuery();
-            var result = await mediator.Send(command);
-            return result.IsError
-                ? Results.Extensions.InternalServerError(result.ErrorMessage())
-                : Results.Ok(result.Value);
-        });
-
         group.MapGet("chat-command/all", async (IMediator mediator) =>
         {
             var command = new GetAllChatCommandsQuery();
@@ -133,6 +124,24 @@ public static class ServerEndpoint
                 return result.IsError
                     ? Results.Extensions.InternalServerError(result.ErrorMessage())
                     : Results.Ok();
+            });
+
+        group.MapGet("start-parameters/get",
+            async (IMediator mediator) =>
+            {
+                var command = new GetStartParametersQuery();
+                var result = await mediator.Send(command);
+                return result.IsError
+                    ? Results.Extensions.InternalServerError(result.ErrorMessage())
+                    : Results.Ok(result.Value);
+            });
+
+        group.MapPost("start-parameters/set",
+            async (IMediator mediator, [FromBody] StartParameters startParameters) =>
+            {
+                var command = new SetStartParametersCommand(startParameters);
+                await mediator.Send(command);
+                return Results.Ok();
             });
 
         return group;

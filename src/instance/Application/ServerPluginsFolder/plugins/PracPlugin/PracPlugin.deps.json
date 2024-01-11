@@ -6,16 +6,15 @@
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v7.0": {
-      "CustomCommandsPlugin/1.0.0": {
+      "PracPlugin/1.0.0": {
         "dependencies": {
-          "CounterStrikeSharp.API": "1.0.142",
-          "SharedPluginLib": "1.0.0"
+          "CounterStrikeSharp.API": "1.0.143"
         },
         "runtime": {
-          "CustomCommandsPlugin.dll": {}
+          "PracPlugin.dll": {}
         }
       },
-      "CounterStrikeSharp.API/1.0.142": {
+      "CounterStrikeSharp.API/1.0.143": {
         "dependencies": {
           "McMaster.NETCore.Plugins": "1.4.0",
           "Microsoft.CSharp": "4.7.0",
@@ -32,8 +31,8 @@
         },
         "runtime": {
           "lib/net7.0/CounterStrikeSharp.API.dll": {
-            "assemblyVersion": "1.0.142.0",
-            "fileVersion": "1.0.142.0"
+            "assemblyVersion": "1.0.143.0",
+            "fileVersion": "1.0.143.0"
           }
         }
       },
@@ -499,26 +498,21 @@
         "dependencies": {
           "System.Text.Encodings.Web": "7.0.0"
         }
-      },
-      "SharedPluginLib/1.0.0": {
-        "runtime": {
-          "SharedPluginLib.dll": {}
-        }
       }
     }
   },
   "libraries": {
-    "CustomCommandsPlugin/1.0.0": {
+    "PracPlugin/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "CounterStrikeSharp.API/1.0.142": {
+    "CounterStrikeSharp.API/1.0.143": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-d1MdKKeVSUc1WAidjkK9B5FdSLnX/SOS9zFD/IMjaMpMiezIzznOUWluGkjx3FOyyZs4imZzZfS1BLC8ChR9bA==",
-      "path": "counterstrikesharp.api/1.0.142",
-      "hashPath": "counterstrikesharp.api.1.0.142.nupkg.sha512"
+      "sha512": "sha512-2UhYDdjDOyVwbtafDzzXO3BuaqMomf1HeSSy+npdG0mcWbwWyGgU+6MfniNSiXBPz/gUnMju7wfzlj+r66Xqxw==",
+      "path": "counterstrikesharp.api/1.0.143",
+      "hashPath": "counterstrikesharp.api.1.0.143.nupkg.sha512"
     },
     "McMaster.NETCore.Plugins/1.4.0": {
       "type": "package",
@@ -820,11 +814,6 @@
       "sha512": "sha512-DaGSsVqKsn/ia6RG8frjwmJonfos0srquhw09TlT8KRw5I43E+4gs+/bZj4K0vShJ5H9imCuXupb4RmS+dBy3w==",
       "path": "system.text.json/7.0.0",
       "hashPath": "system.text.json.7.0.0.nupkg.sha512"
-    },
-    "SharedPluginLib/1.0.0": {
-      "type": "project",
-      "serviceable": false,
-      "sha512": ""
     }
   }
 }

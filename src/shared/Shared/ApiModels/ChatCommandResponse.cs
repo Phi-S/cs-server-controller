@@ -1,3 +1,3 @@
 ﻿namespace Shared.ApiModels;
 
-public record ChatCommandResponse(long CommandId, string ChatMessage, string ServerCommand);
+public record ChatCommandResponse(string ChatMessage, string ServerCommand);

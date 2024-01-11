@@ -10,6 +10,12 @@ public static class RandomHelper
         return random.NextInt64();
     }
     
+    public static int RandomInt()
+    {
+        var random = new Random();
+        return random.Next();
+    }
+    
     public static string RandomString(int length = 20)
     {
         var random = new Random();

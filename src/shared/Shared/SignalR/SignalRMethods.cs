@@ -11,17 +11,17 @@ public static class SignalRMethods
     public const string ServerLogMethod = "server-log";
     public const string UpdateOrInstallLogMethod = "update-or-install-log";
 
-    public static Task SendServerStatus(this IClientProxy clientProxy, ServerStatusResponse serverStatusResponse,
+    public static Task SendServerStatus(this IClientProxy clientProxy, ServerInfoResponse serverInfoResponse,
         CancellationToken cancellationToken = default)
     {
-        return clientProxy.SendAsync(ServerStatusMethod, serverStatusResponse, cancellationToken: cancellationToken);
+        return clientProxy.SendAsync(ServerStatusMethod, serverInfoResponse, cancellationToken: cancellationToken);
     }
 
-    public static IDisposable OnServerStatus(this HubConnection hubConnection, Func<ServerStatusResponse, Task> handler)
+    public static IDisposable OnServerStatus(this HubConnection hubConnection, Func<ServerInfoResponse, Task> handler)
     {
         return hubConnection.On(ServerStatusMethod,
-            new[] { typeof(ServerStatusResponse) },
-            args => handler((ServerStatusResponse)args[0]!));
+            new[] { typeof(ServerInfoResponse) },
+            args => handler((ServerInfoResponse)args[0]!));
     }
 
     public static Task SendEvent(this IClientProxy clientProxy, EventLogResponse eventLogResponse,

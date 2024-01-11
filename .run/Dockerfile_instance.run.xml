@@ -2,6 +2,7 @@
   <configuration default="false" name="Dockerfile_instance" type="docker-deploy" factoryName="dockerfile" server-name="Docker">
     <deployment type="dockerfile">
       <settings>
+        <option name="buildKitEnabled" value="true" />
         <option name="containerName" value="cs-controller-instance" />
         <option name="envVars">
           <list>

@@ -7,12 +7,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "web", "web", "{59AA4DD8-B6AC-44B3-8EC5-5919E8DE063A}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{6DAB15F4-1C8B-4DDA-93CA-CAD30437C593}"
-	ProjectSection(SolutionItems) = preProject
-		tests\TestHelper\obj\Debug\net8.0\.NETCoreApp,Version = v8.0.AssemblyAttributes.cs = tests\TestHelper\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
-		tests\TestHelper\obj\Release\net8.0\.NETCoreApp,Version = v8.0.AssemblyAttributes.cs = tests\TestHelper\obj\Release\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
-		tests\TestHelperTests\obj\Debug\net8.0\.NETCoreApp,Version = v8.0.AssemblyAttributes.cs = tests\TestHelperTests\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
-		tests\TestHelperTests\obj\Release\net8.0\.NETCoreApp,Version = v8.0.AssemblyAttributes.cs = tests\TestHelperTests\obj\Release\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
-	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Instance", "src\instance\Instance\Instance.csproj", "{775CB425-C8DF-48E3-9946-6CE98B95679E}"
 EndProject
@@ -38,9 +32,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Web", "src\web\Web\Web.cspr
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "plugins", "plugins", "{8FC03ABD-9933-42B3-B53A-0A9A88BC9AD6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomCommandsPlugin", "src\instance\plugins\CustomCommandsPlugin\CustomCommandsPlugin.csproj", "{FC91CF5C-8BB6-4317-912F-0BCFA3E00B88}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnableDisablePlugin", "src\instance\plugins\EnableDisablePlugin\EnableDisablePlugin.csproj", "{5065DB0C-9EB6-47B8-A9FA-B0C1EE5ABADF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedPluginLib", "src\instance\plugins\SharedPluginLib\SharedPluginLib.csproj", "{9AAF89FD-F442-4A74-AF5E-384A35AE3F5D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PracPlugin", "src\instance\plugins\PracPlugin\PracPlugin.csproj", "{2786BCE4-8310-4575-90A2-0ED1B0F71AFE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -84,14 +78,14 @@ Global
 		{6179C104-DD62-4D90-BA84-213F81698310}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6179C104-DD62-4D90-BA84-213F81698310}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6179C104-DD62-4D90-BA84-213F81698310}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FC91CF5C-8BB6-4317-912F-0BCFA3E00B88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FC91CF5C-8BB6-4317-912F-0BCFA3E00B88}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FC91CF5C-8BB6-4317-912F-0BCFA3E00B88}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FC91CF5C-8BB6-4317-912F-0BCFA3E00B88}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9AAF89FD-F442-4A74-AF5E-384A35AE3F5D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9AAF89FD-F442-4A74-AF5E-384A35AE3F5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9AAF89FD-F442-4A74-AF5E-384A35AE3F5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9AAF89FD-F442-4A74-AF5E-384A35AE3F5D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5065DB0C-9EB6-47B8-A9FA-B0C1EE5ABADF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5065DB0C-9EB6-47B8-A9FA-B0C1EE5ABADF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5065DB0C-9EB6-47B8-A9FA-B0C1EE5ABADF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5065DB0C-9EB6-47B8-A9FA-B0C1EE5ABADF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2786BCE4-8310-4575-90A2-0ED1B0F71AFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2786BCE4-8310-4575-90A2-0ED1B0F71AFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2786BCE4-8310-4575-90A2-0ED1B0F71AFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2786BCE4-8310-4575-90A2-0ED1B0F71AFE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{49CE0BFE-0F42-4B41-AD24-73523675C6D0} = {00546B4C-43CA-413F-B1C5-B8FED61C95AD}
@@ -108,7 +102,7 @@ Global
 		{C4FF0908-94EA-46E2-B582-534EB745A4AF} = {6DAB15F4-1C8B-4DDA-93CA-CAD30437C593}
 		{6179C104-DD62-4D90-BA84-213F81698310} = {59AA4DD8-B6AC-44B3-8EC5-5919E8DE063A}
 		{8FC03ABD-9933-42B3-B53A-0A9A88BC9AD6} = {49CE0BFE-0F42-4B41-AD24-73523675C6D0}
-		{FC91CF5C-8BB6-4317-912F-0BCFA3E00B88} = {8FC03ABD-9933-42B3-B53A-0A9A88BC9AD6}
-		{9AAF89FD-F442-4A74-AF5E-384A35AE3F5D} = {8FC03ABD-9933-42B3-B53A-0A9A88BC9AD6}
+		{5065DB0C-9EB6-47B8-A9FA-B0C1EE5ABADF} = {8FC03ABD-9933-42B3-B53A-0A9A88BC9AD6}
+		{2786BCE4-8310-4575-90A2-0ED1B0F71AFE} = {8FC03ABD-9933-42B3-B53A-0A9A88BC9AD6}
 	EndGlobalSection
 EndGlobal

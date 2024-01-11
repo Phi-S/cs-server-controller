@@ -6,9 +6,9 @@ using Shared.ApiModels;
 
 namespace Application.CQRS.Query;
 
-public record GetServerStatusQuery() : IRequest<ServerStatusResponse>;
+public record GetServerStatusQuery() : IRequest<ServerInfoResponse>;
 
-public class GetServerStatusQueryHandler : IRequestHandler<GetServerStatusQuery, ServerStatusResponse>
+public class GetServerStatusQueryHandler : IRequestHandler<GetServerStatusQuery, ServerInfoResponse>
 {
     private readonly IOptions<AppOptions> _options;
     private readonly StatusService _statusService;
@@ -19,9 +19,9 @@ public class GetServerStatusQueryHandler : IRequestHandler<GetServerStatusQuery,
         _statusService = statusService;
     }
 
-    public Task<ServerStatusResponse> Handle(GetServerStatusQuery request, CancellationToken cancellationToken)
+    public Task<ServerInfoResponse> Handle(GetServerStatusQuery request, CancellationToken cancellationToken)
     {
-        var info = new ServerStatusResponse(
+        var info = new ServerInfoResponse(
             _statusService.ServerInstalled,
             _statusService.ServerStartParameters?.ServerHostname,
             _statusService.ServerStartParameters?.ServerPassword,

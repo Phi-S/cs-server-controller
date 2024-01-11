@@ -1,37 +1,47 @@
 using System.Net;
+using BlazorBootstrap;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Shared;
 using Shared.ApiModels;
 using Throw;
+using Web.BlazorExtensions;
 using Web.Helper;
 using Web.Services;
 
 namespace Web.Components.Custom;
 
-public class ServerDisplayCompRazor : ComponentBase
+public class ServerDisplayCompRazor : ComponentBase, IDisposable
 {
     [Inject] private ILogger<ServerDisplayCompRazor> Logger { get; set; } = default!;
+    [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] protected IJSRuntime JsRuntime { get; set; } = default!;
-    [Inject] protected NavigationManager NavigationManager { get; set; } = default!;
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
     [Inject] protected InstanceApiService InstanceApiService { get; set; } = default!;
 
-    [Inject] private StartParametersJsonService StartParametersJsonService { get; set; } = default!;
+    protected ServerInfoResponse? ServerInfo;
+    protected string Hostname => ServerInfo?.Hostname ?? ServerInfoService.StartParameters.ServerHostname;
 
-    private static readonly StartParameters DefaultStartParameters = new();
-    protected ServerStatusResponse? ServerInfo;
-    protected string Hostname => ServerInfo?.Hostname ?? DefaultStartParameters.ServerHostname;
-
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         try
         {
             ServerInfo = ServerInfoService.ServerInfo;
-            ServerInfoService.OnServerInfoChangedEvent += async (_, _) =>
+            var getStartParametersResult = await InstanceApiService.GetStartParameters();
+            if (getStartParametersResult.IsError)
             {
-                ServerInfo = ServerInfoService.ServerInfo;
-                await InvokeAsync(StateHasChanged);
-            };
+                Logger.LogError("Failed to get start parameters. Using default start parameter. {Error}",
+                    getStartParametersResult.ErrorMessage());
+            }
+            else
+            {
+                ServerInfoService.StartParameters = getStartParametersResult.Value;
+            }
+
+            ServerInfoService.OnServerInfoChangedEvent += OnServerInfoChangedEvent;
+            ServerInfoService.OnStartParametersChangedEvent += ServerInfoServiceOnOnStartParametersChangedEvent;
+
+            await base.OnInitializedAsync();
         }
         catch (Exception e)
         {
@@ -39,25 +49,56 @@ public class ServerDisplayCompRazor : ComponentBase
         }
     }
 
+    private async void ServerInfoServiceOnOnStartParametersChangedEvent(object? sender, EventArgs arg)
+    {
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Exception in ServerInfoServiceOnOnStartParametersChangedEvent method");
+        }
+    }
+
+    private async void OnServerInfoChangedEvent(object? sender, EventArgs arg)
+    {
+        try
+        {
+            ServerInfo = ServerInfoService.ServerInfo;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Exception in OnServerInfoChangedEvent method");
+        }
+    }
+
     protected async Task ConnectToServer()
     {
-        ServerInfo.ThrowIfNull();
-        
-        var dnsResolve = await Dns.GetHostEntryAsync(ServerInfo.IpOrDomain);
-        var serverIp = dnsResolve.AddressList.First().MapToIPv4().ToString();
-        if (ServerInfo.IpOrDomain.Equals("localhost"))
+        try
         {
-            serverIp = "127.0.0.1";
-        }
+            ServerInfo.ThrowIfNull();
 
-        var connectUrl = $"steam://connect/{serverIp}:{ServerInfo.Port}";
-        if (string.IsNullOrWhiteSpace(ServerInfo.ServerPassword) == false)
+            var dnsResolve = await Dns.GetHostEntryAsync(ServerInfo.IpOrDomain);
+            var serverIp = dnsResolve.AddressList.First().MapToIPv4().ToString();
+            if (ServerInfo.IpOrDomain.Equals("localhost"))
+            {
+                serverIp = "127.0.0.1";
+            }
+
+            var connectUrl = $"steam://connect/{serverIp}:{ServerInfo.Port}";
+            if (string.IsNullOrWhiteSpace(ServerInfo.ServerPassword) == false)
+            {
+                connectUrl += $"/{ServerInfo.ServerPassword}";
+            }
+
+            await JsRuntime.InvokeVoidAsync("open", connectUrl, "");
+        }
+        catch (Exception e)
         {
-            connectUrl += $"/{ServerInfo.ServerPassword}";
+            Logger.LogError(e, "Exception while executing ConnectToServer method");
         }
-
-        Console.WriteLine(connectUrl);
-        await JsRuntime.InvokeVoidAsync("open", connectUrl, "");
     }
 
     protected async Task CopyConnectStringToClipboard()
@@ -72,6 +113,7 @@ public class ServerDisplayCompRazor : ComponentBase
         }
         catch (Exception e)
         {
+            ToastService.Error("Failed to copy server connection string");
             Logger.LogError(e, "Exception while executing CopyConnectStringToClipboard method");
         }
     }
@@ -81,7 +123,7 @@ public class ServerDisplayCompRazor : ComponentBase
         try
         {
             return ServerInfoService.ServerInfo is { ServerStarted: true }
-                ? "bg-info"
+                ? "bg-success"
                 : "bg-warning";
         }
         catch (Exception e)
@@ -95,11 +137,21 @@ public class ServerDisplayCompRazor : ComponentBase
     {
         try
         {
-            Logger.LogInformation("Stopping server");
-            await InstanceApiService.Stop();
+            var stopResult = await InstanceApiService.Stop();
+            if (stopResult.IsError)
+            {
+                Logger.LogError("Failed to stop server. {Error}", stopResult.ErrorMessage());
+                ToastService.Error($"Failed to stop server. {stopResult.ErrorMessage()}");
+            }
+            else
+            {
+                Logger.LogInformation("Server stopped");
+                ToastService.Info("Server stopped");
+            }
         }
         catch (Exception e)
         {
+            ToastService.Error("Failed to stop server");
             Logger.LogError(e, "Failed to stop server");
         }
     }
@@ -108,25 +160,22 @@ public class ServerDisplayCompRazor : ComponentBase
     {
         try
         {
-            Logger.LogInformation("Starting server");
-            var startParameters = StartParametersJsonService.Get();
-            await InstanceApiService.Start(startParameters);
+            var startResult = await InstanceApiService.Start();
+            if (startResult.IsError)
+            {
+                Logger.LogError("Failed to start server. {Error}", startResult.ErrorMessage());
+                ToastService.Error($"Failed to start server. {startResult.ErrorMessage()}");
+            }
+            else
+            {
+                Logger.LogInformation("Server started");
+                ToastService.Info("Server started");
+            }
         }
         catch (Exception e)
         {
+            ToastService.Error("Failed to start server");
             Logger.LogError(e, "Failed to start server");
-        }
-    }
-
-    protected void NavigateToServerLogsPage()
-    {
-        try
-        {
-            NavigationManager.NavigateTo("/server-logs");
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e, "Failed to navigate to server logs page");
         }
     }
 
@@ -139,33 +188,8 @@ public class ServerDisplayCompRazor : ComponentBase
         }
         catch (Exception e)
         {
+            ToastService.Error("Failed to change map");
             Logger.LogError(e, "Failed to change map");
-        }
-    }
-
-    protected string HostnameMdCol
-    {
-        get
-        {
-            if (ServerInfo is null || ServerInfo.ServerStarted == false)
-            {
-                return "col-md-7";
-            }
-
-            return "col-md-4";
-        }
-    }
-
-    protected string ButtonsMdCol
-    {
-        get
-        {
-            if (ServerInfo is null || ServerInfo.ServerStarted == false)
-            {
-                return "col-md-5";
-            }
-
-            return "col-md-4";
         }
     }
 
@@ -188,5 +212,11 @@ public class ServerDisplayCompRazor : ComponentBase
 
             return "";
         }
+    }
+
+    public void Dispose()
+    {
+        ServerInfoService.OnServerInfoChangedEvent -= OnServerInfoChangedEvent;
+        ServerInfoService.OnStartParametersChangedEvent -= ServerInfoServiceOnOnStartParametersChangedEvent;
     }
 }

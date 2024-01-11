@@ -1,16 +1,14 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <ServerDisplayComp/>
-        <NavMenu/>
-    </div>
+<div class="page" style="max-width: 1200px; margin: 0 auto;">
+    <ServerDisplayComp/>
+    <NavMenu/>
+    <hr class="m-0"/>
 
-    <main style="height: 100%">
+    <main class="h-100">
         <article class="content m-0 p-0 px-2">
             @Body
         </article>
     </main>
-
-    <Toasts class="p-3" AutoHide="true" Delay="8000" Placement="ToastsPlacement.TopRight"/>
+    <Toasts class="p-3" AutoHide="true" Delay="8000" Placement="ToastsPlacement.BottomRight"/>
 </div>

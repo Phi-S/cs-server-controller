@@ -30,7 +30,7 @@ public class StartParameters
     public string? LoginToken { get; set; }
     public string? AdditionalStartParameters { get; set; }
 
-    public string GetString(string port, string? backupLoginToken)
+    public string GetAsCommandLineArgs(string port, string? backupLoginToken)
     {
         var sb = new StringBuilder();
         const string seperatorChar = " ";

@@ -10,17 +10,10 @@ else
 {
     <div class="align-items-center">
         <div class="input-group flex-nowrap justify-content-center">
-
-            @if (ServerInfoService.ServerInfo.ServerStarted == false)
-            {
-                <button class="input-group btn btn-outline-info" disabled="@ServerInfoService.ServerInfo?.ServerUpdatingOrInstalling" title="Start server" @onclick="@Start">Start</button>
-            }
-            else
-            {
-                <button class="input-group btn btn-outline-info" title="Stop server" @onclick="@Stop">Stop</button>
-            }
-            <button class="input-group btn btn-outline-info" disabled="@ServerInfoService.ServerInfo?.ServerUpdatingOrInstalling" @onclick="Restart">Restart</button>
-            @if (ServerInfoService.ServerInfo?.ServerUpdatingOrInstalling == false)
+            <button class="input-group btn btn-outline-info" disabled="@(ServerInfoService.ServerInfo.ServerUpdatingOrInstalling || ServerInfoService.ServerInfo.ServerStarted)" title="Start server" @onclick="@Start">Start</button>
+            <button class="input-group btn btn-outline-info" disabled="@(ServerInfoService.ServerInfo.ServerUpdatingOrInstalling || ServerInfoService.ServerInfo.ServerStarted == false)" title="Stop server" @onclick="@Stop">Stop</button>
+            <button class="input-group btn btn-outline-info" disabled="@ServerInfoService.ServerInfo.ServerUpdatingOrInstalling" @onclick="Restart">Restart</button>
+            @if (ServerInfoService.ServerInfo.ServerUpdatingOrInstalling == false)
             {
                 <button class="input-group btn btn-outline-info" title="Update server" @onclick="@StartUpdateOrInstall">Update</button>
             }
@@ -40,18 +33,6 @@ else
                     </li>
                 }
             </ul>
-
-            <button class="input-group btn btn-outline-primary dropdown" disabled="@DisabledWhenServerIsOffline" type="button" id="executeConfigDropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Executing config. The server needs to be online to do this">
-                Execute config
-            </button>
-            <ul class="dropdown-menu" aria-labelledby="executeConfigDropdownMenuButton">
-                @foreach (var config in ServerInfoService.Configs)
-                {
-                    <li>
-                        <button class="dropdown-item" disabled="@DisabledWhenServerIsOffline" type="button" @onclick="() => ExecuteConfig(config)">@config</button>
-                    </li>
-                }
-            </ul>
         </div>
         <div class="text-nowrap align-items-center d-flex justify-content-center pb-1 pt-1">
             <div class="input-group justify-content-center d-flex w-100">
@@ -59,13 +40,13 @@ else
                 <button class="btn btn-outline-info" disabled="@DisabledWhenServerIsOffline" style="width: 30%" @onclick="SendCommand">Send</button>
             </div>
         </div>
-        <div class="overflow-scroll overflow-x-hidden rounded-3 border border-2" style="height: 80vh">
+        <div class="overflow-scroll overflow-x-auto rounded-3 border border-2" style="height: 80vh">
             <table class="table table-sm table-striped">
-                @foreach (var e in ServerInfoService.AllLogs.OrderByDescending(l => l.TimestampUtc).Take(1000))
+                @foreach (var e in ServerInfoService.AllLogs.OrderByDescending(l => l.TimestampUtc).Take(1000).ToList())
                 {
-                    <tr class="border-bottom row m-0 p-0 flex-nowrap" style="width: 95vw">
-                        <td class="m-0 p-0 ms-1 me-2" style="width: 20%">@e.TimestampUtc:</td>
-                        <td class="m-0 p-0" style="width: 80%; word-wrap: break-word">@e.Message</td>
+                    <tr class="border-bottom row m-0 p-0" style="width: 100%">
+                        <td class="m-0 p-0 ps-1 pe-1" style="max-width: 12rem">@e.TimestampUtc:</td>
+                        <td class="m-0 p-0" style="width: calc(100% - 12rem); word-wrap: break-word">@e.Message</td>
                     </tr>
                 }
             </table>

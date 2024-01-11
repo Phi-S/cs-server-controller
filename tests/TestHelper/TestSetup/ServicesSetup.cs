@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using TestHelper.TestConfigurationFolder;
 using TestHelper.TestLoggerFolder;
+using TestHelper.UnitTestOutputFolder;
 using Xunit.Abstractions;
 
 namespace TestHelper.TestSetup;
@@ -10,12 +11,10 @@ public static class ServicesSetup
 {
     public static Task<IServiceCollection> GetApplicationCollection(ITestOutputHelper outputHelper)
     {
-        var folderGuid = Guid.NewGuid();
         var config = TestConfiguration.GetApiAppSettingsTest(
             [
                 new KeyValuePair<string, string?>("APP_OPTIONS:DATA_FOLDER",
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                        "cs-controller-instance-unit-tests", folderGuid.ToString())),
+                    UnitTestOutputHelper.GetNewUnitTestFolder(outputHelper)),
                 new KeyValuePair<string, string?>("APP_OPTIONS:APP_NAME", "cs-controller-instance-test"),
                 new KeyValuePair<string, string?>("APP_OPTIONS:IP_OR_DOMAIN", "ip_or_domain"),
                 new KeyValuePair<string, string?>("APP_OPTIONS:PORT", "port"),
@@ -28,7 +27,6 @@ public static class ServicesSetup
         serviceCollection.AddTestLogger(outputHelper);
         serviceCollection.AddSingleton(config);
         serviceCollection.AddApplication();
-        outputHelper.WriteLine($"Guid: {folderGuid}");
         return Task.FromResult<IServiceCollection>(serviceCollection);
     }
 }

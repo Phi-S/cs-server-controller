@@ -49,12 +49,24 @@ try
     builder.Services.AddHttpClient();
     builder.Services.AddSingleton<InstanceApiService>();
     builder.Services.AddSingleton<ServerInfoService>();
-    builder.Services.AddSingleton<StartParametersJsonService>();
 
     builder.Services.AddRazorComponents()
         .AddInteractiveServerComponents();
 
     var app = builder.Build();
+    
+    var options = app.Services.GetRequiredService<IOptions<AppOptions>>();
+    foreach (var prop in options.Value.GetType().GetProperties())
+    {
+        Log.Logger.Information("{Property}: {PropertyValue}",
+            prop.Name, prop.GetValue(options.Value, null));
+    }
+
+    foreach (var field in options.Value.GetType().GetFields())
+    {
+        Log.Logger.Information("{Property}: {PropertyValue}",
+            field.Name, field.GetValue(options.Value));
+    }
 
     var serverInfoService = app.Services.GetRequiredService<ServerInfoService>();
     while (true)

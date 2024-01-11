@@ -15,13 +15,11 @@ public class AppOptions
     [Required] public required string STEAM_PASSWORD { get; init; }
     [Required] public required string LOGIN_TOKEN { get; init; }
 
-    public string? SEQ_URL { get; set; }
-
+    public string? SEQ_URL { get; init; }
     public string DATA_FOLDER { get; init; } = "/data";
     public string DATABASE_PATH => Path.Combine(DATA_FOLDER, "instance.db");
     public string SERVER_FOLDER => Path.Combine(DATA_FOLDER, "server");
     public string STEAMCMD_FOLDER => Path.Combine(DATA_FOLDER, "steamcmd");
 
-    public string EXECUTING_FOLDER =
-        Path.GetDirectoryName(Environment.ProcessPath) ?? throw new NullReferenceException(nameof(EXECUTING_FOLDER));
+    public string EXECUTING_FOLDER = Environment.CurrentDirectory;
 }

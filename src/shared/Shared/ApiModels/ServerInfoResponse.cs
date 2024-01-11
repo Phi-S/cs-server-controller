@@ -1,6 +1,6 @@
 ﻿namespace Shared.ApiModels;
 
-public record ServerStatusResponse(
+public record ServerInfoResponse(
     bool ServerInstalled,
     string? Hostname,
     string? ServerPassword,

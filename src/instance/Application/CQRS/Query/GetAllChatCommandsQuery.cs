@@ -20,7 +20,7 @@ public class GetAllChaCommandsQueryHandler : IRequestHandler<GetAllChatCommandsQ
     {
         var dbChatCommands = await _unitOfWork.ChatCommandRepo.GetAll();
         return dbChatCommands.Select(dbChatCommand =>
-            new ChatCommandResponse(dbChatCommand.Id, dbChatCommand.ChatMessage, dbChatCommand.Command)
+            new ChatCommandResponse(dbChatCommand.ChatMessage, dbChatCommand.Command)
         ).ToList();
     }
 }

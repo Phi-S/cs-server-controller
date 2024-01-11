@@ -1,114 +1,44 @@
-﻿using System.Formats.Tar;
+﻿using System.Collections.Immutable;
+using System.Formats.Tar;
 using System.IO.Compression;
-using System.Text.RegularExpressions;
-using Application.ServerServiceFolder;
-using CustomCommandsPlugin;
 using Domain;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shared;
-using SharedPluginLib;
 
 namespace Application.ServerPluginsFolder;
+
+using PluginAlias = (string plugin, bool disabled);
 
 public class ServerPluginsService
 {
     private readonly ILogger<ServerPluginsService> _logger;
     private readonly IOptions<AppOptions> _options;
     private readonly HttpClient _httpClient;
-    private readonly ServerService _serverService;
 
+    private static readonly IImmutableList<string> AlwaysActivePlugins = ["EnableDisablePlugin"];
     private const string MetamodUrl = "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1278-linux.tar.gz";
 
     private const string CounterStrikeSharpUrl =
         "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v142/counterstrikesharp-with-runtime-build-142-linux-7b45a88.zip";
 
+    private string PluginsFolder => Path.Combine(
+        _options.Value.SERVER_FOLDER,
+        "game",
+        "csgo",
+        "addons",
+        "counterstrikesharp",
+        "plugins");
+
     public ServerPluginsService(
         ILogger<ServerPluginsService> logger,
         IOptions<AppOptions> options,
-        HttpClient httpClient,
-        ServerService serverService)
+        HttpClient httpClient)
     {
         _logger = logger;
         _options = options;
         _httpClient = httpClient;
-        _serverService = serverService;
-    }
-
-    public async Task<ErrorOr<PlayerPosition>> GetPlayerPosition(int userId)
-    {
-        var commandResponse = await _serverService.ExecuteCommand($"get_player_position {userId}");
-        if (commandResponse.IsError)
-        {
-            return commandResponse.FirstError;
-        }
-
-        var pluginResponse = PluginResponse.GetFromJson(commandResponse.Value);
-        if (pluginResponse is null)
-        {
-            return Errors.Fail("Failed deserialize plugin response");
-        }
-
-        if (pluginResponse.Success == false)
-        {
-            return Errors.Fail($"Command executed but failed with error {pluginResponse.DataJson}");
-        }
-
-        Console.WriteLine(pluginResponse);
-        var tryGetData = pluginResponse.TryGetData(out PlayerPosition? playerPosition);
-        if (tryGetData == false || playerPosition is null)
-        {
-            return Errors.Fail("Failed to get data from plugin response");
-        }
-
-        return playerPosition;
-    }
-
-    public async Task<ErrorOr<Success>> PlaceBotOnPlayerPosition(int userId, string side)
-    {
-        side = side.ToLower();
-        if (side.Equals("t") == false && side.Equals("ct") == false)
-        {
-            return Errors.Fail("Bots can only be placed on ct or t side");
-        }
-
-        var playerPositionResult = await GetPlayerPosition(userId);
-        if (playerPositionResult.IsError)
-        {
-            return playerPositionResult.FirstError;
-        }
-
-        var botAddResponse = await _serverService.ExecuteCommand($"bot_add {side}");
-        if (botAddResponse.IsError)
-        {
-            return botAddResponse.FirstError;
-        }
-
-        var addedBotRegex = @"L (?:\d{2}\/\d{2}\/\d{4}) - (?:\d{2}:){3} ""(?:.+)<(\d{1,2})><BOT><>"" entered the game";
-        var botAddMatch = Regex.Match(botAddResponse.Value, addedBotRegex);
-        if (botAddMatch.Groups.Count != 2)
-        {
-            return Errors.Fail("Failed to get valid response from add bot command");
-        }
-
-        var playerPosition = playerPositionResult.Value;
-        var userIdOfNewBot = botAddMatch.Groups[1].Value;
-        var commandResponse = await _serverService.ExecuteCommand(
-            $"move_player" +
-            $" {userIdOfNewBot}" +
-            $" {playerPosition.PositionX}" +
-            $" {playerPosition.PositionY}" +
-            $" {playerPosition.PositionZ}" +
-            $" {playerPosition.AngleX}" +
-            $" {playerPosition.AngleY}" +
-            $" {playerPosition.AngleZ}");
-        if (commandResponse.IsError)
-        {
-            return commandResponse.FirstError;
-        }
-
-        return Result.Success;
     }
 
     #region Install
@@ -121,7 +51,7 @@ public class ServerPluginsService
             return installBaseResult.FirstError;
         }
 
-        var installPluginsResult = await InstallPlugins();
+        var installPluginsResult = InstallPlugins();
         if (installPluginsResult.IsError)
         {
             return installBaseResult.FirstError;
@@ -159,7 +89,6 @@ public class ServerPluginsService
                 downloadCounterStrikeSharp.ErrorMessage());
             return downloadCounterStrikeSharp.FirstError;
         }
-
 
         var addMetamodEntry = await AddMetamodEntryToGameinfoGi(csgoFolder);
         if (addMetamodEntry.IsError)
@@ -280,26 +209,123 @@ public class ServerPluginsService
         return Result.Success;
     }
 
-    public Task<ErrorOr<Success>> InstallPlugins()
+    public ErrorOr<Success> InstallPlugins()
     {
         var pluginsSrc = Path.Combine(_options.Value.EXECUTING_FOLDER, "ServerPluginsFolder", "plugins");
         var pluginsDest = Path.Combine(_options.Value.SERVER_FOLDER, "game", "csgo", "addons", "counterstrikesharp",
             "plugins");
+        var disabledPluginsDest = Path.Combine(pluginsDest, "disabled");
 
-        Directory.Delete(pluginsDest);
-
-        foreach (var dirPath in Directory.GetDirectories(pluginsSrc, "*", SearchOption.AllDirectories))
+        if (Directory.Exists(pluginsDest))
         {
-            Directory.CreateDirectory(dirPath.Replace(pluginsSrc, pluginsDest));
+            Directory.Delete(pluginsDest, true);
         }
 
-        foreach (var newPath in Directory.GetFiles(pluginsSrc, "*.*", SearchOption.AllDirectories))
+        Directory.CreateDirectory(pluginsDest);
+        Directory.CreateDirectory(disabledPluginsDest);
+
+        var allAvailablePlugins = Directory.GetDirectories(pluginsSrc).Select(Path.GetFileName).ToArray();
+
+        // Copy always active plugins
+        foreach (var alwaysActivePlugin in AlwaysActivePlugins)
         {
-            File.Copy(newPath, newPath.Replace(pluginsSrc, pluginsDest), true);
+            if (allAvailablePlugins.Contains(alwaysActivePlugin) == false)
+            {
+                return Errors.Fail($"Always active plugin \"{alwaysActivePlugin}\" not found at \"{pluginsSrc}\"");
+            }
         }
 
-        return Task.FromResult<ErrorOr<Success>>(Result.Success);
+        foreach (var alwaysActivePlugin in AlwaysActivePlugins)
+        {
+            var alwaysActivePluginSrcPath = Path.Combine(pluginsSrc, alwaysActivePlugin);
+            var alwaysActivePluginDestPath = Path.Combine(pluginsDest, alwaysActivePlugin);
+            CopyDirectory(alwaysActivePluginSrcPath, alwaysActivePluginDestPath);
+        }
+
+        // Copy remaining plugins as disabled
+        foreach (var plugin in allAvailablePlugins)
+        {
+            if (string.IsNullOrWhiteSpace(plugin))
+            {
+                continue;
+            }
+
+            // Skip already copied (Always active plugins)
+            if (AlwaysActivePlugins.Contains(plugin))
+            {
+                continue;
+            }
+
+            var pluginSrcPath = Path.Combine(pluginsSrc, plugin);
+            var pluginDestPath = Path.Combine(disabledPluginsDest, plugin);
+            CopyDirectory(pluginSrcPath, pluginDestPath);
+        }
+
+        return Result.Success;
+    }
+
+    private static void CopyDirectory(string sourceDir, string destinationDir)
+    {
+        // Get information about the source directory
+        var dir = new DirectoryInfo(sourceDir);
+
+        // Check if the source directory exists
+        if (!dir.Exists)
+            throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
+
+        // Cache directories before we start copying
+        var dirs = dir.GetDirectories();
+
+        // Create the destination directory
+        Directory.CreateDirectory(destinationDir);
+
+        // Get the files in the source directory and copy to the destination directory
+        foreach (var file in dir.GetFiles())
+        {
+            var targetFilePath = Path.Combine(destinationDir, file.Name);
+            file.CopyTo(targetFilePath);
+        }
+
+        // Copy subDirectories
+        foreach (var subDir in dirs)
+        {
+            var newDestinationDir = Path.Combine(destinationDir, subDir.Name);
+            CopyDirectory(subDir.FullName, newDestinationDir);
+        }
     }
 
     #endregion
+
+    public List<PluginAlias> GetInstalledPlugins()
+    {
+        if (Directory.Exists(PluginsFolder) == false)
+        {
+            return [];
+        }
+
+        var result = new List<PluginAlias>();
+
+        var pluginFolders = Directory.GetDirectories(PluginsFolder);
+        foreach (var pluginFolder in pluginFolders)
+        {
+            var pluginName = Path.GetFileName(PluginsFolder);
+            if (pluginName.Equals("disabled"))
+            {
+                continue;
+            }
+
+            result.Add((pluginName, false));
+        }
+
+
+        var disabledPluginFolder = Path.Combine(PluginsFolder, "disabled");
+        var disabledPluginsFolders = Directory.GetDirectories(disabledPluginFolder);
+        foreach (var pluginFolder in disabledPluginsFolders)
+        {
+            var pluginName = Path.GetFileName(pluginFolder);
+            result.Add((pluginName, true));
+        }
+
+        return result;
+    }
 }

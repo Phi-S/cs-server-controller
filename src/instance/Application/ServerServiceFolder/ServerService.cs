@@ -64,7 +64,7 @@ public partial class ServerService
             {
                 _eventService.OnStartingServer();
                 _logger.LogWarning("Server is not ready to start. {Error}",
-                    checkIfServerIsReadyToStart.FirstError.Description);
+                    checkIfServerIsReadyToStart.ErrorMessage());
                 _eventService.OnStartingServerFailed();
                 return checkIfServerIsReadyToStart.FirstError;
             }
@@ -89,19 +89,11 @@ public partial class ServerService
 
             #endregion
 
-            #region LinkConfigs
-
-            _logger.LogInformation("Creating symbolic links for server configs");
-            LinkServerConfigs(_options.Value.EXECUTING_FOLDER, _options.Value.SERVER_FOLDER);
-            _logger.LogInformation("All configs linked");
-
-            #endregion
-
             #region StartServerProcess
 
             // ReSharper disable once StringLiteralTypo
             var executablePath = Path.Combine(_options.Value.SERVER_FOLDER, "game", "bin", "linuxsteamrt64", "cs2");
-            var startParameterString = startParameters.GetString(_options.Value.PORT, _options.Value.LOGIN_TOKEN);
+            var startParameterString = startParameters.GetAsCommandLineArgs(_options.Value.PORT, _options.Value.LOGIN_TOKEN);
 
             using var scope = _services.CreateScope();
             var unitOfWork = scope.GetUnitOfWork();
@@ -113,7 +105,6 @@ public partial class ServerService
             var startServerProcess = await StartServerProcess(
                 serverStart,
                 executablePath,
-                _options.Value.SERVER_FOLDER,
                 startParameterString
             );
             if (startServerProcess.IsError)
@@ -146,13 +137,6 @@ public partial class ServerService
 
             #endregion
 
-            #region RefreshConfigs
-
-            _logger.LogInformation("Refreshing available configs");
-            GetAvailableConfigs(_options.Value.SERVER_FOLDER, true);
-
-            #endregion
-
             _logger.LogInformation("Adding event detection");
             AddEventDetection();
             _eventService.OnStartingServerDone(startParameters);
@@ -178,22 +162,22 @@ public partial class ServerService
     {
         if (_statusService.ServerStarted)
         {
-            return Error.Conflict("Server already started");
+            return Errors.Fail("Server already started");
         }
 
         if (_statusService.ServerStarting)
         {
-            return Error.Conflict("Server already starting");
+            return Errors.Fail("Server already starting");
         }
 
         if (_statusService.ServerStopping)
         {
-            return Error.Conflict("Server is stopping");
+            return Errors.Fail("Server is stopping");
         }
 
         if (_statusService.ServerUpdatingOrInstalling)
         {
-            return Error.Conflict("Server is updating");
+            return Errors.Fail("Server is updating");
         }
 
         return Result.Success;
@@ -219,7 +203,7 @@ public partial class ServerService
 
         if (File.Exists(steamClientSrcPath) == false)
         {
-            return Error.NotFound(description:
+            return Errors.Fail(description:
                 $"Steam client not found at \"{steamClientSrcPath}\". Run UpdateOrInstall to install steamclient");
         }
 
@@ -234,48 +218,15 @@ public partial class ServerService
         return Result.Success;
     }
 
-    private void LinkServerConfigs(string executingFolder, string serverFolder)
-    {
-        var srcConfigFolder = Path.Combine(executingFolder, "ServerServiceFolder", "configs");
-        var destConfigFolder = Path.Combine(serverFolder, "game", "csgo", "cfg");
-        var srcConfigPaths = Directory.GetFiles(srcConfigFolder);
-        foreach (var srcConfigPath in srcConfigPaths)
-        {
-            var configName = Path.GetFileName(srcConfigPath);
-            var destConfigPath = Path.Combine(destConfigFolder, configName);
-
-            var fileInfo = new FileInfo(destConfigPath);
-            if (fileInfo is { Exists: true })
-            {
-                if (string.IsNullOrWhiteSpace(fileInfo.LinkTarget) == false &&
-                    fileInfo.LinkTarget.Equals(srcConfigPath))
-                {
-                    _logger.LogInformation("Symbolic link for {ConfigName} already exists", configName);
-                    continue;
-                }
-
-                _logger.LogInformation("Deleting existing file {File}", fileInfo.FullName);
-                fileInfo.Delete();
-            }
-
-            _logger.LogInformation(
-                "Creating symbolic link for {ConfigName} config file. {LinkDestPath} > {LinkSrcPath}",
-                configName, destConfigPath, srcConfigPath);
-            File.CreateSymbolicLink(destConfigPath, srcConfigPath);
-        }
-    }
-
     private async Task<ErrorOr<Process>> StartServerProcess(
         ServerStart serverStart,
         string executablePath,
-        string serverFolder,
         string startParameter)
     {
         var process = new Process
         {
             StartInfo = new ProcessStartInfo
             {
-                WorkingDirectory = serverFolder,
                 FileName = executablePath,
                 Arguments = startParameter,
                 UseShellExecute = false,
@@ -386,30 +337,37 @@ public partial class ServerService
 
             serverStartedHandler = (_, args) =>
             {
-                var message = args.Data;
-                if (string.IsNullOrWhiteSpace(message))
+                try
                 {
-                    return;
-                }
+                    var message = args.Data;
+                    if (string.IsNullOrWhiteSpace(message))
+                    {
+                        return;
+                    }
 
-                if (message.StartsWith("Host activate: Loading"))
+                    if (message.StartsWith("Host activate: Loading"))
+                    {
+                        hostActivated = true;
+                        process.StandardInput.WriteLine($"say {ServerStartedMessage}");
+                        return;
+                    }
+
+                    if (hostActivated == false)
+                    {
+                        return;
+                    }
+
+                    if (message.Equals($"[All Chat][Console (0)]: {ServerStartedMessage}") == false)
+                    {
+                        return;
+                    }
+
+                    serverStarted = true;
+                }
+                catch (Exception e)
                 {
-                    hostActivated = true;
-                    process.StandardInput.WriteLine($"say {ServerStartedMessage}");
-                    return;
+                    _logger.LogError(e, "Exception in serverStartedHandler");
                 }
-
-                if (hostActivated == false)
-                {
-                    return;
-                }
-
-                if (message.Equals($"[All Chat][Console (0)]: {ServerStartedMessage}") == false)
-                {
-                    return;
-                }
-
-                serverStarted = true;
             };
 
             process.OutputDataReceived += serverStartedHandler;

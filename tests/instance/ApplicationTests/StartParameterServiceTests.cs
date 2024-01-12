@@ -5,7 +5,7 @@ using Shared;
 using Shared.ApiModels;
 using TestHelper.RandomHelperFolder;
 using TestHelper.TestLoggerFolder;
-using TestHelper.UnitTestOutputFolder;
+using TestHelper.UnitTestFolderFolder;
 using Xunit.Abstractions;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -24,7 +24,7 @@ public class StartParameterServiceTests
     public void TestGet_JsonFileDoseNotExists()
     {
         // Arrange
-        var unitTestFolder = UnitTestOutputHelper.GetNewUnitTestFolder(_outputHelper);
+        var unitTestFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
         var options = Options.Create(new AppOptions
         {
             APP_NAME = "TestAppName",
@@ -58,7 +58,7 @@ public class StartParameterServiceTests
     public void TestGet_JsonFileExists()
     {
         // Arrange
-        var unitTestFolder = UnitTestOutputHelper.GetNewUnitTestFolder(_outputHelper);
+        var unitTestFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
         var options = Options.Create(new AppOptions
         {
             APP_NAME = "TestAppName",
@@ -113,7 +113,7 @@ public class StartParameterServiceTests
     public void TestSet_JsonFileDoseNotExist()
     {
         // Arrange
-        var unitTestFolder = UnitTestOutputHelper.GetNewUnitTestFolder(_outputHelper);
+        var unitTestFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
         var options = Options.Create(new AppOptions
         {
             APP_NAME = "TestAppName",
@@ -161,7 +161,7 @@ public class StartParameterServiceTests
     public void TestSet_JsonFileExists()
     {
         // Arrange
-        var unitTestFolder = UnitTestOutputHelper.GetNewUnitTestFolder(_outputHelper);
+        var unitTestFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
         var options = Options.Create(new AppOptions
         {
             APP_NAME = "TestAppName",

@@ -3,13 +3,21 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
+using Microsoft.Extensions.Logging;
 
 namespace EnableDisablePlugin;
 
 public class EnableDisablePlugin : BasePlugin
 {
+    private readonly ILogger<EnableDisablePlugin> _logger;
+
+    public EnableDisablePlugin(ILogger<EnableDisablePlugin> logger)
+    {
+        _logger = logger;
+    }
+
     public override string ModuleName => Assembly.GetExecutingAssembly().GetName().Name ??
-                                         throw new NullReferenceException("Assemblyname");
+                                         throw new NullReferenceException("AssemblyName");
 
     public override string ModuleVersion => "1";
 
@@ -29,7 +37,7 @@ public class EnableDisablePlugin : BasePlugin
 
         if (Directory.Exists(_pluginsFolder) == false)
         {
-            Console.WriteLine($"{ModuleName}: Plugins folder \"{_pluginsFolder}\" dose not exist");
+            _logger.LogError("Failed to load. Plugins folder \"{PluginsFolder}\" dose not exist", _pluginsFolder);
             return;
         }
 

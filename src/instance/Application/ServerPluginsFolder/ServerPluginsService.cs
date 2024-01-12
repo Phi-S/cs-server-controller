@@ -17,20 +17,6 @@ public class ServerPluginsService
     private readonly IOptions<AppOptions> _options;
     private readonly HttpClient _httpClient;
 
-    private static readonly IImmutableList<string> AlwaysActivePlugins = ["EnableDisablePlugin"];
-    private const string MetamodUrl = "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1278-linux.tar.gz";
-
-    private const string CounterStrikeSharpUrl =
-        "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v142/counterstrikesharp-with-runtime-build-142-linux-7b45a88.zip";
-
-    private string PluginsFolder => Path.Combine(
-        _options.Value.SERVER_FOLDER,
-        "game",
-        "csgo",
-        "addons",
-        "counterstrikesharp",
-        "plugins");
-
     public ServerPluginsService(
         ILogger<ServerPluginsService> logger,
         IOptions<AppOptions> options,
@@ -41,48 +27,102 @@ public class ServerPluginsService
         _httpClient = httpClient;
     }
 
+    #region InstallInProgress
+
+    private static readonly object InstallInProgressLock = new();
+    private static volatile bool _installInProgress;
+
+    private static bool InstallInProgress
+    {
+        get
+        {
+            lock (InstallInProgressLock)
+            {
+                return _installInProgress;
+            }
+        }
+        set
+        {
+            lock (InstallInProgressLock)
+            {
+                _installInProgress = value;
+            }
+        }
+    }
+
+    #endregion
+
+
+    private static readonly IImmutableList<string> AlwaysActivePlugins = ["EnableDisablePlugin"];
+
+
+    private string CsgoFolder => Path.Combine(
+        _options.Value.SERVER_FOLDER,
+        "game",
+        "csgo");
+
+    private string AddonsFolder => Path.Combine(
+        CsgoFolder,
+        "addons");
+
+    private string CounterstrikeSharpFolder => Path.Combine(AddonsFolder, "counterstrikesharp");
+
+    private string PluginsFolder => Path.Combine(CounterstrikeSharpFolder, "plugins");
+
+    private string ConfigsFolder => Path.Combine(CounterstrikeSharpFolder, "configs");
+
     #region Install
 
     public async Task<ErrorOr<Success>> Install()
     {
-        var installBaseResult = await InstallBase();
-        if (installBaseResult.IsError)
+        if (InstallInProgress)
         {
-            return installBaseResult.FirstError;
+            return Errors.Fail("Failed to install plugins. Another install is already in progress");
         }
 
-        var installPluginsResult = InstallPlugins();
-        if (installPluginsResult.IsError)
+        try
         {
-            return installBaseResult.FirstError;
-        }
+            InstallInProgress = true;
+            var installBaseResult = await InstallBase();
+            if (installBaseResult.IsError)
+            {
+                return installBaseResult.FirstError;
+            }
 
-        return Result.Success;
+            var installPluginsResult = InstallPlugins();
+            if (installPluginsResult.IsError)
+            {
+                return installBaseResult.FirstError;
+            }
+
+            return Result.Success;
+        }
+        finally
+        {
+            InstallInProgress = false;
+        }
     }
 
+    #region Base
 
     public async Task<ErrorOr<Success>> InstallBase()
     {
-        _logger.LogInformation("Installing server plugins");
-
-        var csgoFolder = Path.Combine(_options.Value.SERVER_FOLDER, "game", "csgo");
-        var addonsFolder = Path.Combine(csgoFolder, "addons");
-
-        if (Directory.Exists(addonsFolder))
+        _logger.LogInformation("Installing Metamod and CounterStrikeSharp");
+        if (Directory.Exists(AddonsFolder))
         {
-            Directory.Delete(addonsFolder, true);
+            Directory.Delete(AddonsFolder, true);
         }
 
-        Directory.CreateDirectory(addonsFolder);
+        Directory.CreateDirectory(AddonsFolder);
 
-        var downloadMetamod = await DownloadMetamod(csgoFolder);
+        var downloadMetamod = await DownloadMetamod(_httpClient, CsgoFolder);
         if (downloadMetamod.IsError)
         {
             _logger.LogError("Failed to install metamod. {Error}", downloadMetamod.ErrorMessage());
             return downloadMetamod.FirstError;
         }
 
-        var downloadCounterStrikeSharp = await DownloadCounterStrikeSharp(csgoFolder);
+        var downloadCounterStrikeSharp = await DownloadCounterStrikeSharp(_httpClient, CsgoFolder);
         if (downloadCounterStrikeSharp.IsError)
         {
             _logger.LogError("Failed to install CounterStrikeSharp. {Error}",
@@ -90,7 +130,7 @@ public class ServerPluginsService
             return downloadCounterStrikeSharp.FirstError;
         }
 
-        var addMetamodEntry = await AddMetamodEntryToGameinfoGi(csgoFolder);
+        var addMetamodEntry = await AddMetamodEntryToGameinfoGi(CsgoFolder);
         if (addMetamodEntry.IsError)
         {
             _logger.LogError("Failed to install CounterStrikeSharp. {Error}",
@@ -98,14 +138,18 @@ public class ServerPluginsService
             return addMetamodEntry.FirstError;
         }
 
-        _logger.LogInformation("Server plugins installed");
+        _logger.LogInformation("Added metamod entry to gameinfo.gi");
+
+        CreateCoreCfg(ConfigsFolder);
+        _logger.LogInformation("Metamod and CounterStrikeSharp installed");
         return Result.Success;
     }
 
-    public async Task<ErrorOr<Success>> DownloadMetamod(string csgoFolder)
+    public static async Task<ErrorOr<Success>> DownloadMetamod(HttpClient httpClient, string csgoFolder)
     {
+        const string metamodUrl = "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1278-linux.tar.gz";
         var downloadPath = Path.Combine(csgoFolder, "addons", "metamod.tar.gz");
-        var downLoadResult = await Download(MetamodUrl, downloadPath);
+        var downLoadResult = await Download(httpClient, metamodUrl, downloadPath);
         if (downLoadResult.IsError)
         {
             return downLoadResult.FirstError;
@@ -117,7 +161,6 @@ public class ServerPluginsService
             using var unzippedStream = new MemoryStream();
             await gzip.CopyToAsync(unzippedStream);
             unzippedStream.Seek(0, SeekOrigin.Begin);
-
 
             await using var reader = new TarReader(unzippedStream);
             while (await reader.GetNextEntryAsync() is { } entry)
@@ -142,10 +185,12 @@ public class ServerPluginsService
         return Result.Success;
     }
 
-    public async Task<ErrorOr<Success>> DownloadCounterStrikeSharp(string csgoFolder)
+    public static async Task<ErrorOr<Success>> DownloadCounterStrikeSharp(HttpClient httpClient, string csgoFolder)
     {
+        const string counterStrikeSharpUrl =
+            "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v142/counterstrikesharp-with-runtime-build-142-linux-7b45a88.zip";
         var downloadPath = Path.Combine(csgoFolder, "addons", "counterstrikesharp-with-runtime.zip");
-        var downLoadResult = await Download(CounterStrikeSharpUrl, Path.Combine(downloadPath));
+        var downLoadResult = await Download(httpClient, counterStrikeSharpUrl, Path.Combine(downloadPath));
         if (downLoadResult.IsError)
         {
             return downLoadResult.FirstError;
@@ -162,9 +207,9 @@ public class ServerPluginsService
         return Result.Success;
     }
 
-    public async Task<ErrorOr<Success>> Download(string downloadUrl, string downloadPath)
+    public static async Task<ErrorOr<Success>> Download(HttpClient httpClient, string downloadUrl, string downloadPath)
     {
-        await using var downloadStream = await _httpClient.GetStreamAsync(downloadUrl);
+        await using var downloadStream = await httpClient.GetStreamAsync(downloadUrl);
         await using var fileStream = new FileStream(downloadPath, FileMode.OpenOrCreate);
         await downloadStream.CopyToAsync(fileStream);
 
@@ -176,20 +221,18 @@ public class ServerPluginsService
         return Errors.Fail($"Failed to download \"{downloadUrl}\"");
     }
 
-    public async Task<ErrorOr<Success>> AddMetamodEntryToGameinfoGi(string csgoFolder)
+    public static async Task<ErrorOr<Success>> AddMetamodEntryToGameinfoGi(string csgoFolder)
     {
         const string metamodEntry = "			Game csgo/addons/metamod";
         var gameinfoGiPath = Path.Combine(csgoFolder, "gameinfo.gi");
         if (File.Exists(gameinfoGiPath) == false)
         {
-            _logger.LogInformation("Failed to find gameinfo.gi at \"{GameinfoGiPath}\"", gameinfoGiPath);
             return Errors.Fail($"Failed to find gameinfo.gi at \"{gameinfoGiPath}\"");
         }
 
         var fileLines = await File.ReadAllLinesAsync(gameinfoGiPath);
         if (fileLines.Any(l => l.Trim().Equals(metamodEntry.Trim())))
         {
-            _logger.LogInformation("gameinfo.gi already contains the metamod entry");
             return Result.Success;
         }
 
@@ -205,15 +248,35 @@ public class ServerPluginsService
 
         await streamWriter.FlushAsync();
         streamWriter.Close();
-        _logger.LogInformation("Added metamod entry to gameinfo.gi");
         return Result.Success;
     }
+
+    public static void CreateCoreCfg(string configsFolder)
+    {
+        var coreCfgJsonPath = Path.Combine(configsFolder, "core.json");
+        const string json =
+            """
+            {
+                "PublicChatTrigger": [ "." ],
+                "SilentChatTrigger": [ "/" ],
+                "FollowCS2ServerGuidelines": true,
+                "PluginHotReloadEnabled": true,
+                "ServerLanguage": "en"
+            }
+            """;
+
+        File.WriteAllText(coreCfgJsonPath, json);
+    }
+
+    #endregion
+
+
+    #region Plugins
 
     public ErrorOr<Success> InstallPlugins()
     {
         var pluginsSrc = Path.Combine(_options.Value.EXECUTING_FOLDER, "ServerPluginsFolder", "plugins");
-        var pluginsDest = Path.Combine(_options.Value.SERVER_FOLDER, "game", "csgo", "addons", "counterstrikesharp",
-            "plugins");
+        var pluginsDest = PluginsFolder;
         var disabledPluginsDest = Path.Combine(pluginsDest, "disabled");
 
         if (Directory.Exists(pluginsDest))
@@ -296,6 +359,8 @@ public class ServerPluginsService
 
     #endregion
 
+    #endregion
+
     public List<PluginAlias> GetInstalledPlugins()
     {
         if (Directory.Exists(PluginsFolder) == false)
@@ -308,7 +373,7 @@ public class ServerPluginsService
         var pluginFolders = Directory.GetDirectories(PluginsFolder);
         foreach (var pluginFolder in pluginFolders)
         {
-            var pluginName = Path.GetFileName(PluginsFolder);
+            var pluginName = Path.GetFileName(pluginFolder);
             if (pluginName.Equals("disabled"))
             {
                 continue;

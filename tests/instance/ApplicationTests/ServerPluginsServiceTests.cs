@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using TestHelper.TestLoggerFolder;
 using TestHelper.TestSetup;
+using TestHelper.UnitTestFolderFolder;
 using Xunit.Abstractions;
 
 namespace ApplicationTests;
@@ -21,28 +22,12 @@ public class ServerPluginsServiceTests
     public async Task TestMetamodDownload()
     {
         // Arrange
-        var folderGuid = Guid.NewGuid();
-        _outputHelper.WriteLine($"FolderGuid: {folderGuid}");
-        var dataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "cs-controller-instance-unit-tests", folderGuid.ToString());
-        var addonsFolder = Path.Combine(dataFolder, "addons");
-        Directory.CreateDirectory(addonsFolder);
-        var options = Options.Create(new AppOptions
-        {
-            APP_NAME = "null",
-            IP_OR_DOMAIN = "null",
-            PORT = "null",
-            STEAM_USERNAME = "null",
-            STEAM_PASSWORD = "null",
-            LOGIN_TOKEN = "null",
-            DATA_FOLDER = dataFolder
-        });
-        var logger = new XunitLogger<ServerPluginsService>(_outputHelper);
         var httpClient = new HttpClient();
-        var service = new ServerPluginsService(logger, options, httpClient);
+        var testFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
+        Directory.CreateDirectory(Path.Combine(testFolder, "addons"));
 
         // Act
-        var downloadMetamod = await service.DownloadMetamod(dataFolder);
+        var downloadMetamod = await ServerPluginsService.DownloadMetamod(httpClient, testFolder);
 
         // Assert
         if (downloadMetamod.IsError)
@@ -51,6 +36,7 @@ public class ServerPluginsServiceTests
             Assert.Fail();
         }
 
+        var addonsFolder = Path.Combine(testFolder, "addons");
         Assert.True(File.Exists(Path.Combine(addonsFolder, "metamod.vdf")));
         Assert.True(File.Exists(Path.Combine(addonsFolder, "metamod_x64.vdf")));
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "metamod")));
@@ -62,29 +48,12 @@ public class ServerPluginsServiceTests
     public async Task TestCounterStrikeSharpDownload()
     {
         // Arrange
-        var folderGuid = Guid.NewGuid();
-        _outputHelper.WriteLine($"FolderGuid: {folderGuid}");
-        var dataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "cs-controller-instance-unit-tests", folderGuid.ToString());
-        var addonsFolder = Path.Combine(dataFolder, "addons");
-        Directory.CreateDirectory(addonsFolder);
-
-        var options = Options.Create(new AppOptions
-        {
-            APP_NAME = "null",
-            IP_OR_DOMAIN = "null",
-            PORT = "null",
-            STEAM_USERNAME = "null",
-            STEAM_PASSWORD = "null",
-            LOGIN_TOKEN = "null",
-            DATA_FOLDER = dataFolder
-        });
-        var logger = new XunitLogger<ServerPluginsService>(_outputHelper);
         var httpClient = new HttpClient();
-        var service = new ServerPluginsService(logger, options, httpClient);
-
+        var testFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
+        Directory.CreateDirectory(Path.Combine(testFolder, "addons"));
+        
         // Act
-        var downloadCounterStrikeSharp = await service.DownloadCounterStrikeSharp(dataFolder);
+        var downloadCounterStrikeSharp = await ServerPluginsService.DownloadCounterStrikeSharp(httpClient, testFolder);
 
         // Assert
         if (downloadCounterStrikeSharp.IsError)
@@ -93,9 +62,9 @@ public class ServerPluginsServiceTests
             Assert.Fail();
         }
 
+        var addonsFolder = Path.Combine(testFolder, "addons");
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "metamod")));
         Assert.True(File.Exists(Path.Combine(addonsFolder, "metamod", "counterstrikesharp.vdf")));
-
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "counterstrikesharp")));
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "counterstrikesharp", "api")));
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "counterstrikesharp", "gamedata")));
@@ -109,7 +78,7 @@ public class ServerPluginsServiceTests
         var applicationServices = await ServicesSetup.GetApplicationCollection(_outputHelper);
         await using var provider = applicationServices.BuildServiceProvider();
         var serverPluginsService = provider.GetRequiredService<ServerPluginsService>();
-        
+
         // Act
         var installPlugins = serverPluginsService.InstallPlugins();
 
@@ -119,5 +88,21 @@ public class ServerPluginsServiceTests
             _outputHelper.WriteLine($"Failed to install plugins. {installPlugins}");
             Assert.Fail();
         }
+    }
+
+    [Fact]
+    public async Task CreateCoreCfgTest()
+    {
+        // Arrange
+        var testFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
+
+        // Act
+        ServerPluginsService.CreateCoreCfg(testFolder);
+
+        // Assert
+        var filePath = Path.Combine(testFolder, "core.json");
+        Assert.True(File.Exists(filePath));
+        var fileContent = await File.ReadAllTextAsync(filePath);
+        Assert.Contains(@"""PublicChatTrigger"": [ ""."" ],", fileContent);
     }
 }

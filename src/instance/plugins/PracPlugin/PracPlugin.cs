@@ -3,19 +3,40 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Utils;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using PracPlugin.Services;
 
 namespace PracPlugin;
 
+public class TestPluginServiceCollection : IPluginServiceCollection<PracPlugin>
+{
+    public void ConfigureServices(IServiceCollection serviceCollection)
+    {
+        serviceCollection.AddSingleton<BotService>();
+        serviceCollection.AddSingleton<TimerService>();
+    }
+}
+
 public class PracPlugin : BasePlugin
 {
-    public static PracPlugin? Instance { get; private set; }
+    private readonly ILogger<PracPlugin> _logger;
+
+    public PracPlugin(ILogger<PracPlugin> logger, BotService botService)
+    {
+        _logger = logger;
+        _botService = botService;
+    }
 
     public override string ModuleName => Assembly.GetExecutingAssembly().GetName().Name ??
-                                         throw new NullReferenceException("Assemblyname");
+                                         throw new NullReferenceException("AssemblyName");
 
     public override string ModuleVersion => "1";
 
     private const string ConfigName = "prac.cfg";
+
+    private readonly BotService _botService;
 
     public override void Load(bool hotReload)
     {
@@ -25,12 +46,14 @@ public class PracPlugin : BasePlugin
             "addons",
             "counterstrikesharp",
             "plugins",
-            nameof(PracPlugin),
+            ModuleName,
+            "Configs",
             ConfigName);
 
         if (File.Exists(configSrcPath) == false)
         {
-            Console.WriteLine($"Failed to laod {ModuleName}. \"prac.cfg\" not found");
+            Console.WriteLine($"Failed to load {ModuleName}. \"prac.cfg\" not found");
+            return;
         }
 
         var configDestPath = Path.Combine(
@@ -40,9 +63,9 @@ public class PracPlugin : BasePlugin
             ConfigName);
 
         File.Copy(configSrcPath, configDestPath, true);
+        _botService.RegisterEventHandler(this);
 
         Server.ExecuteCommand($"exec {ConfigName}");
-        Instance = this;
         base.Load(hotReload);
     }
 
@@ -74,16 +97,38 @@ public class PracPlugin : BasePlugin
     }
 
     [ConsoleCommand("bot", "Places standing bot on calling player position")]
-    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    [CommandHelper(minArgs: 0, usage: "[CT/T] (optional)", whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void PlaceBotOnPlayerPosition(CCSPlayerController? player, CommandInfo command)
     {
         if (player is null)
         {
-            Console.WriteLine("!bot can only be executed by clients");
+            _logger.LogWarning("bot command can only be executed by clients");
             return;
         }
 
-        BotManager.AddBot(player);
+        if (command.ArgCount == 2)
+        {
+            var botTeam = command.ArgByIndex(1).ToLower();
+            if (string.IsNullOrEmpty(botTeam) == false)
+            {
+                if (botTeam.Equals("t"))
+                {
+                    _botService.AddBot(player, CsTeam.Terrorist);
+                }
+                else if (botTeam.Equals("ct"))
+                {
+                    _botService.AddBot(player, CsTeam.CounterTerrorist);
+                }
+                else
+                {
+                    _logger.LogWarning("Cant add bot to team {BotTeam}", botTeam);
+                }
+
+                return;
+            }
+        }
+
+        _botService.AddBot(player);
     }
 
     [ConsoleCommand("cbot", "Places crouching bot on calling player position")]
@@ -96,7 +141,7 @@ public class PracPlugin : BasePlugin
             return;
         }
 
-        BotManager.AddBot(player, true);
+        _botService.AddBot(player, CsTeam.None, true);
     }
 
     [ConsoleCommand("boost", "Places bot beneath calling player position")]
@@ -109,7 +154,7 @@ public class PracPlugin : BasePlugin
             return;
         }
 
-        BotManager.Boost(player);
+        _botService.Boost(player);
     }
 
     [ConsoleCommand("cboost", "Places crouching bot beneath calling player position")]
@@ -122,10 +167,23 @@ public class PracPlugin : BasePlugin
             return;
         }
 
-        BotManager.Boost(player, true);
+        _botService.Boost(player, true);
     }
 
-    [ConsoleCommand("clear", "Removes all bots spawn by the calling player")]
+    [ConsoleCommand("nobot", "Removes the closest bot from calling player")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void RemoveClosestBotSpawnedByCallingPlayer(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player is null)
+        {
+            Console.WriteLine("!bot can only be executed by clients");
+            return;
+        }
+
+        _botService.NoBot(player);
+    }
+
+    [ConsoleCommand("nobots", "Removes all bots spawn by the calling player")]
     [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void RemoveAllBotsSpawnedByCallingPlayer(CCSPlayerController? player, CommandInfo command)
     {
@@ -135,6 +193,6 @@ public class PracPlugin : BasePlugin
             return;
         }
 
-        BotManager.NoBot(player);
+        _botService.ClearBots(player);
     }
 }

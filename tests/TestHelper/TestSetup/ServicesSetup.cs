@@ -2,7 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using TestHelper.TestConfigurationFolder;
 using TestHelper.TestLoggerFolder;
-using TestHelper.UnitTestOutputFolder;
+using TestHelper.UnitTestFolderFolder;
 using Xunit.Abstractions;
 
 namespace TestHelper.TestSetup;
@@ -14,7 +14,7 @@ public static class ServicesSetup
         var config = TestConfiguration.GetApiAppSettingsTest(
             [
                 new KeyValuePair<string, string?>("APP_OPTIONS:DATA_FOLDER",
-                    UnitTestOutputHelper.GetNewUnitTestFolder(outputHelper)),
+                    UnitTestFolderHelper.GetNewUnitTestFolder(outputHelper)),
                 new KeyValuePair<string, string?>("APP_OPTIONS:APP_NAME", "cs-controller-instance-test"),
                 new KeyValuePair<string, string?>("APP_OPTIONS:IP_OR_DOMAIN", "ip_or_domain"),
                 new KeyValuePair<string, string?>("APP_OPTIONS:PORT", "port"),

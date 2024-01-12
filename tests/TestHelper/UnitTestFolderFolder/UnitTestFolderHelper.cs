@@ -1,8 +1,8 @@
 ﻿using Xunit.Abstractions;
 
-namespace TestHelper.UnitTestOutputFolder;
+namespace TestHelper.UnitTestFolderFolder;
 
-public static class UnitTestOutputHelper
+public static class UnitTestFolderHelper
 {
     public static string GetNewUnitTestFolder(ITestOutputHelper outputHelper)
     {

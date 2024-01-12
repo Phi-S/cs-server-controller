@@ -21,8 +21,18 @@ public class GrenadeService
     {
         plugin.RegisterEventHandler<EventSmokegrenadeDetonate>(OnSmokeDetonate);
         plugin.RegisterEventHandler<EventPlayerHurt>(OnPlayerDamage);
+        plugin.RegisterEventHandler<EventPlayerBlind>(OnPlayerBlind);
         plugin.RegisterListener<Listeners.OnEntitySpawned>(OnEntitySpawned);
         _logger.LogInformation("BotManager event handler registered");
+    }
+
+    public HookResult OnPlayerBlind(EventPlayerBlind @event, GameEventInfo info)
+    {
+        var blindDuration = Math.Round(@event.BlindDuration, 2);
+        Server.PrintToChatAll(
+            $"{ColorHelper.PlayerName(@event.Attacker.PlayerName)} blinded {ColorHelper.PlayerName(@event.Userid.PlayerName)} for " +
+            $"{ColorHelper.Value(blindDuration.ToString(CultureInfo.InvariantCulture))}seconds");
+        return HookResult.Continue;
     }
 
     private HookResult OnSmokeDetonate(EventSmokegrenadeDetonate @event, GameEventInfo info)
@@ -48,7 +58,7 @@ public class GrenadeService
         {
             Server.PrintToChatAll(
                 $"{ColorHelper.PlayerName(@event.Attacker.PlayerName)} damaged {ColorHelper.PlayerName(@event.Userid.PlayerName)} " +
-                $"for  {ColorHelper.Value(@event.DmgHealth.ToString())}HP");
+                $"for {ColorHelper.Value(@event.DmgHealth.ToString())}HP");
         }
 
         return HookResult.Continue;

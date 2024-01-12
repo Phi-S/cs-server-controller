@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Globalization;
+using System.Reflection;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
@@ -6,6 +7,7 @@ using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using PracPlugin.Helper;
 using PracPlugin.Services;
 
 namespace PracPlugin;
@@ -80,13 +82,6 @@ public class PracPlugin : BasePlugin
         _logger.LogInformation("All event handler registered");
         Server.ExecuteCommand($"exec {ConfigName}");
         base.Load(hotReload);
-    }
-
-    [GameEventHandler]
-    public HookResult OnPlayerBlind(EventPlayerBlind @event, GameEventInfo info)
-    {
-        Server.PrintToChatAll($"{@event.Userid.PlayerName} blinded for {@event.BlindDuration} seconds");
-        return HookResult.Continue;
     }
 
     [GameEventHandler]
@@ -245,7 +240,7 @@ public class PracPlugin : BasePlugin
             _spawnsService.TeleportToTeamSpawn(player, spawnNumber);
         }
     }
-    
+
     [ConsoleCommand("tspawn", "Teleport to specific t spawn")]
     [CommandHelper(minArgs: 1, usage: "[Spawn]", whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void TeleportToTSpawn(CCSPlayerController? player, CommandInfo command)
@@ -266,7 +261,7 @@ public class PracPlugin : BasePlugin
             _spawnsService.TeleportToTeamSpawn(player, spawnNumber, CsTeam.Terrorist);
         }
     }
-    
+
     [ConsoleCommand("ctspawn", "Teleport to specific ct spawn")]
     [CommandHelper(minArgs: 1, usage: "[Spawn]", whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void TeleportToCtSpawn(CCSPlayerController? player, CommandInfo command)

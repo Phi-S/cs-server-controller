@@ -55,10 +55,11 @@ public class SpawnsService
 
         var result = new List<PositionModel>();
         var spawns = Utilities.FindAllEntitiesByDesignerName<SpawnPoint>($"info_player_{teamString}").ToList();
+        Console.WriteLine($"Spawn: {spawns.Count()}");
         var minPrio = 1;
         foreach (var spawn in spawns)
         {
-            if (spawn.IsValid && spawn.Enabled && spawn.Priority < minPrio)
+            if (spawn.IsValid && spawn.Enabled && spawn.Priority <= minPrio)
             {
                 minPrio = spawn.Priority;
             }
@@ -76,6 +77,7 @@ public class SpawnsService
             }
         }
 
+        Console.WriteLine($"ResultSpawns: {result.Count}");
         return result;
     }
 
@@ -91,7 +93,10 @@ public class SpawnsService
             return;
         }
 
-        var targetTeam = (team != CsTeam.Terrorist && team != CsTeam.CounterTerrorist) ? (CsTeam)player.TeamNum : team;
+        var targetTeam = team != CsTeam.Terrorist && team != CsTeam.CounterTerrorist
+            ? (CsTeam)player.TeamNum
+            : team;
+
         List<PositionModel> spawns;
         if (targetTeam == CsTeam.Terrorist)
         {
@@ -106,10 +111,8 @@ public class SpawnsService
             return;
         }
 
-        if (spawns.Count <= spawnNumber)
+        if (spawns.Count < spawnNumber)
         {
-            player.PrintToCenter(
-                $"insufficient number of spawns found. spawns {spawns.Count} - {spawnNumber}");
             return;
         }
 
@@ -119,9 +122,10 @@ public class SpawnsService
             return;
         }
 
+        var spawn = spawns[spawnNumber - 1];
         playerPawn.Value.Teleport(
-            spawns[spawnNumber - 1].Position,
-            spawns[spawnNumber - 1].Angle,
+            spawn.Position,
+            spawn.Angle,
             new Vector(0, 0, 0));
     }
 }

@@ -18,11 +18,8 @@ public class BotService
         _logger = logger;
         _timerService = timerService;
     }
-
-    /// <summary>
-    /// Dict of a bots Key = userid of bot
-    /// </summary>
-    public readonly Dictionary<int, BotInfoModel> SpawnedBots = new();
+    
+    private readonly Dictionary<int, BotInfoModel> _spawnedBots = new();
 
     public void RegisterEventHandler(BasePlugin plugin)
     {
@@ -105,7 +102,7 @@ public class BotService
                 continue;
             }
 
-            if (SpawnedBots.ContainsKey(tempPlayer.UserId.Value) == false && unusedBotFound)
+            if (_spawnedBots.ContainsKey(tempPlayer.UserId.Value) == false && unusedBotFound)
             {
                 // Kicking the unused bot. We have to do this because bot_add_t/bot_add_ct may add multiple bots but we need only 1, so we kick the remaining unused ones
                 _logger.LogInformation("Kicking unused bot {BotName}", tempPlayer.PlayerName);
@@ -113,7 +110,7 @@ public class BotService
                 continue;
             }
 
-            if (SpawnedBots.ContainsKey(tempPlayer.UserId.Value))
+            if (_spawnedBots.ContainsKey(tempPlayer.UserId.Value))
             {
                 continue;
             }
@@ -146,7 +143,7 @@ public class BotService
                 botOwnerPosition,
                 botOwner,
                 crouch);
-            SpawnedBots.Add(tempPlayer.UserId.Value, spawnedBotInfo);
+            _spawnedBots.Add(tempPlayer.UserId.Value, spawnedBotInfo);
 
             var movementService =
                 new CCSPlayer_MovementServices(tempPlayerPawn.MovementServices!.Handle);
@@ -180,7 +177,6 @@ public class BotService
     /// <param name="crouch">option if the added bot should crouch</param>
     public void Boost(CCSPlayerController player, bool crouch = false)
     {
-        // TODO: team
         AddBot(player, CsTeam.None, crouch);
         _timerService.AddTimer(0.2f, () => ElevatePlayer(player));
     }
@@ -193,7 +189,7 @@ public class BotService
     {
         CCSPlayerController? closestBot = null;
         float distance = 0;
-        foreach (var botDict in SpawnedBots.Values)
+        foreach (var botDict in _spawnedBots.Values)
         {
             var botOwner = botDict.Owner;
             var bot = botDict.Controller;
@@ -224,7 +220,7 @@ public class BotService
         if (closestBot != null)
         {
             Server.ExecuteCommand($"kickid {closestBot.UserId}");
-            SpawnedBots.Remove((int)closestBot.UserId!);
+            _spawnedBots.Remove((int)closestBot.UserId!);
             _logger.LogInformation("Closest bot to {Player} removed", player.PlayerName);
         }
     }
@@ -278,13 +274,13 @@ public class BotService
     /// <param name="player"></param>
     public void ClearBots(CCSPlayerController player)
     {
-        foreach (var spawnedBotInfo in SpawnedBots.Values)
+        foreach (var spawnedBotInfo in _spawnedBots.Values)
         {
             if (spawnedBotInfo.Owner.UserId == player.UserId)
             {
                 var bot = spawnedBotInfo.Controller;
                 Server.ExecuteCommand($"kickid {bot.UserId}");
-                SpawnedBots.Remove(bot.UserId!.Value);
+                _spawnedBots.Remove(bot.UserId!.Value);
             }
         }
     }
@@ -313,7 +309,7 @@ public class BotService
         // Respawing a bot where it was actually spawned during practice session
         if (player.IsValid && player.IsBot && player.UserId.HasValue)
         {
-            if (SpawnedBots.TryGetValue(player.UserId.Value, out var spawnedBotInfo))
+            if (_spawnedBots.TryGetValue(player.UserId.Value, out var spawnedBotInfo))
             {
                 var playerPawn = player.PlayerPawn.Value;
                 if (playerPawn is null)

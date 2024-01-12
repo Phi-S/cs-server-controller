@@ -16,6 +16,8 @@ public class TestPluginServiceCollection : IPluginServiceCollection<PracPlugin>
     {
         serviceCollection.AddSingleton<BotService>();
         serviceCollection.AddSingleton<TimerService>();
+        serviceCollection.AddSingleton<GrenadeService>();
+        serviceCollection.AddSingleton<SpawnsService>();
     }
 }
 
@@ -23,10 +25,16 @@ public class PracPlugin : BasePlugin
 {
     private readonly ILogger<PracPlugin> _logger;
 
-    public PracPlugin(ILogger<PracPlugin> logger, BotService botService)
+    public PracPlugin(
+        ILogger<PracPlugin> logger,
+        BotService botService,
+        GrenadeService grenadeService,
+        SpawnsService spawnsService)
     {
         _logger = logger;
         _botService = botService;
+        _grenadeService = grenadeService;
+        _spawnsService = spawnsService;
     }
 
     public override string ModuleName => Assembly.GetExecutingAssembly().GetName().Name ??
@@ -37,6 +45,8 @@ public class PracPlugin : BasePlugin
     private const string ConfigName = "prac.cfg";
 
     private readonly BotService _botService;
+    private readonly GrenadeService _grenadeService;
+    private readonly SpawnsService _spawnsService;
 
     public override void Load(bool hotReload)
     {
@@ -64,7 +74,10 @@ public class PracPlugin : BasePlugin
 
         File.Copy(configSrcPath, configDestPath, true);
         _botService.RegisterEventHandler(this);
+        _grenadeService.RegisterEventHandler(this);
+        _spawnsService.RegisterEventHandler(this);
 
+        _logger.LogInformation("All event handler registered");
         Server.ExecuteCommand($"exec {ConfigName}");
         base.Load(hotReload);
     }
@@ -89,7 +102,7 @@ public class PracPlugin : BasePlugin
         return HookResult.Continue;
     }
 
-    [ConsoleCommand("prac", "Executed the prac.cfg")]
+    [ConsoleCommand("reload", "Executed the prac.cfg")]
     [CommandHelper(whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
     public void OnPracCommand(CCSPlayerController? player, CommandInfo command)
     {
@@ -102,7 +115,6 @@ public class PracPlugin : BasePlugin
     {
         if (player is null)
         {
-            _logger.LogWarning("bot command can only be executed by clients");
             return;
         }
 
@@ -132,13 +144,34 @@ public class PracPlugin : BasePlugin
     }
 
     [ConsoleCommand("cbot", "Places crouching bot on calling player position")]
-    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    [CommandHelper(minArgs: 0, usage: "[CT/T] (optional)", whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void PlaceCrouchingBotOnPlayerPosition(CCSPlayerController? player, CommandInfo command)
     {
         if (player is null)
         {
-            Console.WriteLine("!bot can only be executed by clients");
             return;
+        }
+
+        if (command.ArgCount == 2)
+        {
+            var botTeam = command.ArgByIndex(1).ToLower();
+            if (string.IsNullOrEmpty(botTeam) == false)
+            {
+                if (botTeam.Equals("t"))
+                {
+                    _botService.AddBot(player, CsTeam.Terrorist, true);
+                }
+                else if (botTeam.Equals("ct"))
+                {
+                    _botService.AddBot(player, CsTeam.CounterTerrorist, true);
+                }
+                else
+                {
+                    _logger.LogWarning("Cant add bot to team {BotTeam}", botTeam);
+                }
+
+                return;
+            }
         }
 
         _botService.AddBot(player, CsTeam.None, true);
@@ -150,7 +183,6 @@ public class PracPlugin : BasePlugin
     {
         if (player is null)
         {
-            Console.WriteLine("!bot can only be executed by clients");
             return;
         }
 
@@ -163,7 +195,6 @@ public class PracPlugin : BasePlugin
     {
         if (player is null)
         {
-            Console.WriteLine("!bot can only be executed by clients");
             return;
         }
 
@@ -176,7 +207,6 @@ public class PracPlugin : BasePlugin
     {
         if (player is null)
         {
-            Console.WriteLine("!bot can only be executed by clients");
             return;
         }
 
@@ -189,10 +219,72 @@ public class PracPlugin : BasePlugin
     {
         if (player is null)
         {
-            Console.WriteLine("!bot can only be executed by clients");
             return;
         }
 
         _botService.ClearBots(player);
+    }
+
+    [ConsoleCommand("spawn", "Teleport to specific spawn")]
+    [CommandHelper(minArgs: 1, usage: "[Spawn]", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void TeleportToSpawn(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player is null)
+        {
+            return;
+        }
+
+        if (command.ArgCount != 2)
+        {
+            return;
+        }
+
+        var spawnNumberString = command.ArgByIndex(1);
+        if (int.TryParse(spawnNumberString, out var spawnNumber))
+        {
+            _spawnsService.TeleportToTeamSpawn(player, spawnNumber);
+        }
+    }
+    
+    [ConsoleCommand("tspawn", "Teleport to specific t spawn")]
+    [CommandHelper(minArgs: 1, usage: "[Spawn]", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void TeleportToTSpawn(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player is null)
+        {
+            return;
+        }
+
+        if (command.ArgCount != 2)
+        {
+            return;
+        }
+
+        var spawnNumberString = command.ArgByIndex(1);
+        if (int.TryParse(spawnNumberString, out var spawnNumber))
+        {
+            _spawnsService.TeleportToTeamSpawn(player, spawnNumber, CsTeam.Terrorist);
+        }
+    }
+    
+    [ConsoleCommand("ctspawn", "Teleport to specific ct spawn")]
+    [CommandHelper(minArgs: 1, usage: "[Spawn]", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void TeleportToCtSpawn(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player is null)
+        {
+            return;
+        }
+
+        if (command.ArgCount != 2)
+        {
+            return;
+        }
+
+        var spawnNumberString = command.ArgByIndex(1);
+        if (int.TryParse(spawnNumberString, out var spawnNumber))
+        {
+            _spawnsService.TeleportToTeamSpawn(player, spawnNumber, CsTeam.CounterTerrorist);
+        }
     }
 }

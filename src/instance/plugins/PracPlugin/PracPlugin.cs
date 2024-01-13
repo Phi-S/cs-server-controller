@@ -7,6 +7,7 @@ using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic.CompilerServices;
 using PracPlugin.Helper;
 using PracPlugin.Services;
 
@@ -26,17 +27,23 @@ public class TestPluginServiceCollection : IPluginServiceCollection<PracPlugin>
 public class PracPlugin : BasePlugin
 {
     private readonly ILogger<PracPlugin> _logger;
+    private readonly BotService _botService;
+    private readonly GrenadeService _grenadeService;
+    private readonly SpawnsService _spawnsService;
+    private readonly TimerService _timerService;
 
     public PracPlugin(
         ILogger<PracPlugin> logger,
         BotService botService,
         GrenadeService grenadeService,
-        SpawnsService spawnsService)
+        SpawnsService spawnsService,
+        TimerService timerService)
     {
         _logger = logger;
         _botService = botService;
         _grenadeService = grenadeService;
         _spawnsService = spawnsService;
+        _timerService = timerService;
     }
 
     public override string ModuleName => Assembly.GetExecutingAssembly().GetName().Name ??
@@ -46,9 +53,6 @@ public class PracPlugin : BasePlugin
 
     private const string ConfigName = "prac.cfg";
 
-    private readonly BotService _botService;
-    private readonly GrenadeService _grenadeService;
-    private readonly SpawnsService _spawnsService;
 
     public override void Load(bool hotReload)
     {
@@ -138,6 +142,8 @@ public class PracPlugin : BasePlugin
         _botService.AddBot(player);
     }
 
+    #region Bots
+
     [ConsoleCommand("cbot", "Places crouching bot on calling player position")]
     [CommandHelper(minArgs: 0, usage: "[CT/T] (optional)", whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void PlaceCrouchingBotOnPlayerPosition(CCSPlayerController? player, CommandInfo command)
@@ -220,6 +226,10 @@ public class PracPlugin : BasePlugin
         _botService.ClearBots(player);
     }
 
+    #endregion
+
+    #region Spawns
+
     [ConsoleCommand("spawn", "Teleport to specific spawn")]
     [CommandHelper(minArgs: 1, usage: "[Spawn]", whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void TeleportToSpawn(CCSPlayerController? player, CommandInfo command)
@@ -282,4 +292,43 @@ public class PracPlugin : BasePlugin
             _spawnsService.TeleportToTeamSpawn(player, spawnNumber, CsTeam.CounterTerrorist);
         }
     }
+
+    #endregion
+
+    #region Granades
+
+    [ConsoleCommand("rethrow", "rethrows the last grenade")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void RethrowGrenade(CCSPlayerController? player, CommandInfo command)
+    {
+        Server.ExecuteCommand("sv_rethrow_last_grenade");
+    }
+
+    [ConsoleCommand("last", "Teleports player to his last thrown grenade position")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void TeleportToLastGrenade(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player is null)
+        {
+            return;
+        }
+
+        if (_grenadeService.TryGetLastThrownGrenade(player, out var lastThrownGrenadePosition))
+        {
+            player.PlayerPawn.Value?.Teleport(
+                lastThrownGrenadePosition.Position,
+                lastThrownGrenadePosition.Angle,
+                new Vector(0, 0, 0)
+            );
+        }
+    }
+
+    [ConsoleCommand("ff", "Clears all grenades")]
+    public void ClearAllGrenades(CCSPlayerController? player, CommandInfo command)
+    {
+        Server.ExecuteCommand("host_timescale 50");
+        _timerService.AddTimer(20f, () => Server.ExecuteCommand("host_timescale 1"));
+    }
+
+    #endregion
 }

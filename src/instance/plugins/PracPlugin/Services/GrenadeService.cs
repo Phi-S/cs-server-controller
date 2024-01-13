@@ -1,8 +1,10 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using Microsoft.Extensions.Logging;
 using PracPlugin.Helper;
+using PracPlugin.Models;
 
 namespace PracPlugin.Services;
 
@@ -15,6 +17,7 @@ public class GrenadeService
         _logger = logger;
     }
 
+    private readonly Dictionary<CCSPlayerController, PositionModel> _lastThrownGrenade = new();
     private readonly Dictionary<int, DateTime> _lastThrownSmoke = new();
 
     public void RegisterEventHandler(BasePlugin plugin)
@@ -22,11 +25,24 @@ public class GrenadeService
         plugin.RegisterEventHandler<EventSmokegrenadeDetonate>(OnSmokeDetonate);
         plugin.RegisterEventHandler<EventPlayerHurt>(OnPlayerDamage);
         plugin.RegisterEventHandler<EventPlayerBlind>(OnPlayerBlind);
+        plugin.RegisterEventHandler<EventGrenadeThrown>(OnGrenadeThrown);
         plugin.RegisterListener<Listeners.OnEntitySpawned>(OnEntitySpawned);
         _logger.LogInformation("BotManager event handler registered");
     }
 
-    public HookResult OnPlayerBlind(EventPlayerBlind @event, GameEventInfo info)
+    public bool TryGetLastThrownGrenade(CCSPlayerController player, [MaybeNullWhen(false)] out PositionModel position)
+    {
+        if (_lastThrownGrenade.TryGetValue(player, out var positionTemp))
+        {
+            position = positionTemp;
+            return true;
+        }
+
+        position = null;
+        return false;
+    }
+
+    private HookResult OnPlayerBlind(EventPlayerBlind @event, GameEventInfo info)
     {
         var blindDuration = Math.Round(@event.BlindDuration, 2);
         Server.PrintToChatAll(
@@ -59,6 +75,24 @@ public class GrenadeService
             Server.PrintToChatAll(
                 $"{ColorHelper.PlayerName(@event.Attacker.PlayerName)} damaged {ColorHelper.PlayerName(@event.Userid.PlayerName)} " +
                 $"for {ColorHelper.Value(@event.DmgHealth.ToString())}HP");
+        }
+
+        return HookResult.Continue;
+    }
+
+    private HookResult OnGrenadeThrown(EventGrenadeThrown @event, GameEventInfo info)
+    {
+        if (@event.Userid.IsValid &&
+            @event.Userid.PlayerPawn is { IsValid: true, Value.AbsOrigin: not null })
+        {
+            var lastThrownGrenadePlayerPosition = PositionModel.CopyFrom(
+                @event.Userid.PlayerPawn.Value.AbsOrigin,
+                @event.Userid.PlayerPawn.Value.EyeAngles);
+            _lastThrownGrenade[@event.Userid] = lastThrownGrenadePlayerPosition;
+        }
+        else
+        {
+            _logger.LogWarning("Failed to add last grenade for {Player}", @event.Userid.PlayerName);
         }
 
         return HookResult.Continue;

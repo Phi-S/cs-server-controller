@@ -13,10 +13,9 @@ public class SpawnsService
     public SpawnsService(ILogger<SpawnsService> logger)
     {
         _logger = logger;
-        _mapSpawns = GetSpawnForCurrentMap();
     }
 
-    private MapSpawnsModel _mapSpawns;
+    private MapSpawnsModel? _mapSpawns;
 
     public void RegisterEventHandler(BasePlugin plugin)
     {
@@ -97,6 +96,8 @@ public class SpawnsService
             ? (CsTeam)player.TeamNum
             : team;
 
+        _mapSpawns ??= GetSpawnForCurrentMap();
+        
         List<PositionModel> spawns;
         if (targetTeam == CsTeam.Terrorist)
         {

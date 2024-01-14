@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Reflection;
+﻿using System.Reflection;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
@@ -7,8 +6,6 @@ using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic.CompilerServices;
-using PracPlugin.Helper;
 using PracPlugin.Services;
 
 namespace PracPlugin;

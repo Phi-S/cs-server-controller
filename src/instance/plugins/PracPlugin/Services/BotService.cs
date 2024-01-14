@@ -1,9 +1,7 @@
 ﻿using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
-using ErrorOr;
 using Microsoft.Extensions.Logging;
-using PracPlugin.Helper;
 using PracPlugin.Models;
 
 namespace PracPlugin.Services;
@@ -18,8 +16,8 @@ public class BotService
         _logger = logger;
         _timerService = timerService;
     }
-    
-    private readonly Dictionary<int, BotInfoModel> _spawnedBots = new();
+
+    private readonly ThreadSaveDictionary<int, BotInfoModel> _spawnedBots = new();
 
     public void RegisterEventHandler(BasePlugin plugin)
     {
@@ -35,7 +33,7 @@ public class BotService
     /// <param name="player">player who added the bot</param>
     /// <param name="team">team(CT/T) the bot will join. If none. The bot will join the opposite team of the player</param>
     /// <param name="crouch">option if the added bot should crouch</param>
-    public ErrorOr<Success> AddBot(CCSPlayerController player, CsTeam team = CsTeam.None, bool crouch = false)
+    public void AddBot(CCSPlayerController player, CsTeam team = CsTeam.None, bool crouch = false)
     {
         // If no valid team is given,
         // use the opposite of the player team to spawn the  (CT player == T bot / T player == CT bot)
@@ -63,7 +61,8 @@ public class BotService
         }
         else
         {
-            return Errors.Fail($"Bots cant be added to {team.ToString()} team");
+            _logger.LogWarning("Bots cant be added to {Tem} team", team.ToString());
+            return;
         }
 
         // Adding a small timer so that bot can be added in the world
@@ -72,7 +71,6 @@ public class BotService
         Server.ExecuteCommand("bot_stop 1");
         Server.ExecuteCommand("bot_freeze 1");
         Server.ExecuteCommand("bot_zombie 1");
-        return Result.Success;
     }
 
     private void SpawnBot(CCSPlayerController botOwner, CsTeam team = CsTeam.None, bool crouch = false)
@@ -143,7 +141,7 @@ public class BotService
                 botOwnerPosition,
                 botOwner,
                 crouch);
-            _spawnedBots.Add(tempPlayer.UserId.Value, spawnedBotInfo);
+            _spawnedBots.AddOrUpdate(tempPlayer.UserId.Value, spawnedBotInfo);
 
             var movementService =
                 new CCSPlayer_MovementServices(tempPlayerPawn.MovementServices!.Handle);
@@ -307,9 +305,9 @@ public class BotService
         var player = @event.Userid;
 
         // Respawing a bot where it was actually spawned during practice session
-        if (player.IsValid && player.IsBot && player.UserId.HasValue)
+        if (player.IsValid && player is { IsBot: true, UserId: not null })
         {
-            if (_spawnedBots.TryGetValue(player.UserId.Value, out var spawnedBotInfo))
+            if (_spawnedBots.Get(player.UserId.Value, out var spawnedBotInfo))
             {
                 var playerPawn = player.PlayerPawn.Value;
                 if (playerPawn is null)

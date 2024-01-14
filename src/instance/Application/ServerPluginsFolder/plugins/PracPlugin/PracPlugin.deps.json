@@ -8,8 +8,7 @@
     ".NETCoreApp,Version=v7.0": {
       "PracPlugin/1.0.0": {
         "dependencies": {
-          "CounterStrikeSharp.API": "1.0.143",
-          "ErrorOr": "1.9.0"
+          "CounterStrikeSharp.API": "1.0.143"
         },
         "runtime": {
           "PracPlugin.dll": {}
@@ -29,14 +28,6 @@
           "Serilog.Sinks.Console": "5.0.0",
           "Serilog.Sinks.File": "5.0.0",
           "System.Data.DataSetExtensions": "4.5.0"
-        }
-      },
-      "ErrorOr/1.9.0": {
-        "runtime": {
-          "lib/net6.0/ErrorOr.dll": {
-            "assemblyVersion": "1.9.0.0",
-            "fileVersion": "1.9.0.0"
-          }
         }
       },
       "McMaster.NETCore.Plugins/1.4.0": {
@@ -284,13 +275,6 @@
       "sha512": "sha512-2UhYDdjDOyVwbtafDzzXO3BuaqMomf1HeSSy+npdG0mcWbwWyGgU+6MfniNSiXBPz/gUnMju7wfzlj+r66Xqxw==",
       "path": "counterstrikesharp.api/1.0.143",
       "hashPath": "counterstrikesharp.api.1.0.143.nupkg.sha512"
-    },
-    "ErrorOr/1.9.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-M0MVobszE2WOUpZSN3v5Sy0fJ4WtT/bM0sNm/l17zbKETkp7nk8NW9enQsIUdsUXaRvrGeq0cYyel8u3xW+zJQ==",
-      "path": "erroror/1.9.0",
-      "hashPath": "erroror.1.9.0.nupkg.sha512"
     },
     "McMaster.NETCore.Plugins/1.4.0": {
       "type": "package",

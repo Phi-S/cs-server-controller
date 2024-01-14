@@ -1,8 +1,5 @@
 ﻿using Application.ServerPluginsFolder;
-using Domain;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using TestHelper.TestLoggerFolder;
 using TestHelper.TestSetup;
 using TestHelper.UnitTestFolderFolder;
 using Xunit.Abstractions;
@@ -19,15 +16,14 @@ public class ServerPluginsServiceTests
     }
 
     [Fact]
-    public async Task TestMetamodDownload()
+    public async Task TestMetamodInstall()
     {
         // Arrange
         var httpClient = new HttpClient();
         var testFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
-        Directory.CreateDirectory(Path.Combine(testFolder, "addons"));
 
         // Act
-        var downloadMetamod = await ServerPluginsService.DownloadMetamod(httpClient, testFolder);
+        var downloadMetamod = await ServerPluginsService.InstallMetamod(httpClient, testFolder);
 
         // Assert
         if (downloadMetamod.IsError)
@@ -45,15 +41,53 @@ public class ServerPluginsServiceTests
     }
 
     [Fact]
-    public async Task TestCounterStrikeSharpDownload()
+    public async Task TestCounterStrikeSharpInstall()
     {
         // Arrange
         var httpClient = new HttpClient();
         var testFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
-        Directory.CreateDirectory(Path.Combine(testFolder, "addons"));
-        
+
         // Act
-        var downloadCounterStrikeSharp = await ServerPluginsService.DownloadCounterStrikeSharp(httpClient, testFolder);
+        var downloadCounterStrikeSharp = await ServerPluginsService.InstallCounterStrikeSharp(httpClient, testFolder);
+        var downloadMetamod = await ServerPluginsService.InstallMetamod(httpClient, testFolder);
+
+        // Assert
+        if (downloadCounterStrikeSharp.IsError)
+        {
+            _outputHelper.WriteLine($"Failed to install CounterStrikeSharp. {downloadCounterStrikeSharp}");
+            Assert.Fail();
+        }
+
+        if (downloadMetamod.IsError)
+        {
+            _outputHelper.WriteLine($"Failed to install metamod. {downloadMetamod}");
+            Assert.Fail();
+        }
+
+        var addonsFolder = Path.Combine(testFolder, "addons");
+        Assert.True(Directory.Exists(Path.Combine(addonsFolder, "metamod")));
+        Assert.True(File.Exists(Path.Combine(addonsFolder, "metamod", "counterstrikesharp.vdf")));
+        Assert.True(Directory.Exists(Path.Combine(addonsFolder, "counterstrikesharp")));
+        Assert.True(Directory.Exists(Path.Combine(addonsFolder, "counterstrikesharp", "api")));
+        Assert.True(Directory.Exists(Path.Combine(addonsFolder, "counterstrikesharp", "gamedata")));
+        Assert.True(File.Exists(Path.Combine(addonsFolder, "counterstrikesharp", "gamedata", "gamedata.json")));
+
+        Assert.True(File.Exists(Path.Combine(addonsFolder, "metamod.vdf")));
+        Assert.True(File.Exists(Path.Combine(addonsFolder, "metamod_x64.vdf")));
+        Assert.True(Directory.Exists(Path.Combine(addonsFolder, "metamod")));
+        Assert.True(File.Exists(Path.Combine(addonsFolder, "metamod", "metaplugins.ini")));
+        Assert.True(Directory.Exists(Path.Combine(addonsFolder, "metamod", "bin")));
+    }
+
+    [Fact]
+    public async Task TestMetamodAndCounterStrikeSharpInstall()
+    {
+        // Arrange
+        var httpClient = new HttpClient();
+        var testFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
+
+        // Act
+        var downloadCounterStrikeSharp = await ServerPluginsService.InstallCounterStrikeSharp(httpClient, testFolder);
 
         // Assert
         if (downloadCounterStrikeSharp.IsError)
@@ -75,9 +109,12 @@ public class ServerPluginsServiceTests
     public async Task TestInstallPlugins()
     {
         // Arrange
-        var applicationServices = await ServicesSetup.GetApplicationCollection(_outputHelper);
-        await using var provider = applicationServices.BuildServiceProvider();
+        var (serviceCollection, testFolder) = ServicesSetup.GetApplication(_outputHelper);
+        await using var provider = serviceCollection.BuildServiceProvider();
         var serverPluginsService = provider.GetRequiredService<ServerPluginsService>();
+        var pluginsFolder = Path.Combine(testFolder, "server", "game", "csgo", "addons", "counterstrikesharp",
+            "plugins", "disabled");
+        Directory.CreateDirectory(pluginsFolder);
 
         // Act
         var installPlugins = serverPluginsService.InstallPlugins();
@@ -86,6 +123,36 @@ public class ServerPluginsServiceTests
         if (installPlugins.IsError)
         {
             _outputHelper.WriteLine($"Failed to install plugins. {installPlugins}");
+            Assert.Fail();
+        }
+    }
+    
+    [Fact]
+    public async Task TestInstallPlugins_UpdateExistingPlugins()
+    {
+        // Arrange
+        var (serviceCollection, testFolder) = ServicesSetup.GetApplication(_outputHelper);
+        await using var provider = serviceCollection.BuildServiceProvider();
+        var serverPluginsService = provider.GetRequiredService<ServerPluginsService>();
+        var pluginsFolder = Path.Combine(testFolder, "server", "game", "csgo", "addons", "counterstrikesharp",
+            "plugins", "disabled");
+        Directory.CreateDirectory(pluginsFolder);
+
+        // Act
+        var installPlugins = serverPluginsService.InstallPlugins();
+        _outputHelper.WriteLine("==========================================");
+        var updatePlugins = serverPluginsService.InstallPlugins();
+        
+        // Assert
+        if (installPlugins.IsError)
+        {
+            _outputHelper.WriteLine($"Failed to install plugins. {installPlugins}");
+            Assert.Fail();
+        }
+        
+        if (updatePlugins.IsError)
+        {
+            _outputHelper.WriteLine($"Failed to update plugins. {updatePlugins}");
             Assert.Fail();
         }
     }

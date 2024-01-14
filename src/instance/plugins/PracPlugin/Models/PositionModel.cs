@@ -1,5 +1,4 @@
-﻿using System.Numerics;
-using CounterStrikeSharp.API.Modules.Utils;
+﻿using CounterStrikeSharp.API.Modules.Utils;
 using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
 
 namespace PracPlugin.Models;

@@ -17,8 +17,8 @@ public class GrenadeService
         _logger = logger;
     }
 
-    private readonly Dictionary<CCSPlayerController, PositionModel> _lastThrownGrenade = new();
-    private readonly Dictionary<int, DateTime> _lastThrownSmoke = new();
+    private readonly ThreadSaveDictionary<CCSPlayerController, PositionModel> _lastThrownGrenade = new();
+    private readonly ThreadSaveDictionary<int, DateTime> _lastThrownSmoke = new();
 
     public void RegisterEventHandler(BasePlugin plugin)
     {
@@ -32,7 +32,8 @@ public class GrenadeService
 
     public bool TryGetLastThrownGrenade(CCSPlayerController player, [MaybeNullWhen(false)] out PositionModel position)
     {
-        if (_lastThrownGrenade.TryGetValue(player, out var positionTemp))
+        var smoke = Utilities.CreateEntityByName<CSmokeGrenadeProjectile>("smokegrenade_projectile");
+        if (_lastThrownGrenade.Get(player, out var positionTemp))
         {
             position = positionTemp;
             return true;
@@ -53,7 +54,7 @@ public class GrenadeService
 
     private HookResult OnSmokeDetonate(EventSmokegrenadeDetonate @event, GameEventInfo info)
     {
-        if (_lastThrownSmoke.TryGetValue(@event.Entityid, out var result))
+        if (_lastThrownSmoke.Get(@event.Entityid, out var result))
         {
             var throwDuration = Math.Round((DateTime.UtcNow - result).TotalSeconds, 2)
                 .ToString(CultureInfo.InvariantCulture);
@@ -88,7 +89,7 @@ public class GrenadeService
             var lastThrownGrenadePlayerPosition = PositionModel.CopyFrom(
                 @event.Userid.PlayerPawn.Value.AbsOrigin,
                 @event.Userid.PlayerPawn.Value.EyeAngles);
-            _lastThrownGrenade[@event.Userid] = lastThrownGrenadePlayerPosition;
+            _lastThrownGrenade.AddOrUpdate(@event.Userid, lastThrownGrenadePlayerPosition);
         }
         else
         {
@@ -104,7 +105,7 @@ public class GrenadeService
         {
             if (entity.Entity.DesignerName.Equals("smokegrenade_projectile"))
             {
-                _lastThrownSmoke.Add((int)entity.Index, DateTime.UtcNow);
+                _lastThrownSmoke.AddOrUpdate((int)entity.Index, DateTime.UtcNow);
             }
         }
     }

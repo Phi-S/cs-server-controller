@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Formats.Tar;
 using System.IO.Compression;
+using Application.Helpers;
 using Domain;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
@@ -55,7 +56,6 @@ public class ServerPluginsService
 
     private static readonly IImmutableList<string> AlwaysActivePlugins = ["EnableDisablePlugin"];
 
-
     private string CsgoFolder => Path.Combine(
         _options.Value.SERVER_FOLDER,
         "game",
@@ -108,27 +108,26 @@ public class ServerPluginsService
     public async Task<ErrorOr<Success>> InstallBase()
     {
         _logger.LogInformation("Installing Metamod and CounterStrikeSharp");
-        if (Directory.Exists(AddonsFolder))
-        {
-            Directory.Delete(AddonsFolder, true);
-        }
-
         Directory.CreateDirectory(AddonsFolder);
 
-        var downloadMetamod = await DownloadMetamod(_httpClient, CsgoFolder);
-        if (downloadMetamod.IsError)
+        var installMetamod = await InstallMetamod(_httpClient, CsgoFolder);
+        if (installMetamod.IsError)
         {
-            _logger.LogError("Failed to install metamod. {Error}", downloadMetamod.ErrorMessage());
-            return downloadMetamod.FirstError;
+            _logger.LogError("Failed to install metamod. {Error}", installMetamod.ErrorMessage());
+            return installMetamod.FirstError;
         }
 
-        var downloadCounterStrikeSharp = await DownloadCounterStrikeSharp(_httpClient, CsgoFolder);
-        if (downloadCounterStrikeSharp.IsError)
+        _logger.LogInformation("Metamod installed");
+
+        var installCounterStrikeSharp = await InstallCounterStrikeSharp(_httpClient, CsgoFolder);
+        if (installCounterStrikeSharp.IsError)
         {
             _logger.LogError("Failed to install CounterStrikeSharp. {Error}",
-                downloadCounterStrikeSharp.ErrorMessage());
-            return downloadCounterStrikeSharp.FirstError;
+                installCounterStrikeSharp.ErrorMessage());
+            return installCounterStrikeSharp.FirstError;
         }
+
+        _logger.LogInformation("CounterStrikeSharp installed");
 
         var addMetamodEntry = await AddMetamodEntryToGameinfoGi(CsgoFolder);
         if (addMetamodEntry.IsError)
@@ -141,21 +140,23 @@ public class ServerPluginsService
         _logger.LogInformation("Added metamod entry to gameinfo.gi");
 
         CreateCoreCfg(ConfigsFolder);
+        _logger.LogInformation("Core.cfg created");
         _logger.LogInformation("Metamod and CounterStrikeSharp installed");
         return Result.Success;
     }
 
-    public static async Task<ErrorOr<Success>> DownloadMetamod(HttpClient httpClient, string csgoFolder)
+    public static async Task<ErrorOr<Success>> InstallMetamod(HttpClient httpClient, string csgoFolder)
     {
+        var downloadTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
         const string metamodUrl = "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1278-linux.tar.gz";
-        var downloadPath = Path.Combine(csgoFolder, "addons", "metamod.tar.gz");
+        var downloadPath = Path.Combine(downloadTempFolder, "metamod.tar.gz");
         var downLoadResult = await Download(httpClient, metamodUrl, downloadPath);
         if (downLoadResult.IsError)
         {
             return downLoadResult.FirstError;
         }
 
-        Directory.CreateDirectory(csgoFolder);
+        var extractionTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
         await using (var gzip = new GZipStream(File.OpenRead(downloadPath), CompressionMode.Decompress))
         {
             using var unzippedStream = new MemoryStream();
@@ -166,7 +167,7 @@ public class ServerPluginsService
             while (await reader.GetNextEntryAsync() is { } entry)
             {
                 var entryPath = Path.Combine(
-                    csgoFolder,
+                    extractionTempFolder,
                     entry.Name.Replace("/", Path.DirectorySeparatorChar.ToString()
                     ));
 
@@ -181,29 +182,75 @@ public class ServerPluginsService
             }
         }
 
-        File.Delete(downloadPath);
+        var extractedAddonsFolder = Path.Combine(extractionTempFolder, "addons");
+        if (Directory.Exists(extractedAddonsFolder) == false)
+        {
+            return Errors.Fail("Failed to extract metamod. No Addons folder found in extraction destination");
+        }
+
+        Directory.Delete(downloadTempFolder, true);
+        var csgoAddonsFolder = Path.Combine(csgoFolder, "addons");
+        var copyDirectory = FolderHelper.CopyDirectory(extractedAddonsFolder, csgoAddonsFolder);
+        if (copyDirectory.IsError)
+        {
+            return copyDirectory.FirstError;
+        }
+
+        if (File.Exists(Path.Combine(csgoAddonsFolder, "metamod.vdf")) == false
+            || File.Exists(Path.Combine(csgoAddonsFolder, "metamod_x64.vdf")) == false
+            || Directory.Exists(Path.Combine(csgoAddonsFolder, "metamod")) == false
+           )
+        {
+            return Errors.Fail($"Metamod installation not found at destination folder \"{csgoAddonsFolder}\"");
+        }
+
         return Result.Success;
     }
 
-    public static async Task<ErrorOr<Success>> DownloadCounterStrikeSharp(HttpClient httpClient, string csgoFolder)
+    public static async Task<ErrorOr<Success>> InstallCounterStrikeSharp(HttpClient httpClient, string csgoFolder)
     {
+        var downloadTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
         const string counterStrikeSharpUrl =
-            "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v142/counterstrikesharp-with-runtime-build-142-linux-7b45a88.zip";
-        var downloadPath = Path.Combine(csgoFolder, "addons", "counterstrikesharp-with-runtime.zip");
+            "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v146/counterstrikesharp-with-runtime-build-146-linux-7a70078.zip";
+        var downloadPath = Path.Combine(downloadTempFolder, "counterstrikesharp-with-runtime.zip");
         var downLoadResult = await Download(httpClient, counterStrikeSharpUrl, Path.Combine(downloadPath));
         if (downLoadResult.IsError)
         {
             return downLoadResult.FirstError;
         }
 
-        Directory.CreateDirectory(csgoFolder);
-
+        var extractionTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
         await using (var fileStream = File.OpenRead(downloadPath))
         {
-            ZipFile.ExtractToDirectory(fileStream, csgoFolder);
+            ZipFile.ExtractToDirectory(fileStream, extractionTempFolder);
         }
 
-        File.Delete(downloadPath);
+        var extractedAddonsFolder = Path.Combine(extractionTempFolder, "addons");
+        if (Directory.Exists(extractionTempFolder) == false
+            || File.Exists(Path.Combine(extractedAddonsFolder, "metamod", "counterstrikesharp.vdf")) == false
+            || File.Exists(Path.Combine(extractedAddonsFolder, "counterstrikesharp", "api",
+                "CounterStrikeSharp.API.dll")) == false)
+        {
+            return Errors.Fail("Extracted CounterStrikeSharp dose not exist");
+        }
+
+        Directory.Delete(downloadTempFolder, true);
+
+        var csgoAddonsFolder = Path.Combine(csgoFolder, "addons");
+        var copyDirectory = FolderHelper.CopyDirectory(extractedAddonsFolder, csgoAddonsFolder);
+        if (copyDirectory.IsError)
+        {
+            return copyDirectory.FirstError;
+        }
+
+        if (Directory.Exists(csgoAddonsFolder) == false
+            || File.Exists(Path.Combine(csgoAddonsFolder, "metamod", "counterstrikesharp.vdf")) == false
+            || File.Exists(Path.Combine(csgoAddonsFolder, "counterstrikesharp", "api", "CounterStrikeSharp.API.dll")) ==
+            false)
+        {
+            return Errors.Fail($"CounterStrikeSharp installation not found at destination {csgoAddonsFolder}");
+        }
+
         return Result.Success;
     }
 
@@ -275,24 +322,45 @@ public class ServerPluginsService
 
     public ErrorOr<Success> InstallPlugins()
     {
+        _logger.LogInformation("Installing plugins");
         var pluginsSrc = Path.Combine(_options.Value.EXECUTING_FOLDER, "ServerPluginsFolder", "plugins");
         var pluginsDest = PluginsFolder;
         var disabledPluginsDest = Path.Combine(pluginsDest, "disabled");
 
-        if (Directory.Exists(pluginsDest))
+        if (Directory.Exists(pluginsSrc) == false)
         {
-            Directory.Delete(pluginsDest, true);
+            return Errors.Fail($"Plugin source folder \"{pluginsSrc}\" dose not exist");
         }
 
-        Directory.CreateDirectory(pluginsDest);
-        Directory.CreateDirectory(disabledPluginsDest);
+        if (Directory.Exists(pluginsDest) == false
+            || Directory.Exists(disabledPluginsDest) == false)
+        {
+            return Errors.Fail($"CounterStrikeSharp is not installed. Plugin folder \"{pluginsDest}\" dose not exist");
+        }
 
-        var allAvailablePlugins = Directory.GetDirectories(pluginsSrc).Select(Path.GetFileName).ToArray();
+        var pluginsToInstall = Directory
+            .GetDirectories(pluginsSrc)
+            .Select(p => Path.GetFileName(p))
+            .ToList();
+
+        if (pluginsToInstall.Count == 0 && AlwaysActivePlugins.Count == 0)
+        {
+            return Result.Success;
+        }
+
+        if (pluginsToInstall.Count == 0 && AlwaysActivePlugins.Count != 0)
+        {
+            return Errors.Fail(
+                $"No plugins to install but those always active plugins are required: [{string.Join(",", AlwaysActivePlugins)}]");
+        }
+
+        _logger.LogInformation("Plugins to install: ({Count})[{Plugins}]", pluginsToInstall.Count,
+            string.Join(",", pluginsToInstall));
 
         // Copy always active plugins
         foreach (var alwaysActivePlugin in AlwaysActivePlugins)
         {
-            if (allAvailablePlugins.Contains(alwaysActivePlugin) == false)
+            if (pluginsToInstall.Contains(alwaysActivePlugin) == false)
             {
                 return Errors.Fail($"Always active plugin \"{alwaysActivePlugin}\" not found at \"{pluginsSrc}\"");
             }
@@ -300,60 +368,75 @@ public class ServerPluginsService
 
         foreach (var alwaysActivePlugin in AlwaysActivePlugins)
         {
-            var alwaysActivePluginSrcPath = Path.Combine(pluginsSrc, alwaysActivePlugin);
-            var alwaysActivePluginDestPath = Path.Combine(pluginsDest, alwaysActivePlugin);
-            CopyDirectory(alwaysActivePluginSrcPath, alwaysActivePluginDestPath);
+            CopyPlugin(alwaysActivePlugin, pluginsSrc, pluginsDest);
+            pluginsToInstall.Remove(alwaysActivePlugin);
+            _logger.LogInformation("Always active plugin \"{AlwaysActivePlugin}\" installed", alwaysActivePlugin);
         }
+
+        _logger.LogInformation(
+            "All always active plugin installed. " +
+            "Plugins left to install: ({Count})[{Plugins}]",
+            pluginsToInstall.Count,
+            string.Join(",", pluginsToInstall));
+
+        var alreadyInstalledPlugins = Directory
+            .GetDirectories(pluginsDest)
+            .Select(Path.GetFileName)
+            .ToArray();
+
+        foreach (var alreadyInstalledPlugin in alreadyInstalledPlugins)
+        {
+            var pluginToInstall = pluginsToInstall.FirstOrDefault(p => p.Equals(alreadyInstalledPlugin));
+            if (pluginToInstall is null)
+            {
+                continue;
+            }
+
+            CopyPlugin(pluginToInstall, pluginsSrc, pluginsDest);
+            pluginsToInstall.Remove(pluginToInstall);
+            _logger.LogInformation("Already installed plugin \"{AlreadyInstalledPlugin}\" updated", pluginToInstall);
+        }
+
+        var alreadyInstalledDisabledPlugins = Directory
+            .GetDirectories(disabledPluginsDest)
+            .Select(Path.GetFileName)
+            .ToArray();
+
+        foreach (var alreadyInstalledPlugin in alreadyInstalledDisabledPlugins)
+        {
+            var pluginToInstall = pluginsToInstall.FirstOrDefault(p => p.Equals(alreadyInstalledPlugin));
+            if (pluginToInstall is null)
+            {
+                continue;
+            }
+
+            CopyPlugin(pluginToInstall, pluginsSrc, disabledPluginsDest);
+            pluginsToInstall.Remove(pluginToInstall);
+            _logger.LogInformation("Already installed plugin \"{AlreadyInstalledPlugin}\"(disabled) updated",
+                pluginToInstall);
+        }
+
+        _logger.LogInformation(
+            "Already installed plugins updated. " +
+            "Plugins left to install: ({Count})[{Plugins}]",
+            pluginsToInstall.Count,
+            string.Join(",", pluginsToInstall));
 
         // Copy remaining plugins as disabled
-        foreach (var plugin in allAvailablePlugins)
+        foreach (var plugin in pluginsToInstall)
         {
-            if (string.IsNullOrWhiteSpace(plugin))
-            {
-                continue;
-            }
-
-            // Skip already copied (Always active plugins)
-            if (AlwaysActivePlugins.Contains(plugin))
-            {
-                continue;
-            }
-
-            var pluginSrcPath = Path.Combine(pluginsSrc, plugin);
-            var pluginDestPath = Path.Combine(disabledPluginsDest, plugin);
-            CopyDirectory(pluginSrcPath, pluginDestPath);
+            CopyPlugin(plugin, pluginsSrc, disabledPluginsDest);
+            _logger.LogInformation("New plugin installed: \"{NewPlugin}\"", plugin);
         }
 
+        _logger.LogInformation("All plugins installed or updated");
         return Result.Success;
-    }
 
-    private static void CopyDirectory(string sourceDir, string destinationDir)
-    {
-        // Get information about the source directory
-        var dir = new DirectoryInfo(sourceDir);
-
-        // Check if the source directory exists
-        if (!dir.Exists)
-            throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
-
-        // Cache directories before we start copying
-        var dirs = dir.GetDirectories();
-
-        // Create the destination directory
-        Directory.CreateDirectory(destinationDir);
-
-        // Get the files in the source directory and copy to the destination directory
-        foreach (var file in dir.GetFiles())
+        void CopyPlugin(string pluginName, string pluginSrcFolder, string pluginDestFolder)
         {
-            var targetFilePath = Path.Combine(destinationDir, file.Name);
-            file.CopyTo(targetFilePath);
-        }
-
-        // Copy subDirectories
-        foreach (var subDir in dirs)
-        {
-            var newDestinationDir = Path.Combine(destinationDir, subDir.Name);
-            CopyDirectory(subDir.FullName, newDestinationDir);
+            var pluginSrcPath = Path.Combine(pluginSrcFolder, pluginName);
+            var pluginDestPath = Path.Combine(pluginDestFolder, pluginName);
+            FolderHelper.CopyDirectory(pluginSrcPath, pluginDestPath);
         }
     }
 

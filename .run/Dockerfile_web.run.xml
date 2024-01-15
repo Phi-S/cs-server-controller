@@ -4,6 +4,14 @@
       <settings>
         <option name="buildKitEnabled" value="true" />
         <option name="containerName" value="cs-controller-web" />
+        <option name="envVars">
+          <list>
+            <DockerEnvVarImpl>
+              <option name="name" value="APP_OPTIONS:INSTANCE_API_ENDPOINT" />
+              <option name="value" value="http://localhost:11111" />
+            </DockerEnvVarImpl>
+          </list>
+        </option>
         <option name="sourceFilePath" value="Dockerfile_web" />
       </settings>
     </deployment>

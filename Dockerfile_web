@@ -1,7 +1,7 @@
-﻿FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine as runtime
+﻿FROM mcr.microsoft.com/dotnet/runtime-deps:8.0.1-alpine as runtime
 RUN adduser -S appuser
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS publish
+FROM mcr.microsoft.com/dotnet/sdk:8.0.101-alpine AS publish
 WORKDIR /src
 COPY src/. .
 

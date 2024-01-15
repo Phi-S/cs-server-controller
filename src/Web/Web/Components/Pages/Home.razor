@@ -18,7 +18,6 @@ else
                 <button
                     class="input-group btn btn-outline-info"
                     disabled="@ServerInfoService.IsServerBusy"
-                    title="Update server"
                     @onclick="@StartUpdateOrInstall">
                     Update Server
                 </button>
@@ -27,17 +26,14 @@ else
             {
                 <button
                     class="input-group btn btn-outline-info"
-                    disabled="@ServerInfoService.IsServerBusy"
-                    title="Cancel server update"
                     @onclick="@CancelUpdateOrInstall">
-                    Cancel update
+                    Cancel server update
                 </button>
             }
 
             <button
                 class="input-group btn btn-outline-info"
                 disabled="@(ServerInfoService.IsServerBusy)"
-                title="Update plugins"
                 @onclick="@UpdateOrInstallPlugins">
                 Update plugins
             </button>
@@ -48,8 +44,7 @@ else
                 type="button"
                 id="changeMapDropdownMenuButton"
                 data-bs-toggle="dropdown"
-                aria-expanded="false"
-                title="Changes map. The server needs to be online to do this">
+                aria-expanded="false">
                 Change map
             </button>
 

@@ -1,4 +1,4 @@
-﻿FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-bookworm-slim-amd64 as runtime
+﻿FROM mcr.microsoft.com/dotnet/runtime-deps:8.0.1-bookworm-slim-amd64 as runtime
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends --no-install-suggests \
 		python3=3.11.2-1+b1 \
@@ -7,7 +7,7 @@ RUN apt-get update \
 
 RUN useradd -m appuser -u 1001
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim-amd64 AS publish
+FROM mcr.microsoft.com/dotnet/sdk:8.0.1-bookworm-slim-amd64 AS publish
 WORKDIR /src
 COPY src/. .
 

@@ -93,7 +93,8 @@ public partial class ServerService
 
             // ReSharper disable once StringLiteralTypo
             var executablePath = Path.Combine(_options.Value.SERVER_FOLDER, "game", "bin", "linuxsteamrt64", "cs2");
-            var startParameterString = startParameters.GetAsCommandLineArgs(_options.Value.PORT, _options.Value.LOGIN_TOKEN);
+            var startParameterString =
+                startParameters.GetAsCommandLineArgs(_options.Value.PORT, _options.Value.LOGIN_TOKEN);
 
             using var scope = _services.CreateScope();
             var unitOfWork = scope.GetUnitOfWork();
@@ -480,7 +481,7 @@ public partial class ServerService
 
         lock (_processLockObject)
         {
-            _process?.Kill();
+            _process?.Kill(true);
             _process?.Close();
         }
 
@@ -490,6 +491,22 @@ public partial class ServerService
         {
             await Task.Delay(50);
             if (IsServerStopped())
+            {
+                return true;
+            }
+        }
+
+        lock (_processLockObject)
+        {
+            if (_process is not null)
+            {
+                if (_process.HasExited)
+                {
+                    _process = null;
+                    return true;
+                }
+            }
+            else
             {
                 return true;
             }
@@ -537,7 +554,7 @@ public partial class ServerService
                         {
                             break;
                         }
-                        
+
                         await Task.Delay(50);
                         lock (_processLockObject)
                         {

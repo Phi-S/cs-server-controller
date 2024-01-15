@@ -50,7 +50,9 @@ public class ServerPluginsService
             return Errors.Fail("Install or update is already in progress");
         }
 
-        if (_statusService.ServerStarted || _statusService.ServerStarting || _statusService.ServerStopping ||
+        if (_statusService.ServerStarted ||
+            _statusService.ServerStarting ||
+            _statusService.ServerStopping ||
             _statusService.ServerUpdatingOrInstalling)
         {
             return Errors.Fail("Server is busy");

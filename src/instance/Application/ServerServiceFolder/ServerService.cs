@@ -441,6 +441,10 @@ public partial class ServerService
         if (stopForce)
         {
             _logger.LogWarning("Server stopped forcefully");
+            if (_statusService.ServerStarted)
+            {
+                _eventService.OnServerExited();
+            }
             return Result.Success;
         }
 

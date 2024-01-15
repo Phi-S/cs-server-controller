@@ -38,7 +38,7 @@ public partial class ServerService
 
     private const string ServerStartedMessage = "#####_SERVER_STARTED";
     private const int ServerStartTimeoutMs = 30_000;
-    private const int ServerStopTimeoutMs = 5_000;
+    private const int ServerStopTimeoutMs = 15_000;
 
     #endregion
 

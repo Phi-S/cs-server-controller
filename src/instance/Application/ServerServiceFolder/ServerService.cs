@@ -480,15 +480,15 @@ public partial class ServerService
 
         lock (_processLockObject)
         {
-            _process!.Kill();
-            _process!.Close();
+            _process?.Kill();
+            _process?.Close();
         }
 
         var waitForServerToStopTimeout = 5000;
         var sw = Stopwatch.StartNew();
         while (sw.ElapsedMilliseconds <= waitForServerToStopTimeout)
         {
-            await Task.Delay(10);
+            await Task.Delay(50);
             if (IsServerStopped())
             {
                 return true;
@@ -527,11 +527,17 @@ public partial class ServerService
         {
             try
             {
+                var retries = 0;
                 _logger.LogInformation("OutputFlushBackgroundTask started");
                 while (true)
                 {
                     try
                     {
+                        if (retries == 5)
+                        {
+                            break;
+                        }
+                        
                         await Task.Delay(50);
                         lock (_processLockObject)
                         {
@@ -552,10 +558,14 @@ public partial class ServerService
                         {
                             _process.StandardInput.Write(_process.StandardInput.NewLine);
                         }
+
+                        retries = 0;
                     }
                     catch (Exception e)
                     {
                         _logger.LogWarning(e, "Exception in OutputFlushBackgroundTask. Restarting...");
+                        retries++;
+                        await Task.Delay(1000);
                     }
                 }
             }

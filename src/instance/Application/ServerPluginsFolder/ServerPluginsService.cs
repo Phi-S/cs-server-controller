@@ -1,7 +1,9 @@
 ﻿using System.Collections.Immutable;
 using System.Formats.Tar;
 using System.IO.Compression;
+using Application.EventServiceFolder;
 using Application.Helpers;
+using Application.StatusServiceFolder;
 using Domain;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
@@ -10,49 +12,27 @@ using Shared;
 
 namespace Application.ServerPluginsFolder;
 
-using PluginAlias = (string plugin, bool disabled);
-
 public class ServerPluginsService
 {
     private readonly ILogger<ServerPluginsService> _logger;
     private readonly IOptions<AppOptions> _options;
     private readonly HttpClient _httpClient;
+    private readonly StatusService _statusService;
+    private readonly EventService _eventService;
 
     public ServerPluginsService(
         ILogger<ServerPluginsService> logger,
         IOptions<AppOptions> options,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        StatusService statusService,
+        EventService eventService)
     {
         _logger = logger;
         _options = options;
         _httpClient = httpClient;
+        _statusService = statusService;
+        _eventService = eventService;
     }
-
-    #region InstallInProgress
-
-    private static readonly object InstallInProgressLock = new();
-    private static volatile bool _installInProgress;
-
-    private static bool InstallInProgress
-    {
-        get
-        {
-            lock (InstallInProgressLock)
-            {
-                return _installInProgress;
-            }
-        }
-        set
-        {
-            lock (InstallInProgressLock)
-            {
-                _installInProgress = value;
-            }
-        }
-    }
-
-    #endregion
-
 
     private static readonly IImmutableList<string> AlwaysActivePlugins = ["EnableDisablePlugin"];
 
@@ -61,54 +41,55 @@ public class ServerPluginsService
         "game",
         "csgo");
 
-    private string AddonsFolder => Path.Combine(
-        CsgoFolder,
-        "addons");
-
-    private string CounterstrikeSharpFolder => Path.Combine(AddonsFolder, "counterstrikesharp");
-
-    private string PluginsFolder => Path.Combine(CounterstrikeSharpFolder, "plugins");
-
-    private string ConfigsFolder => Path.Combine(CounterstrikeSharpFolder, "configs");
-
     #region Install
 
-    public async Task<ErrorOr<Success>> Install()
+    public async Task<ErrorOr<Success>> InstallOrUpdate()
     {
-        if (InstallInProgress)
+        if (_statusService.ServerPluginsUpdatingOrInstalling)
         {
-            return Errors.Fail("Failed to install plugins. Another install is already in progress");
+            return Errors.Fail("Install or update is already in progress");
+        }
+
+        if (_statusService.ServerStarted || _statusService.ServerStarting || _statusService.ServerStopping ||
+            _statusService.ServerUpdatingOrInstalling)
+        {
+            return Errors.Fail("Server is busy");
         }
 
         try
         {
-            InstallInProgress = true;
-            var installBaseResult = await InstallBase();
-            if (installBaseResult.IsError)
+            _eventService.OnPluginUpdateOrInstallStarted();
+            var installOrUpdateBase = await InstallOrUpdateBase();
+            if (installOrUpdateBase.IsError)
             {
-                return installBaseResult.FirstError;
+                _eventService.OnPluginUpdateOrInstallFailed();
+                return installOrUpdateBase.FirstError;
             }
 
-            var installPluginsResult = InstallPlugins();
-            if (installPluginsResult.IsError)
+            var installOrUpdatePlugins = InstallOrUpdatePlugins();
+            if (installOrUpdatePlugins.IsError)
             {
-                return installBaseResult.FirstError;
+                _eventService.OnPluginUpdateOrInstallFailed();
+                return installOrUpdateBase.FirstError;
             }
 
+            _eventService.OnPluginUpdateOrInstallDone();
             return Result.Success;
         }
-        finally
+        catch
         {
-            InstallInProgress = false;
+            _eventService.OnPluginUpdateOrInstallFailed();
+            throw;
         }
     }
 
     #region Base
 
-    public async Task<ErrorOr<Success>> InstallBase()
+    public async Task<ErrorOr<Success>> InstallOrUpdateBase()
     {
         _logger.LogInformation("Installing Metamod and CounterStrikeSharp");
-        Directory.CreateDirectory(AddonsFolder);
+        var addonsFolder = Path.Combine(CsgoFolder, "addons");
+        Directory.CreateDirectory(addonsFolder);
 
         var installMetamod = await InstallMetamod(_httpClient, CsgoFolder);
         if (installMetamod.IsError)
@@ -139,7 +120,8 @@ public class ServerPluginsService
 
         _logger.LogInformation("Added metamod entry to gameinfo.gi");
 
-        CreateCoreCfg(ConfigsFolder);
+        var configsFolder = Path.Combine(addonsFolder, "counterstrikesharp", "configs");
+        CreateCoreCfg(configsFolder);
         _logger.LogInformation("Core.cfg created");
         _logger.LogInformation("Metamod and CounterStrikeSharp installed");
         return Result.Success;
@@ -320,11 +302,11 @@ public class ServerPluginsService
 
     #region Plugins
 
-    public ErrorOr<Success> InstallPlugins()
+    public ErrorOr<Success> InstallOrUpdatePlugins()
     {
         _logger.LogInformation("Installing plugins");
         var pluginsSrc = Path.Combine(_options.Value.EXECUTING_FOLDER, "ServerPluginsFolder", "plugins");
-        var pluginsDest = PluginsFolder;
+        var pluginsDest = Path.Combine(CsgoFolder, "addons", "counterstrikesharp", "plugins");
         var disabledPluginsDest = Path.Combine(pluginsDest, "disabled");
 
         if (Directory.Exists(pluginsSrc) == false)
@@ -443,37 +425,4 @@ public class ServerPluginsService
     #endregion
 
     #endregion
-
-    public List<PluginAlias> GetInstalledPlugins()
-    {
-        if (Directory.Exists(PluginsFolder) == false)
-        {
-            return [];
-        }
-
-        var result = new List<PluginAlias>();
-
-        var pluginFolders = Directory.GetDirectories(PluginsFolder);
-        foreach (var pluginFolder in pluginFolders)
-        {
-            var pluginName = Path.GetFileName(pluginFolder);
-            if (pluginName.Equals("disabled"))
-            {
-                continue;
-            }
-
-            result.Add((pluginName, false));
-        }
-
-
-        var disabledPluginFolder = Path.Combine(PluginsFolder, "disabled");
-        var disabledPluginsFolders = Directory.GetDirectories(disabledPluginFolder);
-        foreach (var pluginFolder in disabledPluginsFolders)
-        {
-            var pluginName = Path.GetFileName(pluginFolder);
-            result.Add((pluginName, true));
-        }
-
-        return result;
-    }
 }

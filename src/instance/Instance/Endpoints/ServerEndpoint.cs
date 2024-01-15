@@ -36,10 +36,9 @@ public static class ServerEndpoint
         // Stops the server and starts the update or install process.
         // If startParameters is set, the server will start automatically after the update or install process
         group.MapPost("start-updating-or-installing", async (
-            IMediator mediator,
-            [FromBody] bool startAfterUpdate = true) =>
+            IMediator mediator) =>
         {
-            var command = new StartUpdateOrInstallCommand(startAfterUpdate);
+            var command = new StartUpdateOrInstallCommand();
             var result = await mediator.Send(command);
             return result.IsError
                 ? Results.Extensions.InternalServerError(result.ErrorMessage())
@@ -55,6 +54,15 @@ public static class ServerEndpoint
                     ? Results.Extensions.InternalServerError(result.ErrorMessage())
                     : Results.Ok();
             });
+
+        group.MapPost("update-or-install-plugins", async (IMediator mediator) =>
+        {
+            var command = new UpdateOrInstallPluginsCommand();
+            var result = await mediator.Send(command);
+            return result.IsError
+                ? Results.Extensions.InternalServerError(result.ErrorMessage())
+                : Results.Ok();
+        });
 
         group.MapPost("start", async (
             IMediator mediator,

@@ -1,5 +1,6 @@
 ﻿using Application.ServerServiceFolder;
 using Application.StartParameterFolder;
+using Application.StatusServiceFolder;
 using Application.UpdateOrInstallServiceFolder;
 using ErrorOr;
 using MediatR;
@@ -7,26 +8,31 @@ using Shared;
 
 namespace Application.CQRS.Commands;
 
-public record StartUpdateOrInstallCommand(bool StartAfterUpdate) : IRequest<ErrorOr<Guid>>;
+public record StartUpdateOrInstallCommand : IRequest<ErrorOr<Guid>>;
 
 public class StartUpdateOrInstallCommandHandler : IRequestHandler<StartUpdateOrInstallCommand, ErrorOr<Guid>>
 {
     private readonly ServerService _serverService;
     private readonly UpdateOrInstallService _updateOrInstallService;
     private readonly StartParameterService _startParameterService;
+    private readonly StatusService _statusService;
 
     public StartUpdateOrInstallCommandHandler(
         ServerService serverService,
         UpdateOrInstallService updateOrInstallService,
-        StartParameterService startParameterService)
+        StartParameterService startParameterService,
+        StatusService statusService)
     {
         _serverService = serverService;
         _updateOrInstallService = updateOrInstallService;
         _startParameterService = startParameterService;
+        _statusService = statusService;
     }
 
     public async Task<ErrorOr<Guid>> Handle(StartUpdateOrInstallCommand request, CancellationToken cancellationToken)
     {
+        var startAfterUpdateOrInstall = _statusService.ServerStarted;
+
         var stop = await _serverService.Stop();
         if (stop.IsError)
         {
@@ -34,17 +40,18 @@ public class StartUpdateOrInstallCommandHandler : IRequestHandler<StartUpdateOrI
         }
 
         ErrorOr<Guid> updateOrInstallResult;
-        if (request.StartAfterUpdate)
+        if (startAfterUpdateOrInstall)
         {
-            var startParametersResult = _startParameterService.Get();
-            if (startParametersResult.IsError)
+            updateOrInstallResult = await _updateOrInstallService.StartUpdateOrInstall(async () =>
             {
-                return startParametersResult.FirstError;
-            }
+                var startParametersResult = _startParameterService.Get();
+                if (startParametersResult.IsError)
+                {
+                    throw new Exception($"Failed to get start parameters. {startParametersResult.ErrorMessage()}");
+                }
 
-            updateOrInstallResult =
-                await _updateOrInstallService.StartUpdateOrInstall(() =>
-                    _serverService.Start(startParametersResult.Value));
+                await _serverService.Start(startParametersResult.Value);
+            });
         }
         else
         {

@@ -10,26 +10,54 @@ else
 {
     <div class="align-items-center">
         <div class="input-group flex-nowrap justify-content-center">
-            <button class="input-group btn btn-outline-info" disabled="@(ServerInfoService.ServerInfo.ServerUpdatingOrInstalling || ServerInfoService.ServerInfo.ServerStarted)" title="Start server" @onclick="@Start">Start</button>
-            <button class="input-group btn btn-outline-info" disabled="@(ServerInfoService.ServerInfo.ServerUpdatingOrInstalling || ServerInfoService.ServerInfo.ServerStarted == false)" title="Stop server" @onclick="@Stop">Stop</button>
-            <button class="input-group btn btn-outline-info" disabled="@ServerInfoService.ServerInfo.ServerUpdatingOrInstalling" @onclick="Restart">Restart</button>
+            <button class="input-group btn btn-outline-info" disabled="@(ServerInfoService.IsServerBusy || ServerInfoService.ServerInfo.ServerStarted)" title="Start server" @onclick="@Start">Start</button>
+            <button class="input-group btn btn-outline-info" disabled="@(ServerInfoService.IsServerBusy || ServerInfoService.ServerInfo.ServerStarted == false)" title="Stop server" @onclick="@Stop">Stop</button>
+            <button class="input-group btn btn-outline-info" disabled="@ServerInfoService.IsServerBusy" @onclick="Restart">Restart</button>
             @if (ServerInfoService.ServerInfo.ServerUpdatingOrInstalling == false)
             {
-                <button class="input-group btn btn-outline-info" title="Update server" @onclick="@StartUpdateOrInstall">Update</button>
+                <button
+                    class="input-group btn btn-outline-info"
+                    disabled="@ServerInfoService.IsServerBusy"
+                    title="Update server"
+                    @onclick="@StartUpdateOrInstall">
+                    Update Server
+                </button>
             }
             else
             {
-                <button class="input-group btn btn-outline-info" title="Cancel server update" @onclick="@CancelUpdateOrInstall">Cancel update</button>
+                <button
+                    class="input-group btn btn-outline-info"
+                    disabled="@ServerInfoService.IsServerBusy"
+                    title="Cancel server update"
+                    @onclick="@CancelUpdateOrInstall">
+                    Cancel update
+                </button>
             }
 
-            <button class="input-group btn btn-outline-primary dropdown" disabled="@DisabledWhenServerIsOffline" type="button" id="changeMapDropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Changes map. The server needs to be online to do this">
+            <button
+                class="input-group btn btn-outline-info"
+                disabled="@(ServerInfoService.IsServerBusy)"
+                title="Update plugins"
+                @onclick="@UpdateOrInstallPlugins">
+                Update plugins
+            </button>
+
+            <button
+                class="input-group btn btn-outline-primary dropdown"
+                disabled="@(ServerInfoService.IsServerBusy || ServerInfoService.ServerInfo.ServerStarted == false)"
+                type="button"
+                id="changeMapDropdownMenuButton"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                title="Changes map. The server needs to be online to do this">
                 Change map
             </button>
+
             <ul class="dropdown-menu" aria-labelledby="changeMapDropdownMenuButton">
                 @foreach (var map in ServerInfoService.Maps)
                 {
                     <li>
-                        <button class="dropdown-item" disabled="@DisabledWhenServerIsOffline" type="button" @onclick="() => ChangeMap(map)">@map</button>
+                        <button class="dropdown-item" disabled="@(ServerInfoService.IsServerBusy || ServerInfoService.ServerInfo.ServerStarted == false)" type="button" @onclick="() => ChangeMap(map)">@map</button>
                     </li>
                 }
             </ul>
@@ -37,7 +65,7 @@ else
         <div class="text-nowrap align-items-center d-flex justify-content-center pb-1 pt-1">
             <div class="input-group justify-content-center d-flex w-100">
                 <input class="input-group-text" style="width: 70%" placeholder="Server command" @bind="SendCommandBind" @bind:event="oninput" @onkeydown="OnEnter"/>
-                <button class="btn btn-outline-info" disabled="@DisabledWhenServerIsOffline" style="width: 30%" @onclick="SendCommand">Send</button>
+                <button class="btn btn-outline-info" disabled="@(ServerInfoService.IsServerBusy || ServerInfoService.ServerInfo.ServerStarted == false)" style="width: 30%" @onclick="SendCommand">Send</button>
             </div>
         </div>
         <div class="overflow-scroll overflow-x-auto rounded-3 border border-2" style="height: 80vh">

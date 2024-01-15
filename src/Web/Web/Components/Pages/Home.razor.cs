@@ -12,6 +12,7 @@ public class HomeRazor : ComponentBase, IDisposable
 {
     [Inject] private ILogger<HomeRazor> Logger { get; set; } = default!;
     [Inject] protected ToastService ToastService { get; set; } = default!;
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
     [Inject] private InstanceApiService InstanceApiService { get; set; } = default!;
 
@@ -166,6 +167,31 @@ public class HomeRazor : ComponentBase, IDisposable
         }
     }
 
+    protected async Task UpdateOrInstallPlugins()
+    {
+        try
+        {
+            var updateOrInstallPlugins = await InstanceApiService.UpdateOrInstallPlugins();
+            if (updateOrInstallPlugins.IsError)
+            {
+                Logger.LogError("Start update plugins failed with error {Error}",
+                    updateOrInstallPlugins.ErrorMessage());
+                ToastService.Error(
+                    $"Failed to update plugins. {updateOrInstallPlugins.ErrorMessage()}");
+            }
+            else
+            {
+                Logger.LogInformation("Plugins updated");
+                ToastService.Info("Plugins updated");
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Failed to update plugins");
+            ToastService.Error("Failed to update plugins");
+        }
+    }
+
     protected async Task ChangeMap(string map)
     {
         try
@@ -223,20 +249,6 @@ public class HomeRazor : ComponentBase, IDisposable
         if (args.Key.Equals("Enter"))
         {
             await SendCommand();
-        }
-    }
-
-
-    protected bool DisabledWhenServerIsOffline
-    {
-        get
-        {
-            if (ServerInfoService.ServerInfo is null)
-            {
-                return false;
-            }
-
-            return ServerInfoService.ServerInfo.ServerStarted == false;
         }
     }
 

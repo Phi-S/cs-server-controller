@@ -196,7 +196,7 @@ public class UpdateOrInstallService
 
             #endregion
 
-            var installPluginsResult = await _serverPluginsService.Install();
+            var installPluginsResult = await _serverPluginsService.InstallOrUpdate();
             if (installPluginsResult.IsError)
             {
                 _logger.LogError("Failed to install server plugins. {Error}",

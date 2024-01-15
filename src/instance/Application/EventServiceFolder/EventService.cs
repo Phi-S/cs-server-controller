@@ -19,6 +19,10 @@ public enum Events
     UpdateOrInstallCancelled,
     UpdateOrInstallFailed,
 
+    PluginUpdateOrInstallStarted,
+    PluginUpdateOrInstallDone,
+    PluginUpdateOrInstallFailed,
+
     UploadDemoStarted,
     UploadDemoDone,
     UploadDemoFailed,
@@ -56,19 +60,29 @@ public sealed class EventService
         StartingServerFailed += handler;
         StoppingServer += handler;
         ServerExited += handler;
+        
         UpdateOrInstallStarted += (sender, eventArg) => { handler(sender, eventArg); };
         UpdateOrInstallDone += (sender, eventArg) => { handler(sender, eventArg); };
         UpdateOrInstallCancelled += (sender, eventArg) => { handler(sender, eventArg); };
         UpdateOrInstallFailed += (sender, eventArg) => { handler(sender, eventArg); };
+        
+        PluginUpdateOrInstallStarted += handler;
+        PluginUpdateOrInstallDone += handler;
+        PluginUpdateOrInstallFailed += handler;
+        
         UploadDemoStarted += handler;
         UploadDemoDone += handler;
         UploadDemoFailed += handler;
+        
         HibernationStarted += handler;
         HibernationEnded += handler;
+        
         MapChanged += (sender, eventArg) => { handler(sender, eventArg); };
+        
         PlayerConnected += (sender, eventArg) => { handler(sender, eventArg); };
         PlayerDisconnected += (sender, eventArg) => { handler(sender, eventArg); };
         PlayerCountChanged += (sender, eventArg) => { handler(sender, eventArg); };
+        
         ChatMessage += (sender, eventArg) => { handler(sender, eventArg); };
     }
 
@@ -200,6 +214,31 @@ public sealed class EventService
     #endregion
 
     #endregion UpdateOrInstall
+
+    #region PluginsUpdateOrInstall
+
+    public event EventHandler<CustomEventArg>? PluginUpdateOrInstallStarted;
+
+    public void OnPluginUpdateOrInstallStarted()
+    {
+        PluginUpdateOrInstallStarted?.Invoke(this, new CustomEventArg(Events.PluginUpdateOrInstallStarted));
+    }
+
+    public event EventHandler<CustomEventArg>? PluginUpdateOrInstallDone;
+
+    public void OnPluginUpdateOrInstallDone()
+    {
+        PluginUpdateOrInstallDone?.Invoke(this, new CustomEventArg(Events.PluginUpdateOrInstallDone));
+    }
+
+    public event EventHandler<CustomEventArg>? PluginUpdateOrInstallFailed;
+
+    public void OnPluginUpdateOrInstallFailed()
+    {
+        PluginUpdateOrInstallFailed?.Invoke(this, new CustomEventArg(Events.PluginUpdateOrInstallFailed));
+    }
+
+    #endregion
 
     #region UploadDemo
 

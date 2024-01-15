@@ -14,6 +14,7 @@ public record ServerInfoResponse(
     bool ServerStopping,
     bool ServerHibernating,
     bool ServerUpdatingOrInstalling,
+    bool ServerPluginsUpdatingOrInstalling,
     bool DemoUploading,
     DateTime CreatedUtc
 );

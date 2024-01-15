@@ -186,6 +186,29 @@ public class ServerInfoService
         }
     }
 
+    public bool IsServerBusy
+    {
+        get
+        {
+            var serverInfo = ServerInfo;
+            if (serverInfo is null)
+            {
+                return false;
+            }
+
+            if (serverInfo.ServerStarting ||
+                serverInfo.ServerStopping ||
+                serverInfo.ServerUpdatingOrInstalling ||
+                serverInfo.ServerPluginsUpdatingOrInstalling ||
+                serverInfo.DemoUploading)
+            {
+                return true;
+            }
+
+            return false;
+        }
+    }
+
     #endregion
 
     #region Events

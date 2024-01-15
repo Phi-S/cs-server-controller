@@ -1,7 +1,7 @@
 ﻿@inherits ServerDisplayCompRazor
 @rendermode InteractiveServer
 
-@if (ServerInfo == null)
+@if (ServerInfoService.ServerInfo == null)
 {
     <LoadingComp/>
 }
@@ -16,18 +16,33 @@ else
                     </div>
 
                     <div class="col-2 text-center m-0 p-0">
-                        <span title="@ServerInfo.CurrentPlayerCount/@ServerInfo.MaxPlayerCount">@ServerInfo.CurrentPlayerCount/@(ServerInfo.MaxPlayerCount ?? ServerInfoService.StartParameters.MaxPlayer)</span>
+                        <span>
+                            @ServerInfoService.ServerInfo.CurrentPlayerCount/@(ServerInfoService.ServerInfo.MaxPlayerCount)
+                        </span>
                     </div>
 
                     <div class="col-3 text-center m-0 p-0 text-truncate">
-                        <span title="@ServerInfo.CurrentMap">@(string.IsNullOrWhiteSpace(ServerInfo.CurrentMap) ? ServerInfoService.StartParameters.StartMap : ServerInfo.CurrentMap)</span>
+                        <span>
+                            @(string.IsNullOrWhiteSpace(ServerInfoService.ServerInfo.CurrentMap)
+                                ? ServerInfoService.StartParameters.StartMap
+                                : ServerInfoService.ServerInfo.CurrentMap)
+                        </span>
                     </div>
                 </div>
             </div>
 
             <div class="col-2 m-0 p-0 d-flex justify-content-end align-items-center align-middle pt-1 flex-nowrap" style="font-size: x-large;">
-                <button class="col-4 p-0 border-0 bg-transparent bi bi-copy text-dark" title="Copy IP" @onclick="CopyConnectStringToClipboard"></button>
-                <button class="col-4 p-0 dropdown border-0 bg-transparent bi bi-map text-dark" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false" title="Changes map. The server needs to be online to do this"></button>
+                <button class="col-4 p-0 border-0 bg-transparent bi bi-copy text-dark"
+                        @onclick="CopyConnectStringToClipboard">
+                </button>
+
+                <button
+                    class="col-4 p-0 dropdown border-0 bg-transparent bi bi-map text-dark"
+                    type="button"
+                    id="dropdownMenuButton1"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                </button>
                 <ul class="dropdown-menu position-absolute z-3" aria-labelledby="dropdownMenuButton1">
                     @foreach (var map in ServerInfoService.Maps)
                     {
@@ -37,21 +52,27 @@ else
                     }
                 </ul>
 
-                @if (ServerInfo.ServerStarted)
+                @if (ServerInfoService.ServerInfo.ServerStarted)
                 {
-                    <button class="col-4 p-0 border-0 bg-transparent bi-stop text-dark" title="Stop server" @onclick="StopServer"></button>
+                    <button
+                        class="col-4 p-0 border-0 bg-transparent bi-stop text-dark"
+                        @onclick="StopServer">
+                    </button>
                 }
-                else if (ServerInfo.ServerStarting || ServerInfo.ServerUpdatingOrInstalling)
+                else if (ServerInfoService.IsServerBusy)
                 {
                     <button class="col-4 p-0 border-0 bg-transparent text-dark">
-                        <div class="spinner-grow" title="@LoadingMessage" role="status" style="width: 1.3rem; height: 1.3rem">
+                        <div class="spinner-grow" title="Server is busy" role="status" style="width: 1.3rem; height: 1.3rem">
                             <span class="visually-hidden"></span>
                         </div>
                     </button>
                 }
                 else
                 {
-                    <button class="col-4 p-0 border-0 bg-transparent bi-play text-dark" title="Start server" @onclick="StartServer"></button>
+                    <button
+                        class="col-4 p-0 border-0 bg-transparent bi-play text-dark"
+                        @onclick="StartServer">
+                    </button>
                 }
             </div>
         </div>

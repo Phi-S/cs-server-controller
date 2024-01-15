@@ -10,7 +10,7 @@ public sealed class StatusService
 {
     private readonly IOptions<AppOptions> _options;
     private readonly EventService _eventService;
-    
+
     public StatusService(IOptions<AppOptions> options, EventService eventService)
     {
         _options = options;
@@ -37,6 +37,7 @@ public sealed class StatusService
             ServerStopping,
             ServerHibernating,
             ServerUpdatingOrInstalling,
+            ServerPluginsUpdatingOrInstalling,
             DemoUploading,
             DateTime.UtcNow
         );
@@ -84,6 +85,10 @@ public sealed class StatusService
             ServerUpdatingOrInstalling = false;
             ServerInstalled = ServerHelper.IsServerInstalled(_options.Value.SERVER_FOLDER);
         };
+
+        _eventService.PluginUpdateOrInstallStarted += (_, _) => { ServerPluginsUpdatingOrInstalling = true; };
+        _eventService.PluginUpdateOrInstallDone += (_, _) => { ServerPluginsUpdatingOrInstalling = false; };
+        _eventService.PluginUpdateOrInstallFailed += (_, _) => { ServerPluginsUpdatingOrInstalling = false; };
 
         _eventService.UploadDemoStarted += (_, _) => { DemoUploading = true; };
         _eventService.UploadDemoDone += (_, _) => { DemoUploading = false; };
@@ -255,6 +260,33 @@ public sealed class StatusService
             lock (_serverUpdatingOrInstallingLock)
             {
                 _serverUpdatingOrInstalling = value;
+            }
+
+            OnServerStatusChanged();
+        }
+    }
+
+    #endregion
+
+    #region ServerPluginsUpdatingOrInstalling
+
+    private volatile bool _serverPluginsUpdatingOrInstalling;
+    private readonly object _serverPluginsUpdatingOrInstallingLock = new();
+
+    public bool ServerPluginsUpdatingOrInstalling
+    {
+        get
+        {
+            lock (_serverPluginsUpdatingOrInstallingLock)
+            {
+                return _serverPluginsUpdatingOrInstalling;
+            }
+        }
+        private set
+        {
+            lock (_serverPluginsUpdatingOrInstallingLock)
+            {
+                _serverPluginsUpdatingOrInstalling = value;
             }
 
             OnServerStatusChanged();

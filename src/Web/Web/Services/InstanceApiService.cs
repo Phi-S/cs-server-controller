@@ -185,11 +185,9 @@ public class InstanceApiService
         return result;
     }
 
-    public async Task<ErrorOr<Guid>> StartUpdatingOrInstalling(bool startAfterUpdate = true)
+    public async Task<ErrorOr<Guid>> StartUpdatingOrInstalling()
     {
-        const string endpoint = "/server/start-updating-or-installing";
-
-        var requestMessage = PostRequestMessage(endpoint, "startAfterUpdate", startAfterUpdate.ToString());
+        var requestMessage = PostRequestMessage("/server/start-updating-or-installing");
         var response = await Send<Guid>(requestMessage);
         return response;
     }
@@ -197,6 +195,13 @@ public class InstanceApiService
     public async Task<ErrorOr<Success>> CancelUpdatingOrInstalling(Guid id)
     {
         var requestMessage = PostRequestMessage("/server/cancel-updating-or-installing", "id", id.ToString());
+        var response = await SendWithoutResponse(requestMessage);
+        return response;
+    }
+
+    public async Task<ErrorOr<Success>> UpdateOrInstallPlugins()
+    {
+        var requestMessage = PostRequestMessage("/server/update-or-install-plugins");
         var response = await SendWithoutResponse(requestMessage);
         return response;
     }
@@ -217,7 +222,10 @@ public class InstanceApiService
 
     public async Task<ErrorOr<string>> SendCommand(string command)
     {
-        var requestMessage = PostRequestMessage("/server/send-command", "command", command);
+        var requestMessage = PostRequestMessage(
+            "/server/send-command",
+            "command",
+            command);
         var result = await Send<string>(requestMessage);
         return result;
     }

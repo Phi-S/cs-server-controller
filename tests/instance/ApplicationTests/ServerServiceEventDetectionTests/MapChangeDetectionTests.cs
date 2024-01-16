@@ -35,12 +35,12 @@ public class MapChangeDetectionTests
         serverService.NewOutputMapChangeDetection(
             null,
             new ServerOutputEventArg(
-                new ServerStart
+                new ServerStartDbModel
                 {
                     Id = Guid.NewGuid(),
                     StartParameters = "-startParameter",
-                    StartedAtUtc = DateTime.UtcNow,
-                    CreatedAtUtc = DateTime.UtcNow
+                    StartedUtc = DateTime.UtcNow,
+                    CreatedUtc = DateTime.UtcNow
                 },
                 "Host activate: Changelevel (de_dust2)"));
         var waitResult =

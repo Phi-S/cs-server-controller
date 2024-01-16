@@ -25,9 +25,9 @@ public class
         var logs = await _unitOfWork.UpdateOrInstallRepo.GetLogsSince(logsSinceDateTime);
         var response = logs.Select(
                 log => new UpdateOrInstallLogResponse(
-                    log.UpdateOrInstallStart.Id,
+                    log.UpdateOrInstallStartDbModel.Id,
                     log.Message,
-                    log.CreatedAtUtc)
+                    log.CreatedUtc)
             )
             .ToList();
         return response;

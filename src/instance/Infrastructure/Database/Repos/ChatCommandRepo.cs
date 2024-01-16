@@ -28,7 +28,7 @@ public class ChatCommandRepo
         }
 
         var cleanedChatMessage = chatMessage.ToLower().Trim();
-        await _dbContext.ChatCommands.AddAsync(new ChatCommand
+        await _dbContext.ChatCommands.AddAsync(new ChatCommandDbModel
         {
             ChatMessage = cleanedChatMessage,
             Command = command,
@@ -53,7 +53,7 @@ public class ChatCommandRepo
         return Result.Deleted;
     }
 
-    public Task<List<ChatCommand>> GetAll()
+    public Task<List<ChatCommandDbModel>> GetAll()
     {
         return Task.FromResult(_dbContext.ChatCommands.ToList());
     }

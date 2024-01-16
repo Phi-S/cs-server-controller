@@ -8,6 +8,7 @@ public static class SignalRMethods
 {
     public const string ServerStatusMethod = "server-status";
     public const string EventMethod = "event";
+    public const string SystemLogMethod = "system-log";
     public const string ServerLogMethod = "server-log";
     public const string UpdateOrInstallLogMethod = "update-or-install-log";
 
@@ -36,6 +37,20 @@ public static class SignalRMethods
             new[] { typeof(EventLogResponse) },
             args => handler((EventLogResponse)args[0]!));
     }
+
+    public static Task SendSystemLog(this IClientProxy clientProxy, SystemLogResponse systemLogResponse,
+        CancellationToken cancellationToken = default)
+    {
+        return clientProxy.SendAsync(SystemLogMethod, systemLogResponse, cancellationToken: cancellationToken);
+    }
+
+    public static IDisposable OnSystemLog(this HubConnection hubConnection, Func<SystemLogResponse, Task> handler)
+    {
+        return hubConnection.On(SystemLogMethod,
+            new[] { typeof(SystemLogResponse) },
+            args => handler((SystemLogResponse)args[0]!));
+    }
+
 
     public static Task SendServerLog(this IClientProxy clientProxy, ServerLogResponse serverLogResponse,
         CancellationToken cancellationToken = default)

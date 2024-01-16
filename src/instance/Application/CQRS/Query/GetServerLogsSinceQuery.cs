@@ -21,9 +21,9 @@ public class GetServerLogsSinceQueryHandler : IRequestHandler<GetServerLogsSince
         var logs = await _unitOfWork.ServerRepo.GetLogsSince(logsSinceDateTime);
         var response = logs.Select(
                 log => new ServerLogResponse(
-                    log.ServerStart.Id,
+                    log.ServerStartDbModel.Id,
                     log.Message,
-                    log.CreatedAtUtc)
+                    log.CreatedUtc)
             )
             .ToList();
 

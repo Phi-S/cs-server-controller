@@ -17,7 +17,7 @@ public class ChatCommandsCache
     }
 
     private readonly SemaphoreSlim _chatCommandsLock = new(1, 1);
-    private readonly ConcurrentBag<ChatCommand> _chatCommands = [];
+    private readonly ConcurrentBag<ChatCommandDbModel> _chatCommands = [];
 
     public async Task RefreshCache()
     {
@@ -39,7 +39,7 @@ public class ChatCommandsCache
         }
     }
 
-    public async Task<ErrorOr<ChatCommand>> GetByChatMessage(string chatMessage)
+    public async Task<ErrorOr<ChatCommandDbModel>> GetByChatMessage(string chatMessage)
     {
         try
         {

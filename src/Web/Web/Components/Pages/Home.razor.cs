@@ -18,6 +18,7 @@ public class HomeRazor : ComponentBase, IDisposable
 
     private static Guid? _currentUpdateOrInstallId;
     protected string SendCommandBind = "";
+    private readonly object _logsLock = new();
 
     protected override void OnInitialized()
     {
@@ -34,6 +35,15 @@ public class HomeRazor : ComponentBase, IDisposable
         catch (Exception e)
         {
             Logger.LogError(e, "Error in OnServerInfoOrLogsChangedEvent Method");
+        }
+    }
+
+    protected List<LogEntry> GetLogs()
+    {
+        lock (_logsLock)
+        {
+            var allLogs = ServerInfoService.AllLogs.ToArray();
+            return allLogs.OrderByDescending(l => l.TimestampUtc).Take(2000).ToList();
         }
     }
 
@@ -82,6 +92,7 @@ public class HomeRazor : ComponentBase, IDisposable
 
             Logger.LogInformation("Server restarted");
             ToastService.Info("Server restarted");
+            await InvokeAsync(StateHasChanged);
         }
         catch (Exception e)
         {

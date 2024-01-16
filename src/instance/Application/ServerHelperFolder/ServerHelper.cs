@@ -95,4 +95,66 @@ public static class ServerHelper
 
         return true;
     }
+    
+    public static bool IsServerPluginBaseInstalled(string serverFolder)
+    {
+        var csgoFolder = Path.Combine(
+            serverFolder,
+            "game",
+            "csgo");
+        
+        var addonsFolder = Path.Combine(csgoFolder, "addons");
+        if (Directory.Exists(addonsFolder) == false)
+        {
+            return false;
+        }
+
+        var metamodVdfFile = Path.Combine(addonsFolder, "metamod.vdf");
+        if (File.Exists(metamodVdfFile) == false)
+        {
+            return false;
+        }
+
+        var metamodVdfx64File = Path.Combine(addonsFolder, "metamod_x64.vdf");
+        if (File.Exists(metamodVdfx64File) == false)
+        {
+            return false;
+        }
+
+        var metamodFolder = Path.Combine(addonsFolder, "metamod");
+        if (Directory.Exists(metamodFolder) == false)
+        {
+            return false;
+        }
+
+        var counterstrikesharpFolder = Path.Combine(addonsFolder, "counterstrikesharp");
+        if (Directory.Exists(counterstrikesharpFolder) == false)
+        {
+            return false;
+        }
+
+        var counterstrikesharpDllFile = Path.Combine(counterstrikesharpFolder, "api", "CounterStrikeSharp.API.dll");
+        if (File.Exists(counterstrikesharpDllFile) == false)
+        {
+            return false;
+        }
+
+        var counterstrikesharpSoFile =
+            Path.Combine(counterstrikesharpFolder, "bin", "linuxsteamrt64", "counterstrikesharp.so");
+        if (File.Exists(counterstrikesharpSoFile) == false)
+        {
+            return false;
+        }
+        
+        var gameinfoGiPath = Path.Combine(csgoFolder, "gameinfo.gi");
+        var fileLines = File.ReadAllLines(gameinfoGiPath);
+        if (fileLines.Any(l => l.Trim().Equals("Game csgo/addons/metamod")) == false)
+        {
+            return false;
+        }
+
+        return true;
+    }
+    
+    
 }

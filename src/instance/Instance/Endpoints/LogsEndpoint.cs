@@ -13,6 +13,13 @@ public static class LogsEndpoint
             .MapGroup(tag)
             .WithTags(tag)
             .WithOpenApi();
+        
+        group.MapGet("system", async (IMediator mediator, [FromQuery] long logsSince) =>
+        {
+            var command = new GetSystemLogsSinceQuery(logsSince);
+            var result = await mediator.Send(command);
+            return Results.Ok(result);
+        });
 
         group.MapGet("server", async (IMediator mediator, [FromQuery] long logsSince) =>
         {

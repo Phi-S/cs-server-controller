@@ -1,20 +1,20 @@
 {
   "runtimeTarget": {
-    "name": ".NETCoreApp,Version=v8.0",
+    "name": ".NETCoreApp,Version=v7.0",
     "signature": ""
   },
   "compilationOptions": {},
   "targets": {
-    ".NETCoreApp,Version=v8.0": {
+    ".NETCoreApp,Version=v7.0": {
       "PracPlugin/1.0.0": {
         "dependencies": {
-          "CounterStrikeSharp.API": "1.0.146"
+          "CounterStrikeSharp.API": "1.0.144"
         },
         "runtime": {
           "PracPlugin.dll": {}
         }
       },
-      "CounterStrikeSharp.API/1.0.146": {
+      "CounterStrikeSharp.API/1.0.144": {
         "dependencies": {
           "McMaster.NETCore.Plugins": "1.4.0",
           "Microsoft.CSharp": "4.7.0",
@@ -269,12 +269,12 @@
       "serviceable": false,
       "sha512": ""
     },
-    "CounterStrikeSharp.API/1.0.146": {
+    "CounterStrikeSharp.API/1.0.144": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-Oqya2Wl9sZ7cPlzsGcEURuos603dXdDjCIQWWd0p29QFFIfnaG7oywvpRB9b5eRk44A63yKye84Ov5G5o3paWA==",
-      "path": "counterstrikesharp.api/1.0.146",
-      "hashPath": "counterstrikesharp.api.1.0.146.nupkg.sha512"
+      "sha512": "sha512-015ETchKnLzXaoPGhO4HNTFsRQVSYsRabh1zGU8BAczd+s+D9NO0kDy9kTVBH+wObusFLR/Yvxr3+A330UFIJQ==",
+      "path": "counterstrikesharp.api/1.0.144",
+      "hashPath": "counterstrikesharp.api.1.0.144.nupkg.sha512"
     },
     "McMaster.NETCore.Plugins/1.4.0": {
       "type": "package",

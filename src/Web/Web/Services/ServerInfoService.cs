@@ -8,7 +8,7 @@ using Web.Options;
 
 namespace Web.Services;
 
-public record LogEntry(DateTime TimestampUtc, string Message);
+public record LogEntry(DateTime TimestampUtc, string Message, bool Highlight = false);
 
 public class ServerInfoService
 {
@@ -73,6 +73,12 @@ public class ServerInfoService
             return serverInfo.FirstError;
         }
 
+        var systemLogs = await _instanceApiService.LogsSystem(last24Hours);
+        if (systemLogs.IsError)
+        {
+            return systemLogs.FirstError;
+        }
+
         var serverLogs = await _instanceApiService.LogsServer(last24Hours);
         if (serverLogs.IsError)
         {
@@ -99,14 +105,17 @@ public class ServerInfoService
 
         ServerInfo = serverInfo.Value;
         Events = events.Value;
+        SystemLogs = systemLogs.Value;
         ServerLogs = serverLogs.Value;
         UpdateOrInstallLogs = updateOrInstallLogs.Value;
         var allLogs = serverLogs.Value.Select(l => new LogEntry(l.MessageReceivedAtUt, l.Message)).ToList();
         allLogs.AddRange(updateOrInstallLogs.Value.Select(l => new LogEntry(l.MessageReceivedAtUt, l.Message)));
+        allLogs.AddRange(systemLogs.Value.Select(l => new LogEntry(l.CreatedUtc, l.Message, true)));
         AllLogs = allLogs;
         Maps = maps.Value;
 
         connection.Remove(SignalRMethods.ServerStatusMethod);
+        connection.Remove(SignalRMethods.SystemLogMethod);
         connection.Remove(SignalRMethods.ServerLogMethod);
         connection.Remove(SignalRMethods.EventMethod);
         connection.Remove(SignalRMethods.UpdateOrInstallLogMethod);
@@ -133,27 +142,64 @@ public class ServerInfoService
 
         connection.OnEvent(response =>
         {
-            Events ??= [];
-            Events.Add(response);
-            OnEventsChangedEvent?.Invoke(this, EventArgs.Empty);
+            lock (_eventsLock)
+            {
+                Events ??= [];
+                Events.Add(response);
+                OnEventsChangedEvent?.Invoke(this, EventArgs.Empty);
+            }
+
+            return Task.CompletedTask;
+        });
+
+        connection.OnSystemLog(response =>
+        {
+            lock (_systemLogsLock)
+            {
+                SystemLogs ??= [];
+                SystemLogs.Add(response);
+            }
+
+            lock (allLogs)
+            {
+                AllLogs.Add(new LogEntry(response.CreatedUtc, response.Message, true));
+                OnAllLogsChangedEvent?.Invoke(this, EventArgs.Empty);
+            }
+
             return Task.CompletedTask;
         });
 
         connection.OnServerLog(response =>
         {
-            ServerLogs ??= [];
-            ServerLogs.Add(response);
-            AllLogs.Add(new LogEntry(response.MessageReceivedAtUt, response.Message));
-            OnAllLogsChangedEvent?.Invoke(this, EventArgs.Empty);
+            lock (_serverLogsLock)
+            {
+                ServerLogs ??= [];
+                ServerLogs.Add(response);
+            }
+
+            lock (_allLogsLock)
+            {
+                AllLogs.Add(new LogEntry(response.MessageReceivedAtUt, response.Message));
+                OnAllLogsChangedEvent?.Invoke(this, EventArgs.Empty);
+            }
+
             return Task.CompletedTask;
         });
 
         connection.OnUpdateOrInstallLog(response =>
         {
-            UpdateOrInstallLogs ??= [];
-            UpdateOrInstallLogs.Add(response);
-            AllLogs.Add(new LogEntry(response.MessageReceivedAtUt, response.Message));
-            OnAllLogsChangedEvent?.Invoke(this, EventArgs.Empty);
+            lock (_updateOrInstallLogsLock)
+            {
+                UpdateOrInstallLogs ??= [];
+                UpdateOrInstallLogs.Add(response);
+            }
+
+            lock (_allLogsLock)
+            {
+                AllLogs.Add(new LogEntry(response.MessageReceivedAtUt, response.Message));
+                OnAllLogsChangedEvent?.Invoke(this, EventArgs.Empty);
+            }
+
             return Task.CompletedTask;
         });
 
@@ -261,6 +307,35 @@ public class ServerInfoService
             {
                 _allLogs = value;
                 OnAllLogsChangedEvent?.Invoke(this, EventArgs.Empty);
+            }
+        }
+    }
+
+    #endregion
+
+    #region SystemLogs
+
+    private readonly object _systemLogsLock = new();
+    private List<SystemLogResponse>? _systemLogs;
+    public event EventHandler? OnSystemLogsChangedEvent;
+
+    public List<SystemLogResponse>? SystemLogs
+    {
+        get
+        {
+            lock (_systemLogsLock)
+            {
+                return _systemLogs;
+            }
+        }
+        private set
+        {
+            lock (_systemLogsLock)
+            {
+                _systemLogs = value is null
+                    ? value
+                    : value.OrderByDescending(l => l.CreatedUtc).ToList();
+                OnSystemLogsChangedEvent?.Invoke(this, EventArgs.Empty);
             }
         }
     }

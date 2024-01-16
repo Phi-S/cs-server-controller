@@ -54,12 +54,12 @@ public class PlayerConnectDetectionTests
         serverService.NewOutputPlayerConnectDetection(
             null,
             new ServerOutputEventArg(
-                new ServerStart
+                new ServerStartDbModel
                 {
                     Id = Guid.NewGuid(),
                     StartParameters = "-startParameter",
-                    StartedAtUtc = DateTime.UtcNow,
-                    CreatedAtUtc = DateTime.UtcNow
+                    StartedUtc = DateTime.UtcNow,
+                    CreatedUtc = DateTime.UtcNow
                 },
                 log)
         );

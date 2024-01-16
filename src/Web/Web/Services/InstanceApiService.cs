@@ -283,6 +283,14 @@ public class InstanceApiService
 
     #region Logs
 
+    public async Task<ErrorOr<List<SystemLogResponse>>> LogsSystem(DateTimeOffset logsSince)
+    {
+        var requestMessage =
+            GetRequestMessage("/logs/system", "logsSince", logsSince.ToUnixTimeMilliseconds().ToString());
+        var result = await Send<List<SystemLogResponse>>(requestMessage);
+        return result;
+    }
+    
     public async Task<ErrorOr<List<ServerLogResponse>>> LogsServer(DateTimeOffset logsSince)
     {
         var requestMessage =

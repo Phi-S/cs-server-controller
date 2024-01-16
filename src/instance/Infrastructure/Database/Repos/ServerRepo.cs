@@ -11,15 +11,15 @@ public class ServerRepo
     {
         _dbContext = instanceDbContext;
     }
-    
-    public async Task<ServerStart> AddStart(string startParameters, DateTime startedAtUtc)
+
+    public async Task<ServerStartDbModel> AddStart(string startParameters, DateTime startedAtUtc)
     {
-        var serverStart = await _dbContext.ServerStarts.AddAsync(new ServerStart()
+        var serverStart = await _dbContext.ServerStarts.AddAsync(new ServerStartDbModel()
         {
             Id = Guid.NewGuid(),
             StartParameters = startParameters,
-            StartedAtUtc = startedAtUtc,
-            CreatedAtUtc = DateTime.UtcNow
+            StartedUtc = startedAtUtc,
+            CreatedUtc = DateTime.UtcNow
         });
         return serverStart.Entity;
     }
@@ -27,18 +27,18 @@ public class ServerRepo
     public async Task AddLog(Guid serverStartId, string message)
     {
         var serverStart = await _dbContext.ServerStarts.FirstAsync(start => start.Id == serverStartId);
-        await _dbContext.ServerLogs.AddAsync(new ServerLog()
+        await _dbContext.ServerLogs.AddAsync(new ServerLogDbModel()
         {
-            ServerStart = serverStart,
+            ServerStartDbModel = serverStart,
             Message = message,
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedUtc = DateTime.UtcNow
         });
     }
 
-    public Task<List<ServerLog>> GetLogsSince(DateTime since)
+    public Task<List<ServerLogDbModel>> GetLogsSince(DateTime since)
     {
-        return Task.FromResult(_dbContext.ServerLogs.Where(log => log.CreatedAtUtc >= since)
-            .Include(log => log.ServerStart)
+        return Task.FromResult(_dbContext.ServerLogs.Where(log => log.CreatedUtc >= since)
+            .Include(log => log.ServerStartDbModel)
             .ToList());
     }
 }

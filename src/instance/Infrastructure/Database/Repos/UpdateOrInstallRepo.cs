@@ -12,13 +12,13 @@ public class UpdateOrInstallRepo
         _dbContext = instanceDbContext;
     }
 
-    public async Task<UpdateOrInstallStart> AddStart(DateTime startedAtUtc)
+    public async Task<UpdateOrInstallStartDbModel> AddStart(DateTime startedAtUtc)
     {
-        var addAsync = await _dbContext.UpdateOrInstallStarts.AddAsync(new UpdateOrInstallStart()
+        var addAsync = await _dbContext.UpdateOrInstallStarts.AddAsync(new UpdateOrInstallStartDbModel()
         {
             Id = Guid.NewGuid(),
-            StartedAtUtc = startedAtUtc,
-            CreatedAtUtc = DateTime.UtcNow
+            StartedUtc = startedAtUtc,
+            CreatedUtc = DateTime.UtcNow
         });
         return addAsync.Entity;
     }
@@ -27,18 +27,18 @@ public class UpdateOrInstallRepo
     {
         var updateOrInstallStart =
             await _dbContext.UpdateOrInstallStarts.FirstAsync(start => start.Id == updateOrInstallStartId);
-        await _dbContext.UpdateOrInstallLogs.AddAsync(new UpdateOrInstallLog()
+        await _dbContext.UpdateOrInstallLogs.AddAsync(new UpdateOrInstallLogModel()
         {
-            UpdateOrInstallStart = updateOrInstallStart,
+            UpdateOrInstallStartDbModel = updateOrInstallStart,
             Message = message,
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedUtc = DateTime.UtcNow
         });
     }
 
-    public Task<List<UpdateOrInstallLog>> GetLogsSince(DateTime logsSince)
+    public Task<List<UpdateOrInstallLogModel>> GetLogsSince(DateTime logsSince)
     {
-        return Task.FromResult(_dbContext.UpdateOrInstallLogs.Where(log => log.CreatedAtUtc >= logsSince)
-            .Include(log => log.UpdateOrInstallStart)
+        return Task.FromResult(_dbContext.UpdateOrInstallLogs.Where(log => log.CreatedUtc >= logsSince)
+            .Include(log => log.UpdateOrInstallStartDbModel)
             .ToList());
     }
 }

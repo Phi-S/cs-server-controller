@@ -1,4 +1,5 @@
-﻿using Application.ServerServiceFolder;
+﻿using Application.ServerPluginsFolder;
+using Application.ServerServiceFolder;
 using Application.StartParameterFolder;
 using Application.StatusServiceFolder;
 using Application.UpdateOrInstallServiceFolder;
@@ -16,17 +17,20 @@ public class StartUpdateOrInstallCommandHandler : IRequestHandler<StartUpdateOrI
     private readonly UpdateOrInstallService _updateOrInstallService;
     private readonly StartParameterService _startParameterService;
     private readonly StatusService _statusService;
+    private readonly ServerPluginsService _serverPluginsService;
 
     public StartUpdateOrInstallCommandHandler(
         ServerService serverService,
         UpdateOrInstallService updateOrInstallService,
         StartParameterService startParameterService,
-        StatusService statusService)
+        StatusService statusService,
+        ServerPluginsService serverPluginsService)
     {
         _serverService = serverService;
         _updateOrInstallService = updateOrInstallService;
         _startParameterService = startParameterService;
         _statusService = statusService;
+        _serverPluginsService = serverPluginsService;
     }
 
     public async Task<ErrorOr<Guid>> Handle(StartUpdateOrInstallCommand request, CancellationToken cancellationToken)
@@ -44,6 +48,12 @@ public class StartUpdateOrInstallCommandHandler : IRequestHandler<StartUpdateOrI
         {
             updateOrInstallResult = await _updateOrInstallService.StartUpdateOrInstall(async () =>
             {
+                var updateOrInstallPlugins = await _serverPluginsService.UpdateOrInstall();
+                if (updateOrInstallPlugins.IsError)
+                {
+                    throw new Exception($"Failed to update server plugins. {updateOrInstallPlugins.ErrorMessage()}");
+                }
+
                 var startParametersResult = _startParameterService.Get();
                 if (startParametersResult.IsError)
                 {
@@ -55,7 +65,14 @@ public class StartUpdateOrInstallCommandHandler : IRequestHandler<StartUpdateOrI
         }
         else
         {
-            updateOrInstallResult = await _updateOrInstallService.StartUpdateOrInstall();
+            updateOrInstallResult = await _updateOrInstallService.StartUpdateOrInstall(async () =>
+            {
+                var updateOrInstallPlugins = await _serverPluginsService.UpdateOrInstall();
+                if (updateOrInstallPlugins.IsError)
+                {
+                    throw new Exception($"Failed to update server plugins. {updateOrInstallPlugins.ErrorMessage()}");
+                }
+            });
         }
 
         return updateOrInstallResult;

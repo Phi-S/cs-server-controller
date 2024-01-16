@@ -97,7 +97,7 @@ public sealed class EventService
         {
             using var scope = _serviceProvider.CreateScope();
             var unitOfWork = scope.GetUnitOfWork();
-            await unitOfWork.EventLogRepo.Add(arg.EventName.ToString(), arg.TriggeredAtUtc, arg.GetDataJson());
+            await unitOfWork.EventLogRepo.Add(arg.EventName.ToString(), arg.TriggeredUtc, arg.GetDataJson());
             await unitOfWork.Save();
         }
         catch (Exception e)

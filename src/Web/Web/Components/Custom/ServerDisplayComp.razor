@@ -16,17 +16,22 @@ else
                     </div>
 
                     <div class="col-2 text-center m-0 p-0">
-                        <span>
-                            @ServerInfoService.ServerInfo.CurrentPlayerCount/@(ServerInfoService.ServerInfo.MaxPlayerCount)
-                        </span>
+                        @if (ServerInfoService.ServerInfo.ServerStarted)
+                        {
+                            <span>
+
+                                @ServerInfoService.ServerInfo.CurrentPlayerCount/@(ServerInfoService.ServerInfo.MaxPlayerCount)
+                            </span>
+                        }
                     </div>
 
                     <div class="col-3 text-center m-0 p-0 text-truncate">
-                        <span>
-                            @(string.IsNullOrWhiteSpace(ServerInfoService.ServerInfo.CurrentMap)
-                                ? ServerInfoService.StartParameters.StartMap
-                                : ServerInfoService.ServerInfo.CurrentMap)
-                        </span>
+                        @if (ServerInfoService.ServerInfo.ServerStarted)
+                        {
+                            <span>
+                                @ServerInfoService.ServerInfo.CurrentMap
+                            </span>
+                        }
                     </div>
                 </div>
             </div>

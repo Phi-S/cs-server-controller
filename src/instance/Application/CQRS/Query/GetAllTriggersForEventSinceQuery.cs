@@ -25,7 +25,7 @@ public class
         var response = logs.Select(
                 log => new EventLogResponse(
                     log.Name,
-                    log.TriggeredAtUtc)
+                    log.TriggeredUtc)
             )
             .ToList();
 

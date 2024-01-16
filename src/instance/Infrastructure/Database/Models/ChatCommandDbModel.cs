@@ -2,7 +2,7 @@
 
 namespace Infrastructure.Database.Models;
 
-public class ChatCommand
+public class ChatCommandDbModel
 {
     [Key] public long Id { get; set; }
     [Required] [StringLength(60)] public required string ChatMessage { get; set; }

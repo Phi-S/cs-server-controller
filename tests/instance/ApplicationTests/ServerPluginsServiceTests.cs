@@ -117,7 +117,7 @@ public class ServerPluginsServiceTests
         Directory.CreateDirectory(pluginsFolder);
 
         // Act
-        var installPlugins = serverPluginsService.InstallOrUpdatePlugins();
+        var installPlugins = serverPluginsService.UpdateOrInstallPlugins();
 
         // Assert
         if (installPlugins.IsError)
@@ -139,9 +139,9 @@ public class ServerPluginsServiceTests
         Directory.CreateDirectory(pluginsFolder);
 
         // Act
-        var installPlugins = serverPluginsService.InstallOrUpdatePlugins();
+        var installPlugins = serverPluginsService.UpdateOrInstallPlugins();
         _outputHelper.WriteLine("==========================================");
-        var updatePlugins = serverPluginsService.InstallOrUpdatePlugins();
+        var updatePlugins = serverPluginsService.UpdateOrInstallPlugins();
         
         // Assert
         if (installPlugins.IsError)

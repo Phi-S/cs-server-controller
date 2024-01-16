@@ -39,7 +39,7 @@ public class UpdateOrInstallPluginsCommandHandler : IRequestHandler<UpdateOrInst
             return Errors.Fail($"Failed to start updating or install server. {stop.ErrorMessage()}");
         }
 
-        var updateOrInstallPlugins = await _serverPluginsService.InstallOrUpdate();
+        var updateOrInstallPlugins = await _serverPluginsService.UpdateOrInstall();
         if (updateOrInstallPlugins.IsError)
         {
             return updateOrInstallPlugins.FirstError;

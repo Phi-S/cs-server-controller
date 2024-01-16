@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Application.EventServiceFolder;
+using Application.ServerHelperFolder;
 using Application.StatusServiceFolder;
+using Application.SystemLogFolder;
 using Domain;
 using ErrorOr;
 using Infrastructure.Database;
@@ -19,24 +21,26 @@ public partial class ServerService
     private readonly IOptions<AppOptions> _options;
     private readonly StatusService _statusService;
     private readonly EventService _eventService;
+    private readonly SystemLogService _systemLogService;
     private readonly IServiceProvider _services;
 
     public ServerService(ILogger<ServerService> logger,
         IOptions<AppOptions> options,
         StatusService statusService,
         EventService eventService,
+        SystemLogService systemLogService,
         IServiceProvider services)
     {
         _logger = logger;
         _options = options;
         _statusService = statusService;
         _eventService = eventService;
+        _systemLogService = systemLogService;
         _services = services;
     }
 
     #region Const
 
-    private const string ServerStartedMessage = "#####_SERVER_STARTED";
     private const int ServerStartTimeoutMs = 30_000;
     private const int ServerStopTimeoutMs = 15_000;
 
@@ -56,6 +60,8 @@ public partial class ServerService
         {
             await _serverStartStopLock.WaitAsync();
             _logger.LogInformation("Starting server");
+            _systemLogService.LogHeader();
+            _systemLogService.Log("Starting server");
 
             #region CheckIfServerIsReadyToStart
 
@@ -63,8 +69,8 @@ public partial class ServerService
             if (checkIfServerIsReadyToStart.IsError)
             {
                 _eventService.OnStartingServer();
-                _logger.LogWarning("Server is not ready to start. {Error}",
-                    checkIfServerIsReadyToStart.ErrorMessage());
+                _logger.LogWarning("Server is not ready to start. {Error}", checkIfServerIsReadyToStart.ErrorMessage());
+                _systemLogService.Log($"Server is not ready to start. {checkIfServerIsReadyToStart.ErrorMessage()}");
                 _eventService.OnStartingServerFailed();
                 return checkIfServerIsReadyToStart.FirstError;
             }
@@ -81,11 +87,13 @@ public partial class ServerService
             if (copySteamclient.IsError)
             {
                 _eventService.OnStartingServerFailed();
-                _logger.LogError("Failed to start server. {Error}", copySteamclient.FirstError.Description);
+                _logger.LogError("Failed to start server. {Error}", copySteamclient.ErrorMessage());
+                _systemLogService.Log($"Failed to start server. {checkIfServerIsReadyToStart.ErrorMessage()}");
                 return copySteamclient.FirstError;
             }
 
             _logger.LogInformation("Steam client linked");
+            _systemLogService.Log("Steam client linked");
 
             #endregion
 
@@ -95,23 +103,33 @@ public partial class ServerService
             var executablePath = Path.Combine(_options.Value.SERVER_FOLDER, "game", "bin", "linuxsteamrt64", "cs2");
             var startParameterString =
                 startParameters.GetAsCommandLineArgs(_options.Value.PORT, _options.Value.LOGIN_TOKEN);
+            var serverPluginsBaseInstalled = ServerHelper.IsServerPluginBaseInstalled(_options.Value.SERVER_FOLDER);
 
             using var scope = _services.CreateScope();
             var unitOfWork = scope.GetUnitOfWork();
             var serverStart = await unitOfWork.ServerRepo.AddStart(startParameterString, DateTime.UtcNow);
             await unitOfWork.Save();
             _logger.LogInformation("Server start id: {ServerStartId}", serverStart.Id);
+            if (serverPluginsBaseInstalled)
+            {
+                _logger.LogInformation("Server plugin base installed. Checking for successful load on startup");
+                _systemLogService.Log("Server plugin base installed. Checking for successful load on startup");
+            }
+
+            _systemLogService.Log($"Starting server process with start id {serverStart.Id}");
             _logger.LogInformation("Starting server with command: \"{StartCommand}\"",
                 $"{executablePath} {startParameterString}");
             var startServerProcess = await StartServerProcess(
                 serverStart,
                 executablePath,
-                startParameterString
+                startParameterString,
+                serverPluginsBaseInstalled
             );
             if (startServerProcess.IsError)
             {
                 _eventService.OnStartingServerFailed();
-                _logger.LogError("Failed to start server. {Error}", startServerProcess.FirstError.Description);
+                _logger.LogError("Failed to start server. {Error}", startServerProcess.ErrorMessage());
+                _systemLogService.Log($"Failed to start server. {startServerProcess.ErrorMessage()}");
                 return startServerProcess.FirstError;
             }
 
@@ -126,31 +144,56 @@ public partial class ServerService
 
             #region StartOutputFlushBackgroundTask
 
-            _logger.LogInformation("Starting background task to periodically write in StandardInput");
+            _logger.LogInformation("Starting0 flush output background task");
             StartOutputFlushBackgroundTask();
+            _logger.LogInformation("Flush output background task started");
 
             #endregion
 
             #region RefreshMaps
 
             _logger.LogInformation("Refreshing available maps");
-            GetAllMaps(_options.Value.SERVER_FOLDER, true);
+            _systemLogService.Log("Refreshing available maps");
+
+            var getAllMapsResult = GetAllMaps(_options.Value.SERVER_FOLDER, true);
+            if (getAllMapsResult.IsError)
+            {
+                _logger.LogError("Failed to start server. Failed to refresh available maps. {Error}",
+                    getAllMapsResult.ErrorMessage());
+                _systemLogService.Log(
+                    $"Failed to start server. Failed to refresh available maps. {getAllMapsResult.ErrorMessage()}");
+                return getAllMapsResult.FirstError;
+            }
+
+            _logger.LogInformation("Available maps refreshed");
+            _systemLogService.Log("Available maps refreshed");
 
             #endregion
 
             _logger.LogInformation("Adding event detection");
             AddEventDetection();
+            _logger.LogInformation("Event detection added");
+            _systemLogService.Log("Event detection enabled");
+
             _eventService.OnStartingServerDone(startParameters);
             _eventService.OnMapChanged(startParameters.StartMap);
             _eventService.OnHibernationStarted();
 
-            _logger.LogInformation("Server started");
+            if (serverPluginsBaseInstalled)
+            {
+                _logger.LogInformation("Server plugin base loaded");
+                _systemLogService.Log("Server plugin base loaded");
+            }
+
+            _logger.LogInformation("Server started successful");
+            _systemLogService.Log("Server started successful");
             return Result.Success;
         }
         catch (Exception e)
         {
             _eventService.OnStartingServerFailed();
             _logger.LogError(e, "Server failed to start with exception");
+            _systemLogService.Log("Server failed to start for unknown reasons");
             return Errors.Fail(description: $"Server failed to start with exception: {e}");
         }
         finally
@@ -220,9 +263,10 @@ public partial class ServerService
     }
 
     private async Task<ErrorOr<Process>> StartServerProcess(
-        ServerStart serverStart,
+        ServerStartDbModel serverStartDbModel,
         string executablePath,
-        string startParameter)
+        string startParameter,
+        bool checkIfServerPluginsBaseIsLoaded)
     {
         var process = new Process
         {
@@ -249,7 +293,7 @@ public partial class ServerService
             process.OutputDataReceived -= OnProcessOnOutputDataReceived;
             process.Close();
             process.Dispose();
-            return Errors.Fail(description: "Failed to start server process");
+            return Errors.Fail("Process start failed");
         }
 
         ServerOutputEvent += ServerOutputLog;
@@ -257,7 +301,7 @@ public partial class ServerService
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        var waitForServerToStart = await WaitForServerToStart(process);
+        var waitForServerToStart = await WaitForServerToStart(process, checkIfServerPluginsBaseIsLoaded);
         return waitForServerToStart.IsError
             ? waitForServerToStart.FirstError
             : process;
@@ -269,7 +313,7 @@ public partial class ServerService
                 return;
             }
 
-            ServerOutputEvent?.Invoke(this, new ServerOutputEventArg(serverStart, args.Data));
+            ServerOutputEvent?.Invoke(this, new ServerOutputEventArg(serverStartDbModel, args.Data));
         }
     }
 
@@ -278,9 +322,10 @@ public partial class ServerService
     {
         try
         {
-            using (_logger.BeginScope(new Dictionary<string, object> { ["StartId"] = arg.ServerStart.Id }))
+            using (_logger.BeginScope(new Dictionary<string, object>
+                       { ["StartId"] = arg.ServerStartDbModel.Id, ["ServerLog"] = true }))
             {
-                _logger.LogInformation("CS: {Output}", arg.Output);
+                _logger.LogInformation("Server: {Output}", arg.Output);
             }
         }
         catch (Exception e)
@@ -295,7 +340,7 @@ public partial class ServerService
         {
             using var scope = _services.CreateScope();
             var unitOfWork = scope.GetUnitOfWork();
-            await unitOfWork.ServerRepo.AddLog(serverOutputEventArg.ServerStart.Id, serverOutputEventArg.Output);
+            await unitOfWork.ServerRepo.AddLog(serverOutputEventArg.ServerStartDbModel.Id, serverOutputEventArg.Output);
             await unitOfWork.Save();
         }
         catch (Exception e)
@@ -328,13 +373,16 @@ public partial class ServerService
         }
     }
 
-    private async Task<ErrorOr<Success>> WaitForServerToStart(Process process)
+    private async Task<ErrorOr<Success>> WaitForServerToStart(Process process, bool checkIfPluginsBaseIsLoaded)
     {
         DataReceivedEventHandler? serverStartedHandler = null;
+        const string serverStartedMessage = "#####_SERVER_STARTED";
+
         try
         {
             var serverStarted = false;
             var hostActivated = false;
+            var pluginBaseLoaded = false;
 
             serverStartedHandler = (_, args) =>
             {
@@ -346,10 +394,15 @@ public partial class ServerService
                         return;
                     }
 
+                    if (message.EndsWith("CSSharp: CounterStrikeSharp.API Loaded Successfully."))
+                    {
+                        pluginBaseLoaded = true;
+                    }
+
                     if (message.StartsWith("Host activate: Loading"))
                     {
                         hostActivated = true;
-                        process.StandardInput.WriteLine($"say {ServerStartedMessage}");
+                        process.StandardInput.WriteLine($"say {serverStartedMessage}");
                         return;
                     }
 
@@ -358,7 +411,7 @@ public partial class ServerService
                         return;
                     }
 
-                    if (message.Equals($"[All Chat][Console (0)]: {ServerStartedMessage}") == false)
+                    if (message.Equals($"[All Chat][Console (0)]: {serverStartedMessage}") == false)
                     {
                         return;
                     }
@@ -380,6 +433,11 @@ public partial class ServerService
                 await Task.Delay(100);
                 await process.StandardInput.WriteLineAsync(process.StandardInput.NewLine);
 
+                if (checkIfPluginsBaseIsLoaded && pluginBaseLoaded == false)
+                {
+                    continue;
+                }
+
                 if (serverStarted == false)
                 {
                     continue;
@@ -388,7 +446,11 @@ public partial class ServerService
                 return Result.Success;
             }
 
-            return Errors.Fail($"Timout while waiting for the server to start after {ServerStartTimeoutMs} ms");
+            return Errors.Fail(
+                $"Timout while waiting for the server to start after {ServerStartTimeoutMs} ms." +
+                $" (ServerStarted: {serverStarted} / " +
+                $"CheckIfPluginsBaseIsLoaded: {checkIfPluginsBaseIsLoaded} / " +
+                $"PluginBaseLoaded: {pluginBaseLoaded})");
         }
         finally
         {
@@ -430,25 +492,32 @@ public partial class ServerService
 
         _eventService.OnStoppingServer();
         _logger.LogInformation("Stopping server");
+        _systemLogService.Log("Stopping server");
         var stopNormal = await StopNormal();
         if (stopNormal)
         {
+            _logger.LogInformation("Server stopped");
+            _systemLogService.Log("Server stopped");
             return Result.Success;
         }
 
         _logger.LogWarning("Force stopping the server because it failed to stop normally");
+        _systemLogService.Log("Force stopping the server because it failed to stop normally");
         var stopForce = await StopForce();
         if (stopForce)
         {
             _logger.LogWarning("Server stopped forcefully");
+            _systemLogService.Log("Server stopped forcefully");
             if (_statusService.ServerStarted)
             {
                 _eventService.OnServerExited();
             }
+
             return Result.Success;
         }
 
         _logger.LogError("Server failed to stop normally in time and failed to force stop");
+        _systemLogService.Log("Server failed to stop normally in time and failed to force stop");
         return Errors.Fail(description: "Server failed to stop normally in time and failed to force stop");
     }
 
@@ -549,7 +618,6 @@ public partial class ServerService
             try
             {
                 var retries = 0;
-                _logger.LogInformation("OutputFlushBackgroundTask started");
                 while (true)
                 {
                     try

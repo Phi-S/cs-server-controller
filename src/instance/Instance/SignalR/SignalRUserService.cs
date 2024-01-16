@@ -3,6 +3,7 @@ using Application.EventServiceFolder;
 using Application.EventServiceFolder.EventArgs;
 using Application.ServerServiceFolder;
 using Application.StatusServiceFolder;
+using Application.SystemLogFolder;
 using Application.UpdateOrInstallServiceFolder;
 using Microsoft.AspNetCore.SignalR;
 using Shared.ApiModels;
@@ -17,25 +18,31 @@ public class SignalRUserService
     private readonly UpdateOrInstallService _updateOrInstallService;
     private readonly EventService _eventService;
     private readonly StatusService _statusService;
+    private readonly SystemLogService _systemLogService;
 
     public SignalRUserService(
         IHubContext<SignalRHub> hubContext,
         ServerService serverService,
         UpdateOrInstallService updateOrInstallService,
         EventService eventService,
-        StatusService statusService)
+        StatusService statusService,
+        SystemLogService systemLogService)
     {
         _hubContext = hubContext;
         _serverService = serverService;
         _updateOrInstallService = updateOrInstallService;
         _eventService = eventService;
         _statusService = statusService;
+        _systemLogService = systemLogService;
 
+        _systemLogService.OnSystemLogEvent += SystemLogServiceOnOnSystemLogEvent;
         _serverService.ServerOutputEvent += OnServerServiceOnServerOutputEvent;
         _updateOrInstallService.UpdateOrInstallOutput += OnUpdateOrInstallServiceOnUpdateOrInstallOutput;
         _eventService.OnEvent += EventServiceOnOnEvent;
         _statusService.ServerStatusChanged += StatusServiceOnServerStatusChanged;
     }
+
+
 
     private readonly object _connectionsLock = new();
     private readonly ConcurrentBag<string> _connections = [];
@@ -48,9 +55,15 @@ public class SignalRUserService
         await _hubContext.Clients.All.SendServerStatus(status);
     }
     
+    private async void SystemLogServiceOnOnSystemLogEvent(object? sender, SystemLogEventArgs arg)
+    {
+        var systemLog = new SystemLogResponse(arg.Message, DateTime.UtcNow);
+        await _hubContext.Clients.All.SendSystemLog(systemLog);
+    }
+    
     private async void OnServerServiceOnServerOutputEvent(object? _, ServerOutputEventArg arg)
     {
-        var serverLog = new ServerLogResponse(arg.ServerStart.Id, arg.Output, DateTime.UtcNow);
+        var serverLog = new ServerLogResponse(arg.ServerStartDbModel.Id, arg.Output, DateTime.UtcNow);
         await _hubContext.Clients.All.SendServerLog(serverLog);
     }
 
@@ -62,7 +75,7 @@ public class SignalRUserService
 
     private async void EventServiceOnOnEvent(object? sender, CustomEventArg arg)
     {
-        var eventResponse = new EventLogResponse(arg.EventName.ToString(), arg.TriggeredAtUtc);
+        var eventResponse = new EventLogResponse(arg.EventName.ToString(), arg.TriggeredUtc);
         await _hubContext.Clients.All.SendEvent(eventResponse);
     }
 

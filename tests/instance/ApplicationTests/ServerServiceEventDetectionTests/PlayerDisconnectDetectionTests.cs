@@ -72,12 +72,12 @@ public class PlayerDisconnectDetectionTests
         serverService.NewOutputPlayerDisconnectDetection(
             null,
             new ServerOutputEventArg(
-                new ServerStart
+                new ServerStartDbModel
                 {
                     Id = Guid.NewGuid(),
                     StartParameters = "-startParameter",
-                    StartedAtUtc = DateTime.UtcNow,
-                    CreatedAtUtc = DateTime.UtcNow
+                    StartedUtc = DateTime.UtcNow,
+                    CreatedUtc = DateTime.UtcNow
                 },
                 rawMessage));
         var waitResult =

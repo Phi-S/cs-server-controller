@@ -20,12 +20,13 @@ public class InstanceDbContext : DbContext
         _options = options;
     }
 
-    public required DbSet<ServerStart> ServerStarts { get; set; }
-    public required DbSet<ServerLog> ServerLogs { get; set; }
-    public required DbSet<UpdateOrInstallStart> UpdateOrInstallStarts { get; set; }
-    public required DbSet<UpdateOrInstallLog> UpdateOrInstallLogs { get; set; }
-    public required DbSet<EventLog> EvenLogs { get; set; }
-    public required DbSet<ChatCommand> ChatCommands { get; set; }
+    public required DbSet<ServerStartDbModel> ServerStarts { get; set; }
+    public required DbSet<SystemLogDbModel> SystemLogs { get; set; }
+    public required DbSet<ServerLogDbModel> ServerLogs { get; set; }
+    public required DbSet<UpdateOrInstallStartDbModel> UpdateOrInstallStarts { get; set; }
+    public required DbSet<UpdateOrInstallLogModel> UpdateOrInstallLogs { get; set; }
+    public required DbSet<EventLogDbModel> EvenLogs { get; set; }
+    public required DbSet<ChatCommandDbModel> ChatCommands { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

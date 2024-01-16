@@ -3,7 +3,9 @@ using System.Formats.Tar;
 using System.IO.Compression;
 using Application.EventServiceFolder;
 using Application.Helpers;
+using Application.ServerHelperFolder;
 using Application.StatusServiceFolder;
+using Application.SystemLogFolder;
 using Domain;
 using ErrorOr;
 using Microsoft.Extensions.Logging;
@@ -19,19 +21,22 @@ public class ServerPluginsService
     private readonly HttpClient _httpClient;
     private readonly StatusService _statusService;
     private readonly EventService _eventService;
+    private readonly SystemLogService _systemLogService;
 
     public ServerPluginsService(
         ILogger<ServerPluginsService> logger,
         IOptions<AppOptions> options,
         HttpClient httpClient,
         StatusService statusService,
-        EventService eventService)
+        EventService eventService,
+        SystemLogService systemLogService)
     {
         _logger = logger;
         _options = options;
         _httpClient = httpClient;
         _statusService = statusService;
         _eventService = eventService;
+        _systemLogService = systemLogService;
     }
 
     private static readonly IImmutableList<string> AlwaysActivePlugins = ["EnableDisablePlugin"];
@@ -43,11 +48,26 @@ public class ServerPluginsService
 
     #region Install
 
-    public async Task<ErrorOr<Success>> InstallOrUpdate()
+    public async Task<ErrorOr<Success>> UpdateOrInstall()
     {
+        var updateOrInstall = ServerHelper.IsServerPluginBaseInstalled(_options.Value.SERVER_FOLDER);
+        var updateOrInstallString = updateOrInstall
+            ? "update"
+            : "install";
+
+        _logger.LogInformation("Starting server plugins {UpdateOrInstall}", updateOrInstallString);
+        _systemLogService.LogHeader();
+        _systemLogService.Log($"Starting server plugins {updateOrInstallString}");
+
         if (_statusService.ServerPluginsUpdatingOrInstalling)
         {
-            return Errors.Fail("Install or update is already in progress");
+            _logger.LogError(
+                "Failed to {UpdateOrInstall} server plugins. Another update or install process is already in progress",
+                updateOrInstallString);
+            _systemLogService.Log(
+                $"Failed to {updateOrInstallString} server plugins. Another update or install process is already in progress");
+            return Errors.Fail(
+                $"Failed to {updateOrInstallString} server plugins. Another update or install process is already in progress");
         }
 
         if (_statusService.ServerStarted ||
@@ -55,59 +75,76 @@ public class ServerPluginsService
             _statusService.ServerStopping ||
             _statusService.ServerUpdatingOrInstalling)
         {
-            return Errors.Fail("Server is busy");
+            _logger.LogError("Failed to {UpdateOrInstall} server plugins. Server is busy", updateOrInstallString);
+            _systemLogService.Log($"Failed to {updateOrInstallString} server plugins. Server is busy");
+            return Errors.Fail($"Failed to {updateOrInstallString} server plugins. Server is busy");
         }
 
         try
         {
             _eventService.OnPluginUpdateOrInstallStarted();
-            var installOrUpdateBase = await InstallOrUpdateBase();
+            var updatingOrInstallingString = updateOrInstall
+                ? "Updating"
+                : "Installing";
+
+            _logger.LogInformation("{UpdatingOrInstalling} plugin base", updatingOrInstallingString);
+            _systemLogService.Log($"{updatingOrInstallingString} plugin base");
+            var installOrUpdateBase = await UpdateOrInstallBase();
             if (installOrUpdateBase.IsError)
             {
                 _eventService.OnPluginUpdateOrInstallFailed();
+                _logger.LogError(
+                    "Server plugins {UpdateOrInstall} failed. Failed to {UpdateOrInstall-} plugin base. {Error}",
+                    updateOrInstallString, updateOrInstallString, installOrUpdateBase.ErrorMessage());
+                _systemLogService.Log(
+                    $"Server plugins {updateOrInstallString} failed. Failed to {updateOrInstallString} plugin base.");
                 return installOrUpdateBase.FirstError;
             }
 
-            var installOrUpdatePlugins = InstallOrUpdatePlugins();
+            _logger.LogInformation("{UpdatingOrInstalling} plugins", updatingOrInstallingString);
+            _systemLogService.Log($"{updatingOrInstallingString} plugins");
+            var installOrUpdatePlugins = UpdateOrInstallPlugins();
             if (installOrUpdatePlugins.IsError)
             {
                 _eventService.OnPluginUpdateOrInstallFailed();
+                _logger.LogError(
+                    "Server plugins {UpdateOrInstall} failed. Failed to {UpdateOrInstall-} plugins. {Error}",
+                    updateOrInstallString, updateOrInstallString, installOrUpdatePlugins.ErrorMessage());
+                _systemLogService.Log($"Server plugins {updateOrInstallString} failed. Failed to install plugins.");
                 return installOrUpdateBase.FirstError;
             }
 
             _eventService.OnPluginUpdateOrInstallDone();
+            _logger.LogInformation("Server plugins {UpdateOrInstall} completed", updateOrInstallString);
+            _systemLogService.Log($"Server plugins {updateOrInstallString} completed");
             return Result.Success;
         }
-        catch
+        catch (Exception e)
         {
             _eventService.OnPluginUpdateOrInstallFailed();
+            _logger.LogError(e, "Server plugins {UpdateOrInstall} failed with exception", updateOrInstallString);
+            _systemLogService.Log($"Server plugins {updateOrInstallString} failed for unknown reasons");
             throw;
         }
     }
 
     #region Base
 
-    public async Task<ErrorOr<Success>> InstallOrUpdateBase()
+    public async Task<ErrorOr<Success>> UpdateOrInstallBase()
     {
-        _logger.LogInformation("Installing Metamod and CounterStrikeSharp");
         var addonsFolder = Path.Combine(CsgoFolder, "addons");
         Directory.CreateDirectory(addonsFolder);
 
         var installMetamod = await InstallMetamod(_httpClient, CsgoFolder);
         if (installMetamod.IsError)
         {
-            _logger.LogError("Failed to install metamod. {Error}", installMetamod.ErrorMessage());
-            return installMetamod.FirstError;
+            return Errors.Fail($"Failed to install metamod. {installMetamod.ErrorMessage()}");
         }
-
-        _logger.LogInformation("Metamod installed");
 
         var installCounterStrikeSharp = await InstallCounterStrikeSharp(_httpClient, CsgoFolder);
         if (installCounterStrikeSharp.IsError)
         {
-            _logger.LogError("Failed to install CounterStrikeSharp. {Error}",
-                installCounterStrikeSharp.ErrorMessage());
-            return installCounterStrikeSharp.FirstError;
+            return Errors.Fail($"Failed to install CounterStrikeSharp. {installCounterStrikeSharp.ErrorMessage()}");
         }
 
         _logger.LogInformation("CounterStrikeSharp installed");
@@ -115,24 +152,18 @@ public class ServerPluginsService
         var addMetamodEntry = await AddMetamodEntryToGameinfoGi(CsgoFolder);
         if (addMetamodEntry.IsError)
         {
-            _logger.LogError("Failed to install CounterStrikeSharp. {Error}",
-                addMetamodEntry.ErrorMessage());
-            return addMetamodEntry.FirstError;
+            return Errors.Fail($"Failed to add metamod entry to gameinfo.gi. {addMetamodEntry.ErrorMessage()}");
         }
-
-        _logger.LogInformation("Added metamod entry to gameinfo.gi");
 
         var configsFolder = Path.Combine(addonsFolder, "counterstrikesharp", "configs");
         CreateCoreCfg(configsFolder);
-        _logger.LogInformation("Core.cfg created");
-        _logger.LogInformation("Metamod and CounterStrikeSharp installed");
         return Result.Success;
     }
 
     public static async Task<ErrorOr<Success>> InstallMetamod(HttpClient httpClient, string csgoFolder)
     {
         var downloadTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
-        const string metamodUrl = "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1278-linux.tar.gz";
+        const string metamodUrl = "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1280-linux.tar.gz";
         var downloadPath = Path.Combine(downloadTempFolder, "metamod.tar.gz");
         var downLoadResult = await Download(httpClient, metamodUrl, downloadPath);
         if (downLoadResult.IsError)
@@ -195,7 +226,7 @@ public class ServerPluginsService
     {
         var downloadTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
         const string counterStrikeSharpUrl =
-            "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v146/counterstrikesharp-with-runtime-build-146-linux-7a70078.zip";
+            "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v144/counterstrikesharp-with-runtime-build-144-linux-bac31b9.zip";
         var downloadPath = Path.Combine(downloadTempFolder, "counterstrikesharp-with-runtime.zip");
         var downLoadResult = await Download(httpClient, counterStrikeSharpUrl, Path.Combine(downloadPath));
         if (downLoadResult.IsError)
@@ -304,10 +335,9 @@ public class ServerPluginsService
 
     #region Plugins
 
-    public ErrorOr<Success> InstallOrUpdatePlugins()
+    public ErrorOr<Success> UpdateOrInstallPlugins()
     {
-        _logger.LogInformation("Installing plugins");
-        var pluginsSrc = Path.Combine(_options.Value.EXECUTING_FOLDER, "ServerPluginsFolder", "plugins");
+        var pluginsSrc = Path.Combine(_options.Value.EXECUTING_FOLDER, nameof(ServerPluginsFolder), "plugins");
         var pluginsDest = Path.Combine(CsgoFolder, "addons", "counterstrikesharp", "plugins");
         var disabledPluginsDest = Path.Combine(pluginsDest, "disabled");
 
@@ -413,7 +443,6 @@ public class ServerPluginsService
             _logger.LogInformation("New plugin installed: \"{NewPlugin}\"", plugin);
         }
 
-        _logger.LogInformation("All plugins installed or updated");
         return Result.Success;
 
         void CopyPlugin(string pluginName, string pluginSrcFolder, string pluginDestFolder)

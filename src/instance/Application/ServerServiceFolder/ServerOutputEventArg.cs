@@ -2,9 +2,9 @@
 
 namespace Application.ServerServiceFolder;
 
-public class ServerOutputEventArg(ServerStart serverStart, string output) : EventArgs
+public class ServerOutputEventArg(ServerStartDbModel serverStartDbModel, string output) : EventArgs
 {
-    public ServerStart ServerStart { get; } = serverStart;
+    public ServerStartDbModel ServerStartDbModel { get; } = serverStartDbModel;
 
     public string Output { get; } = string.IsNullOrWhiteSpace(output)
         ? throw new NullReferenceException(nameof(output))

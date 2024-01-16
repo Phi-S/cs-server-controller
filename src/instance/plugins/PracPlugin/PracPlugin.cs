@@ -104,7 +104,9 @@ public class PracPlugin : BasePlugin
     {
         Server.ExecuteCommand($"exec {ConfigName}");
     }
-
+    
+    #region Bots
+    
     [ConsoleCommand("bot", "Places standing bot on calling player position")]
     [CommandHelper(minArgs: 0, usage: "[CT/T] (optional)", whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void PlaceBotOnPlayerPosition(CCSPlayerController? player, CommandInfo command)
@@ -138,8 +140,6 @@ public class PracPlugin : BasePlugin
 
         _botService.AddBot(player);
     }
-
-    #region Bots
 
     [ConsoleCommand("cbot", "Places crouching bot on calling player position")]
     [CommandHelper(minArgs: 0, usage: "[CT/T] (optional)", whoCanExecute: CommandUsage.CLIENT_ONLY)]

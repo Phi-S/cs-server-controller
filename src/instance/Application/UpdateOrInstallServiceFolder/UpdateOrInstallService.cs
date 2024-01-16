@@ -2,6 +2,7 @@ using System.Text;
 using Application.EventServiceFolder;
 using Application.ServerPluginsFolder;
 using Application.StatusServiceFolder;
+using Application.SystemLogFolder;
 using CliWrap;
 using CliWrap.Buffered;
 using Domain;
@@ -25,6 +26,7 @@ public class UpdateOrInstallService
     private readonly EventService _eventService;
     private readonly HttpClient _httpClient;
     private readonly ServerPluginsService _serverPluginsService;
+    private readonly SystemLogService _systemLogService;
     private readonly IServiceProvider _services;
 
     public UpdateOrInstallService(ILogger<UpdateOrInstallService> logger,
@@ -33,6 +35,7 @@ public class UpdateOrInstallService
         EventService eventService,
         HttpClient httpClient,
         ServerPluginsService serverPluginsService,
+        SystemLogService systemLogService,
         IServiceProvider services
     )
     {
@@ -42,6 +45,7 @@ public class UpdateOrInstallService
         _eventService = eventService;
         _httpClient = httpClient;
         _serverPluginsService = serverPluginsService;
+        _systemLogService = systemLogService;
         _services = services;
     }
 
@@ -51,9 +55,9 @@ public class UpdateOrInstallService
     private volatile CancellationTokenSource _cancellationTokenSource = new();
     private readonly SemaphoreSlim _updateOrInstallLock = new(1);
     private readonly object _idLock = new();
-    private UpdateOrInstallStart? _updateOrInstallStart;
+    private UpdateOrInstallStartDbModel? _updateOrInstallStart;
 
-    private UpdateOrInstallStart? UpdateOrInstallStart
+    private UpdateOrInstallStartDbModel? UpdateOrInstallStart
     {
         get
         {
@@ -80,36 +84,17 @@ public class UpdateOrInstallService
         {
             await _updateOrInstallLock.WaitAsync();
             _logger.LogInformation("Starting updating or install the server");
-            if (_statusService.ServerUpdatingOrInstalling)
+            _systemLogService.LogHeader();
+            _systemLogService.Log("Starting server update");
+            var isServerReadyToUpdateOrInstall = IsServerReadyToUpdateOrInstall();
+            if (isServerReadyToUpdateOrInstall.IsError)
             {
-                _logger.LogWarning(
-                    "Failed to start updating or installing. Another update or install process is still running");
+                _logger.LogError("Failed to start server update or install. {Error}",
+                    isServerReadyToUpdateOrInstall.ErrorMessage());
+                _systemLogService.Log(
+                    $"Failed to start server update. Server is not ready to update.");
                 return Errors.Fail(
-                    "Failed to start updating or installing. Another update or install process is still running");
-            }
-
-            if (_statusService.ServerStarting)
-            {
-                _logger.LogWarning(
-                    "Failed to start updating or installing. Server is starting");
-                return Errors.Fail(
-                    "Failed to start updating or installing. Server is starting");
-            }
-
-            if (_statusService.ServerStopping)
-            {
-                _logger.LogWarning(
-                    "Failed to start updating or installing. Server is stopping");
-                return Errors.Fail(
-                    "Failed to start updating or installing. Server is stopping");
-            }
-
-            if (_statusService.ServerStarted)
-            {
-                _logger.LogWarning(
-                    "Failed to start updating or installing. Server is started");
-                return Errors.Fail(
-                    "Failed to start updating or installing. Server is started");
+                    $"Failed to start server update or install. {isServerReadyToUpdateOrInstall.ErrorMessage()}");
             }
 
             using var scope = _services.CreateScope();
@@ -131,6 +116,31 @@ public class UpdateOrInstallService
         }
     }
 
+    private ErrorOr<Success> IsServerReadyToUpdateOrInstall()
+    {
+        if (_statusService.ServerUpdatingOrInstalling)
+        {
+            return Errors.Fail("Another update or install process is still running");
+        }
+
+        if (_statusService.ServerStarting)
+        {
+            return InstanceErrors.ServerIsBusy(InstanceErrors.ServerBusyTypes.Starting);
+        }
+
+        if (_statusService.ServerStopping)
+        {
+            return InstanceErrors.ServerIsBusy(InstanceErrors.ServerBusyTypes.Stopping);
+        }
+
+        if (_statusService.ServerStarted)
+        {
+            return InstanceErrors.ServerIsBusy(InstanceErrors.ServerBusyTypes.Started);
+        }
+
+        return Result.Success;
+    }
+
     private async Task UpdateOrInstallServer(
         Guid id,
         AppOptions options,
@@ -141,6 +151,7 @@ public class UpdateOrInstallService
             _eventService.OnUpdateOrInstallStarted(id);
             _cancellationTokenSource = new CancellationTokenSource();
             _logger.LogInformation("UpdateOrInstallId: {UpdateOrInstallId}", id);
+            _systemLogService.Log($"Update id: {id}");
 
             #region install steamcmd
 
@@ -148,6 +159,7 @@ public class UpdateOrInstallService
             const string pythonScriptName = "steamcmd.py";
 
             _logger.LogInformation("Installing steamcmd");
+            _systemLogService.Log("Installing steamcmd");
             if (CheckIfSteamcmdIsInstalled(
                     options.STEAMCMD_FOLDER,
                     steamcmdShName,
@@ -157,10 +169,13 @@ public class UpdateOrInstallService
                     steamcmdShName,
                     pythonScriptName);
                 _logger.LogInformation("steamcmd installed successfully");
+                _systemLogService.Log("steamcmd installed successfully");
+                ;
             }
             else
             {
                 _logger.LogInformation("steamcmd already installed");
+                _systemLogService.Log("steamcmd already installed");
             }
 
             var pythonScriptSrcPath =
@@ -177,6 +192,7 @@ public class UpdateOrInstallService
             #region executing update or install process
 
             _logger.LogInformation("Starting the update or install process");
+            _systemLogService.Log("Starting update process");
             var executeUpdateOrInstallProcess = await ExecuteUpdateOrInstallProcess(
                 id,
                 options.STEAMCMD_FOLDER,
@@ -189,24 +205,32 @@ public class UpdateOrInstallService
             if (executeUpdateOrInstallProcess.IsError)
             {
                 _logger.LogError("Failed to update or install server. {Error}",
-                    executeUpdateOrInstallProcess.FirstError.Description);
+                    executeUpdateOrInstallProcess.ErrorMessage());
+                _systemLogService.Log(
+                    $"Failed to start update process. {executeUpdateOrInstallProcess.ErrorMessage()}");
                 _eventService.OnUpdateOrInstallFailed(id);
                 return;
             }
 
             #endregion
 
-            if (afterUpdateOrInstallSuccessfulAction != null)
-            {
-                await afterUpdateOrInstallSuccessfulAction.Invoke();
-            }
-
+            _systemLogService.Log("Server updated finished");
             _logger.LogInformation("Done updating or installing server");
             _eventService.OnUpdateOrInstallDone(id);
+
+            if (afterUpdateOrInstallSuccessfulAction != null)
+            {
+                _logger.LogInformation("Invoking after update or install action");
+                _systemLogService.Log("After update action started");
+                await afterUpdateOrInstallSuccessfulAction.Invoke();
+                _logger.LogInformation("After update or install action finished");
+                _systemLogService.Log("After update action finished");
+            }
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Failed to update or install server");
+            _systemLogService.Log("Failed to update server for unknown reasons");
             _eventService.OnUpdateOrInstallFailed(id);
         }
         finally

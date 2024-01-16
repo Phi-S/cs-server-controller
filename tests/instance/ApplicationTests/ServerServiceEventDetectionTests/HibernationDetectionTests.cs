@@ -33,12 +33,12 @@ public class HibernationDetectionTests
         CustomEventArg? arg = null;
         eventService.HibernationStarted += (_, customEventArg) => arg = customEventArg;
         serverService.NewOutputHibernationDetection(null, new ServerOutputEventArg(
-            new ServerStart
+            new ServerStartDbModel
             {
                 Id = Guid.NewGuid(),
                 StartParameters = "-startParameter",
-                StartedAtUtc = DateTime.UtcNow,
-                CreatedAtUtc = DateTime.UtcNow
+                StartedUtc = DateTime.UtcNow,
+                CreatedUtc = DateTime.UtcNow
             },
             "Server is hibernating"));
         var waitResult =
@@ -65,12 +65,12 @@ public class HibernationDetectionTests
         eventService.HibernationEnded += (_, customEventArg) => arg = customEventArg;
         serverService.NewOutputHibernationDetection(null,
             new ServerOutputEventArg(
-                new ServerStart
+                new ServerStartDbModel
                 {
                     Id = Guid.NewGuid(),
                     StartParameters = "-startParameter",
-                    StartedAtUtc = DateTime.UtcNow,
-                    CreatedAtUtc = DateTime.UtcNow
+                    StartedUtc = DateTime.UtcNow,
+                    CreatedUtc = DateTime.UtcNow
                 },
                 "Server waking up from hibernation"));
         var waitResult =

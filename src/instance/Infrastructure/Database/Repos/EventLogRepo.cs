@@ -13,23 +13,23 @@ public class EventLogRepo
     
     public async Task Add(string eventName, DateTime eventTriggeredAt, string? eventDataJson)
     {
-        await _dbContext.EvenLogs.AddAsync(new EventLog()
+        await _dbContext.EvenLogs.AddAsync(new EventLogDbModel()
         {
             Name = eventName,
-            TriggeredAtUtc = eventTriggeredAt,
+            TriggeredUtc = eventTriggeredAt,
             DataJson = eventDataJson,
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedUtc = DateTime.UtcNow
         });
     }
 
-    public Task<List<EventLog>> GetLogsSince(DateTime since)
+    public Task<List<EventLogDbModel>> GetLogsSince(DateTime since)
     {
-        return Task.FromResult(_dbContext.EvenLogs.Where(log => log.TriggeredAtUtc >= since).ToList());
+        return Task.FromResult(_dbContext.EvenLogs.Where(log => log.TriggeredUtc >= since).ToList());
     }
 
-    public Task<List<EventLog>> GetLogsSince(DateTime since, string eventName)
+    public Task<List<EventLogDbModel>> GetLogsSince(DateTime since, string eventName)
     {
-        return Task.FromResult(_dbContext.EvenLogs.Where(log => log.TriggeredAtUtc >= since && log.Name.Equals(eventName))
+        return Task.FromResult(_dbContext.EvenLogs.Where(log => log.TriggeredUtc >= since && log.Name.Equals(eventName))
             .ToList());
     }
 }

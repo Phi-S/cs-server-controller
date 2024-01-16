@@ -4,6 +4,7 @@ using Application.ServerPluginsFolder;
 using Application.ServerServiceFolder;
 using Application.StartParameterFolder;
 using Application.StatusServiceFolder;
+using Application.SystemLogFolder;
 using Application.UpdateOrInstallServiceFolder;
 using Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +26,7 @@ public static class ApplicationExtensionMethods
         serviceCollection.AddSingleton<ChatCommandsCache>();
         serviceCollection.AddSingleton<ServerPluginsService>();
         serviceCollection.AddSingleton<StartParameterService>();
+        serviceCollection.AddSingleton<SystemLogService>();
 
         serviceCollection.AddHostedService<ChatCommandService>();
 

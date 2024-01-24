@@ -1,65 +1,109 @@
 ﻿using BlazorBootstrap;
+using ErrorOr;
 using Microsoft.AspNetCore.Components;
 using Shared;
+using Shared.ApiModels;
 using Throw;
 using Web.BlazorExtensions;
 using Web.Services;
 
 namespace Web.Components.Pages;
 
-public class StartSettingsRazor : ComponentBase
+public class StartSettingsRazor : ComponentBase, IDisposable
 {
     [Inject] private ILogger<StartSettingsRazor> Logger { get; set; } = default!;
     [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
     [Inject] private InstanceApiService InstanceApiService { get; set; } = default!;
+    
+    protected StartParameters LocalStartParameters = new();
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         try
         {
-            var startParameterResult = await InstanceApiService.GetStartParameters();
-            if (startParameterResult.IsError)
+            if (firstRender)
             {
-                Logger.LogError("Failed to get start parameters. {Error}", startParameterResult.ErrorMessage());
-                throw new Exception($"Failed to get start parameters. {startParameterResult.ErrorMessage()}");
-            }
+                var startParameterResult = await InstanceApiService.GetStartParameters();
+                if (startParameterResult.IsError)
+                {
+                    throw new Exception($"Failed to get start parameters. {startParameterResult.ErrorMessage()}");
+                }
 
-            ServerInfoService.StartParameters = startParameterResult.Value;
-            await base.OnInitializedAsync();
+                ServerInfoService.StartParameters.Set(startParameterResult.Value);
+                ServerInfoService.ServerInfo.OnChange += ServerInfoOnOnChange;
+                ServerInfoService.StartParameters.OnChange += StartParametersOnOnChange;
+                LocalStartParameters = startParameterResult.Value;
+                await InvokeAsync(StateHasChanged);
+            }
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Exception in OnInitializedAsync");
+            Logger.LogError(e, "Exception in OnAfterRenderAsync");
             throw;
         }
+
+        await base.OnAfterRenderAsync(firstRender);
     }
 
-    protected async Task SaveStartParameters()
+    private async void StartParametersOnOnChange(StartParameters obj)
     {
         try
         {
-            var setStartParametersResult =
-                await InstanceApiService.SetStartParameters(ServerInfoService.StartParameters);
-            if (setStartParametersResult.IsError)
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Exception in StartParametersOnOnChange");
+        }
+    }
+
+    private async void ServerInfoOnOnChange(ServerInfoResponse obj)
+    {
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Exception in ServerInfoOnOnChange");
+        }
+    }
+
+    private async Task<ErrorOr<Success>> SaveStartParameters()
+    {
+        var setStartParametersResult = await InstanceApiService.SetStartParameters(LocalStartParameters);
+        if (setStartParametersResult.IsError)
+        {
+            return setStartParametersResult.FirstError;
+        }
+
+        var startParameterResult = await InstanceApiService.GetStartParameters();
+        if (startParameterResult.IsError)
+        {
+            return startParameterResult.FirstError;
+        }
+
+        ServerInfoService.StartParameters.Set(startParameterResult.Value);
+        LocalStartParameters = startParameterResult.Value;
+        await InvokeAsync(StateHasChanged);
+
+        return Result.Success;
+    }
+
+    protected async Task OnSaveStartParametersButton()
+    {
+        try
+        {
+            var saveStartParameters = await SaveStartParameters();
+            if (saveStartParameters.IsError)
             {
-                Logger.LogError("Failed to save start settings. {Error}", setStartParametersResult.ErrorMessage());
-                ToastService.Error($"Failed to save start settings. {setStartParametersResult.ErrorMessage()}");
+                Logger.LogError("Failed to save start settings. {Error}", saveStartParameters.ErrorMessage());
+                ToastService.Error($"Failed to save start settings. {saveStartParameters.ErrorMessage()}");
                 return;
             }
 
-            var startParameterResult = await InstanceApiService.GetStartParameters();
-            if (startParameterResult.IsError)
-            {
-                Logger.LogError("Failed to save start settings. {Error}", startParameterResult.ErrorMessage());
-                ToastService.Error($"Failed to save start settings. {setStartParametersResult.ErrorMessage()}");
-            }
-            else
-            {
-                ServerInfoService.StartParameters = startParameterResult.Value;
-                ToastService.Info("Start settings saved");
-                await InvokeAsync(StateHasChanged);
-            }
+            ToastService.Info("Start settings saved");
         }
         catch (Exception e)
         {
@@ -72,17 +116,32 @@ public class StartSettingsRazor : ComponentBase
     {
         try
         {
-            ServerInfoService.ServerInfo.ThrowIfNull();
+            var saveStartParameters = await SaveStartParameters();
+            if (saveStartParameters.IsError)
+            {
+                Logger.LogError("Failed to save start settings. {Error}", saveStartParameters.ErrorMessage());
+                ToastService.Error($"Failed to save start settings. {saveStartParameters.ErrorMessage()}");
+                return;
+            }
 
-            await SaveStartParameters();
+            ToastService.Info("Start settings saved");
 
-            if (ServerInfoService.ServerInfo.ServerStarted)
+            var serverInfo = ServerInfoService.ServerInfo.Get();
+            if (serverInfo is null)
+            {
+                Logger.LogError("Failed to restart server");
+                ToastService.Error("Failed to restart server");
+                return;
+            }
+
+            if (serverInfo.ServerStarted)
             {
                 var stopResult = await InstanceApiService.Stop();
                 if (stopResult.IsError)
                 {
                     ToastService.Error($"Failed to restart server. {stopResult.ErrorMessage()}");
                     Logger.LogError("Failed to restart server. {Error}", stopResult.ErrorMessage());
+                    return;
                 }
             }
 
@@ -91,6 +150,7 @@ public class StartSettingsRazor : ComponentBase
             {
                 ToastService.Error($"Failed to restart server. {startResult.ErrorMessage()}");
                 Logger.LogError("Failed to restart server. {Error}", startResult.ErrorMessage());
+                return;
             }
 
             Logger.LogInformation("Start settings saved and server restarted");
@@ -101,5 +161,11 @@ public class StartSettingsRazor : ComponentBase
             ToastService.Error("Failed to restart server");
             Logger.LogError(e, "Error in SaveStartParametersAndRestartServer");
         }
+    }
+
+    public void Dispose()
+    {
+        ServerInfoService.ServerInfo.OnChange -= ServerInfoOnOnChange;
+        ServerInfoService.StartParameters.OnChange -= StartParametersOnOnChange;
     }
 }

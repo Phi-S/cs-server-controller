@@ -42,8 +42,6 @@ public class SignalRUserService
         _statusService.ServerStatusChanged += StatusServiceOnServerStatusChanged;
     }
 
-
-
     private readonly object _connectionsLock = new();
     private readonly ConcurrentBag<string> _connections = [];
 
@@ -52,15 +50,15 @@ public class SignalRUserService
     private async void StatusServiceOnServerStatusChanged(object? sender, EventArgs e)
     {
         var status = _statusService.GetStatus();
-        await _hubContext.Clients.All.SendServerStatus(status);
+        await _hubContext.Clients.All.SendServerInfo(status);
     }
-    
+
     private async void SystemLogServiceOnOnSystemLogEvent(object? sender, SystemLogEventArgs arg)
     {
         var systemLog = new SystemLogResponse(arg.Message, DateTime.UtcNow);
         await _hubContext.Clients.All.SendSystemLog(systemLog);
     }
-    
+
     private async void OnServerServiceOnServerOutputEvent(object? _, ServerOutputEventArg arg)
     {
         var serverLog = new ServerLogResponse(arg.ServerStartDbModel.Id, arg.Output, DateTime.UtcNow);

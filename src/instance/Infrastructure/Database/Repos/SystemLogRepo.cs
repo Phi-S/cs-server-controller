@@ -1,5 +1,4 @@
 ﻿using Infrastructure.Database.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Database.Repos;
 

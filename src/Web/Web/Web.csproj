@@ -11,7 +11,7 @@
       <PackageReference Include="Blazor.Bootstrap" Version="1.10.5" />
       <PackageReference Include="ErrorOr" Version="1.9.0" />
       <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.1" />
-      <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
+      <PackageReference Include="Serilog.AspNetCore" Version="8.0.1" />
       <PackageReference Include="Serilog.Expressions" Version="4.0.0" />
       <PackageReference Include="Serilog.Sinks.Seq" Version="6.0.0" />
       <PackageReference Include="Throw" Version="1.4.0" />

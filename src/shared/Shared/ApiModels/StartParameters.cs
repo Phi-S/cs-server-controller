@@ -8,8 +8,15 @@ public class StartParameters
     {
     }
 
-    public StartParameters(string serverHostname, string? serverPassword, int maxPlayer, string startMap, int gameMode,
-        int gameType, string? loginToken, string? additionalStartParameters)
+    public StartParameters(
+        string serverHostname,
+        string? serverPassword,
+        int maxPlayer,
+        string startMap,
+        int gameMode,
+        int gameType,
+        string? loginToken,
+        string? additionalStartParameters)
     {
         ServerHostname = serverHostname;
         ServerPassword = serverPassword;
@@ -30,7 +37,7 @@ public class StartParameters
     public string? LoginToken { get; set; }
     public string? AdditionalStartParameters { get; set; }
 
-    public string GetAsCommandLineArgs(string port, string? backupLoginToken)
+    public string GetAsCommandLineArgs(string port)
     {
         var sb = new StringBuilder();
         const string seperatorChar = " ";
@@ -43,31 +50,12 @@ public class StartParameters
             "+log on",
             $"-maxplayers {MaxPlayer}",
             $"+map {StartMap}",
-            $"+game_type {GameType}",
-            $"+game_mode {GameMode}",
-            GetLoginToken(backupLoginToken),
+            //           $"+game_type {GameType}",
+            //           $"+game_mode {GameMode}",
+            string.IsNullOrWhiteSpace(LoginToken) ? "" : LoginToken,
             $"{AdditionalStartParameters}");
 
         return sb.ToString();
-    }
-
-    /// <summary>
-    /// Gets the command to set the login token.
-    /// If the initial LoginToken from the StartParameter Object is not set, the backup login token will be used.
-    /// If both the initial LoginToken and the backup login token are null, no token is set
-    /// </summary>
-    /// <param name="backupLoginToken"></param>
-    /// <returns></returns>
-    public string GetLoginToken(string? backupLoginToken)
-    {
-        if (string.IsNullOrWhiteSpace(LoginToken) == false)
-        {
-            return $"+sv_setsteamaccount {LoginToken}";
-        }
-
-        return string.IsNullOrWhiteSpace(backupLoginToken)
-            ? ""
-            : $"+sv_setsteamaccount {backupLoginToken}";
     }
 
     public override string ToString()

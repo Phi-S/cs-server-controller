@@ -1,8 +1,9 @@
 ﻿@page "/"
+@using Web.Misc.Maps
 @inherits HomeRazor
 @rendermode InteractiveServer
 
-@if (ServerInfoService.ServerInfo is null)
+@if (ServerInfo is null)
 {
     <LoadingComp/>
 }
@@ -10,10 +11,25 @@ else
 {
     <div class="align-items-center">
         <div class="input-group flex-nowrap justify-content-center">
-            <button class="input-group btn btn-outline-info" disabled="@(ServerInfoService.IsServerBusy || ServerInfoService.ServerInfo.ServerStarted)" title="Start server" @onclick="@Start">Start</button>
-            <button class="input-group btn btn-outline-info" disabled="@(ServerInfoService.IsServerBusy || ServerInfoService.ServerInfo.ServerStarted == false)" title="Stop server" @onclick="@Stop">Stop</button>
-            <button class="input-group btn btn-outline-info" disabled="@ServerInfoService.IsServerBusy" @onclick="Restart">Restart</button>
-            @if (ServerInfoService.ServerInfo.ServerUpdatingOrInstalling == false)
+            <button
+                class="input-group btn btn-outline-info"
+                disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted)"
+                @onclick="@Start">
+                Start
+            </button>
+            <button
+                class="input-group btn btn-outline-info"
+                disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted == false)"
+                @onclick="@Stop">
+                Stop
+            </button>
+            <button
+                class="input-group btn btn-outline-info"
+                disabled="@ServerInfoService.IsServerBusy"
+                @onclick="Restart">
+                Restart
+            </button>
+            @if (ServerInfo.ServerUpdatingOrInstalling == false)
             {
                 <button
                     class="input-group btn btn-outline-info"
@@ -40,7 +56,7 @@ else
 
             <button
                 class="input-group btn btn-outline-primary dropdown"
-                disabled="@(ServerInfoService.IsServerBusy || ServerInfoService.ServerInfo.ServerStarted == false)"
+                disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted == false)"
                 type="button"
                 id="changeMapDropdownMenuButton"
                 data-bs-toggle="dropdown"
@@ -49,10 +65,16 @@ else
             </button>
 
             <ul class="dropdown-menu" aria-labelledby="changeMapDropdownMenuButton">
-                @foreach (var map in ServerInfoService.Maps)
+                @foreach (var map in AvailableMaps.Get)
                 {
                     <li>
-                        <button class="dropdown-item" disabled="@(ServerInfoService.IsServerBusy || ServerInfoService.ServerInfo.ServerStarted == false)" type="button" @onclick="() => ChangeMap(map)">@map</button>
+                        <button
+                            class="dropdown-item"
+                            disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted == false)"
+                            type="button"
+                            @onclick="() => ChangeMap(map.MapName)">
+                            @map.FriendlyMapName
+                        </button>
                     </li>
                 }
             </ul>
@@ -60,15 +82,15 @@ else
         <div class="text-nowrap align-items-center d-flex justify-content-center pb-1 pt-1">
             <div class="input-group justify-content-center d-flex w-100">
                 <input class="input-group-text" style="width: 70%" placeholder="Server command" @bind="SendCommandBind" @bind:event="oninput" @onkeydown="OnEnter"/>
-                <button class="btn btn-outline-info" disabled="@(ServerInfoService.IsServerBusy || ServerInfoService.ServerInfo.ServerStarted == false)" style="width: 30%" @onclick="SendCommand">Send</button>
+                <button class="btn btn-outline-info" disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted == false)" style="width: 30%" @onclick="SendCommand">Send</button>
             </div>
         </div>
         <div class="overflow-scroll overflow-x-auto rounded-3 border border-2" style="height: 80vh">
             <table class="table table-sm table-striped">
-                @foreach (var e in GetLogs())
+                @foreach (var e in ServerInfoService.AllLogs.GetCopy().OrderByDescending(l => l.TimestampUtc).Take(2000))
                 {
                     <tr class="border-bottom row m-0 p-0 @(e.Highlight ? "text-info" : "")" style="width: 100%;">
-                        <td class="m-0 p-0 ps-1 pe-1" style="max-width: 12rem">@e.TimestampUtc:</td>
+                        <td class="m-0 p-0 ps-1 pe-1" style="max-width: 12rem">@e.TimestampUtc.AddHours(BrowserTimezoneOffset):</td>
                         <td class="m-0 p-0" style="width: calc(100% - 12rem); word-wrap: break-word">@e.Message</td>
                     </tr>
                 }

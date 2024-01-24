@@ -1,0 +1,30 @@
+﻿services:
+  instance:
+    container_name: "cs-controller-instance-dev"
+    build:
+      dockerfile: Dockerfile_instance
+    environment:
+      APP_OPTIONS:APP_NAME: "cs-controller-instance-dev"
+      APP_OPTIONS:IP_OR_DOMAIN: "localhost"
+      APP_OPTIONS:PORT: "27015"
+      APP_OPTIONS:STEAM_USERNAME: "${STEAM_USERNAME}"
+      APP_OPTIONS:STEAM_PASSWORD: "${STEAM_PASSWORD}"
+    volumes:
+      - cs-controller-instance:/data
+    ports:
+      - "27015:27015"
+      - "11111:11111"
+
+  web:
+
+    container_name: "cs-controller-web-dev"
+    build:
+      dockerfile: Dockerfile_web
+    environment:
+      APP_OPTIONS:INSTANCE_API_ENDPOINT: "http://instance:11111"
+    ports:
+      - "80:80"
+
+volumes:
+  cs-controller-instance:
+    external: false

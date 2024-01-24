@@ -32,7 +32,6 @@ public class StartParameterServiceTests
             PORT = "TestPort",
             STEAM_USERNAME = "TestSteamUsername",
             STEAM_PASSWORD = "TestSteamPassword",
-            LOGIN_TOKEN = "TestLoginToken",
             DATA_FOLDER = unitTestFolder
         });
 
@@ -66,7 +65,6 @@ public class StartParameterServiceTests
             PORT = "TestPort",
             STEAM_USERNAME = "TestSteamUsername",
             STEAM_PASSWORD = "TestSteamPassword",
-            LOGIN_TOKEN = "TestLoginToken",
             DATA_FOLDER = unitTestFolder
         });
 
@@ -121,7 +119,6 @@ public class StartParameterServiceTests
             PORT = "TestPort",
             STEAM_USERNAME = "TestSteamUsername",
             STEAM_PASSWORD = "TestSteamPassword",
-            LOGIN_TOKEN = "TestLoginToken",
             DATA_FOLDER = unitTestFolder
         });
 
@@ -169,7 +166,6 @@ public class StartParameterServiceTests
             PORT = "TestPort",
             STEAM_USERNAME = "TestSteamUsername",
             STEAM_PASSWORD = "TestSteamPassword",
-            LOGIN_TOKEN = "TestLoginToken",
             DATA_FOLDER = unitTestFolder
         });
 

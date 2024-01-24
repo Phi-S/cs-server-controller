@@ -3,7 +3,7 @@
     <deployment type="dockerfile">
       <settings>
         <option name="buildKitEnabled" value="true" />
-        <option name="containerName" value="cs-controller-instance" />
+        <option name="containerName" value="cs-controller-instance-dev" />
         <option name="envVars">
           <list>
             <DockerEnvVarImpl>
@@ -12,11 +12,7 @@
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:IP_OR_DOMAIN" />
-              <option name="value" value="localhost" />
-            </DockerEnvVarImpl>
-            <DockerEnvVarImpl>
-              <option name="name" value="APP_OPTIONS:LOGIN_TOKEN" />
-              <option name="value" value="DE0B3B69A157A367CA0284059565DD7F" />
+              <option name="value" value="10.10.10.10" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:PORT" />
@@ -49,7 +45,7 @@
             </DockerPortBindingImpl>
           </list>
         </option>
-        <option name="commandLineOptions" value="-v CsServerController:/data" />
+        <option name="commandLineOptions" value="-v cs-controller_cs-controller-instance:/data" />
         <option name="sourceFilePath" value="Dockerfile_instance" />
       </settings>
     </deployment>

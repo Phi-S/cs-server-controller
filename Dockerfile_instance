@@ -26,8 +26,8 @@ WORKDIR /app
 COPY --chown=appuser:root --chmod=770 --from=publish /publish .
 RUN mkdir /data \
     && chown -R appuser:root /data \
-    && chmod -R 770 /data 
-
+    && chmod -R 770 /data
+    
 USER appuser
 ENV HTTP_PORTS=11111
 CMD ["./Instance"]

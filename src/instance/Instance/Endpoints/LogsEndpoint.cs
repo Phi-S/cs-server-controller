@@ -1,4 +1,11 @@
-﻿using Application.CQRS.Query;
+﻿using Application.EventServiceFolder;
+using Application.EventServiceFolder.CQRS;
+using Application.ServerServiceFolder;
+using Application.ServerServiceFolder.CQRS;
+using Application.SystemLogFolder;
+using Application.SystemLogFolder.CQRS;
+using Application.UpdateOrInstallServiceFolder;
+using Application.UpdateOrInstallServiceFolder.CQRS;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

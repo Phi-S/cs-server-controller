@@ -6,38 +6,38 @@
 <div class="pt-4 p-1">
     <div>
         <label for="serverHostname" class="form-label">Server hostname</label>
-        <input type="text" class="form-control" id="serverHostname" @bind:event="oninput" @bind="@ServerInfoService.StartParameters.ServerHostname"/>
+        <input type="text" class="form-control" id="serverHostname" @bind:event="oninput" @bind="@LocalStartParameters.ServerHostname"/>
     </div>
     <div>
         <label for="serverPassword" class="form-label">Server password</label>
-        <input type="text" class="form-control" id="serverPassword" @bind:event="oninput" @bind="@ServerInfoService.StartParameters.ServerPassword"/>
+        <input type="text" class="form-control" id="serverPassword" @bind:event="oninput" @bind="@LocalStartParameters.ServerPassword"/>
     </div>
     <div>
         <label for="maxPlayers" class="form-label">Max players</label>
-        <input type="number" class="form-control" id="maxPlayers" @bind:event="oninput" @bind="@ServerInfoService.StartParameters.MaxPlayer"/>
+        <input type="number" class="form-control" id="maxPlayers" @bind:event="oninput" @bind="@LocalStartParameters.MaxPlayer"/>
     </div>
     <div>
         <label for="startMap" class="form-label">Start map</label>
-        <input type="text" class="form-control" id="startMap" @bind:event="oninput" @bind="@ServerInfoService.StartParameters.StartMap"/>
+        <input type="text" class="form-control" id="startMap" @bind:event="oninput" @bind="@LocalStartParameters.StartMap"/>
     </div>
     <div>
         <label for="gameMode" class="form-label">Game mode</label>
-        <input type="number" class="form-control" id="gameMode" @bind:event="oninput" @bind="@ServerInfoService.StartParameters.GameMode"/>
+        <input type="number" class="form-control" id="gameMode" @bind:event="oninput" @bind="@LocalStartParameters.GameMode"/>
     </div>
     <div>
         <label for="gameType" class="form-label">Game type</label>
-        <input type="number" class="form-control" id="gameType" @bind:event="oninput" @bind="@ServerInfoService.StartParameters.GameType"/>
+        <input type="number" class="form-control" id="gameType" @bind:event="oninput" @bind="@LocalStartParameters.GameType"/>
     </div>
     <div>
         <label for="loginToken" class="form-label">Login token</label>
-        <input type="text" class="form-control" id="loginToken" @bind:event="oninput" @bind="@ServerInfoService.StartParameters.LoginToken"/>
+        <input type="text" class="form-control" id="loginToken" @bind:event="oninput" @bind="@LocalStartParameters.LoginToken"/>
     </div>
     <div>
         <label for="additionalStartParameters" class="form-label">Additional start parameters</label>
-        <input type="text" class="form-control" id="additionalStartParameters" @bind:event="oninput" @bind="@ServerInfoService.StartParameters.AdditionalStartParameters"/>
+        <input type="text" class="form-control" id="additionalStartParameters" @bind:event="oninput" @bind="@LocalStartParameters.AdditionalStartParameters"/>
     </div>
     <div class="pt-2">
-        <button type="submit" class="btn btn-primary" @onclick="SaveStartParameters" title="A restart is required for the new start parameters to take effect">Save</button>
+        <button type="submit" class="btn btn-primary" @onclick="OnSaveStartParametersButton" title="A restart is required for the new start parameters to take effect">Save</button>
         <button type="submit" class="btn btn-primary" @onclick="SaveStartParametersAndRestartServer">Save and restart</button>
     </div>
 </div>

@@ -1,6 +1,18 @@
 ﻿using System.Web;
-using Application.CQRS.Commands;
-using Application.CQRS.Query;
+using Application.ChatCommandFolder;
+using Application.ChatCommandFolder.CQRS;
+using Application.EventServiceFolder;
+using Application.EventServiceFolder.CQRS;
+using Application.ServerPluginsFolder;
+using Application.ServerPluginsFolder.CQRS;
+using Application.ServerServiceFolder;
+using Application.ServerServiceFolder.CQRS;
+using Application.StartParameterFolder;
+using Application.StartParameterFolder.CQRS;
+using Application.StatusServiceFolder;
+using Application.StatusServiceFolder.CQRS;
+using Application.UpdateOrInstallServiceFolder;
+using Application.UpdateOrInstallServiceFolder.CQRS;
 using Instance.Response;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -89,15 +101,6 @@ public static class ServerEndpoint
             var commandUrlDecoded = HttpUtility.UrlDecode(command);
             var mediatorCommand = new SendCommandCommand(commandUrlDecoded);
             var result = await mediator.Send(mediatorCommand);
-            return result.IsError
-                ? Results.Extensions.InternalServerError(result.ErrorMessage())
-                : Results.Ok(result.Value);
-        });
-
-        group.MapGet("maps", async (IMediator mediator) =>
-        {
-            var command = new GetAllAvailableMapsQuery();
-            var result = await mediator.Send(command);
             return result.IsError
                 ? Results.Extensions.InternalServerError(result.ErrorMessage())
                 : Results.Ok(result.Value);

@@ -1,31 +1,194 @@
 ﻿using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PracPlugin.Models;
 
 namespace PracPlugin.Services;
 
-public class BotService
+public class BotService : BackgroundService
 {
     private readonly ILogger<BotService> _logger;
+    private readonly PracPlugin _plugin;
     private readonly TimerService _timerService;
 
-    public BotService(ILogger<BotService> logger, TimerService timerService)
+    public BotService(
+        ILogger<BotService> logger,
+        PracPlugin plugin,
+        TimerService timerService)
     {
         _logger = logger;
+        _plugin = plugin;
         _timerService = timerService;
     }
 
-    private readonly ThreadSaveDictionary<int, BotInfoModel> _spawnedBots = new();
 
-    public void RegisterEventHandler(BasePlugin plugin)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        plugin.RegisterEventHandler<EventPlayerSpawn>(OnPlayerSpawn);
-        _logger.LogInformation("BotManager event handler registered");
+        _plugin.RegisterEventHandler<EventPlayerSpawn>(OnPlayerSpawn);
+        _logger.LogInformation("BotService event handler registered");
+
+        _plugin.AddCommand("bot", "Places standing bot on calling player position", CommandHandlerBot);
+        _plugin.AddCommand("cbot", "Places crouching bot on calling player position", CommandHandlerCBot);
+        _plugin.AddCommand("boost", "Places bot beneath calling player position", CommandHandlerBoost);
+        _plugin.AddCommand("cboost", "Places crouching bot beneath calling player position", CommandHandlerCBoost);
+        _plugin.AddCommand("nobot", "Removes the closest bot from calling player", CommandHandlerNoBot);
+        _plugin.AddCommand("nobots", "Removes all bots spawn by the calling player", CommandHandlerNoBots);
+        _logger.LogInformation("BotService commands registered");
+
+        return Task.CompletedTask;
     }
 
-    #region AddBot
+    #region Commands
+
+    private void CommandHandlerNoBots(CCSPlayerController? player, CommandInfo commandinfo)
+    {
+        if (player is null)
+        {
+            return;
+        }
+
+        ClearBots(player);
+    }
+
+    private void CommandHandlerNoBot(CCSPlayerController? player, CommandInfo commandinfo)
+    {
+        if (player is null)
+        {
+            return;
+        }
+
+        NoBot(player);
+    }
+
+    private void CommandHandlerCBoost(CCSPlayerController? player, CommandInfo commandinfo)
+    {
+        if (player is null)
+        {
+            return;
+        }
+
+        Boost(player, true);
+    }
+
+    private void CommandHandlerBoost(CCSPlayerController? player, CommandInfo commandinfo)
+    {
+        if (player is null)
+        {
+            return;
+        }
+
+        Boost(player);
+    }
+
+    private void CommandHandlerCBot(CCSPlayerController? player, CommandInfo commandinfo)
+    {
+        if (player is null)
+        {
+            return;
+        }
+
+        if (commandinfo.ArgCount == 2)
+        {
+            var botTeam = commandinfo.ArgByIndex(1).ToLower();
+            if (string.IsNullOrEmpty(botTeam) == false)
+            {
+                if (botTeam.Equals("t"))
+                {
+                    AddBot(player, CsTeam.Terrorist, true);
+                }
+                else if (botTeam.Equals("ct"))
+                {
+                    AddBot(player, CsTeam.CounterTerrorist, true);
+                }
+                else
+                {
+                    _logger.LogWarning("Cant add bot to team {BotTeam}", botTeam);
+                }
+
+                return;
+            }
+        }
+
+        AddBot(player, CsTeam.None, true);
+    }
+
+    private void CommandHandlerBot(CCSPlayerController? player, CommandInfo commandinfo)
+    {
+        if (player is null)
+        {
+            return;
+        }
+
+        if (commandinfo.ArgCount == 2)
+        {
+            var botTeam = commandinfo.ArgByIndex(1).ToLower();
+            if (string.IsNullOrEmpty(botTeam) == false)
+            {
+                if (botTeam.Equals("t"))
+                {
+                    AddBot(player, CsTeam.Terrorist);
+                }
+                else if (botTeam.Equals("ct"))
+                {
+                    AddBot(player, CsTeam.CounterTerrorist);
+                }
+                else
+                {
+                    _logger.LogWarning("Cant add bot to team {BotTeam}", botTeam);
+                }
+
+                return;
+            }
+        }
+
+        AddBot(player);
+    }
+
+    #endregion
+
+    #region Events
+
+    private HookResult OnPlayerSpawn(EventPlayerSpawn @event, GameEventInfo info)
+    {
+        var player = @event.Userid;
+
+        // Respawing a bot where it was actually spawned during practice session
+        if (player.IsValid && player is { IsBot: true, UserId: not null })
+        {
+            if (_spawnedBots.Get(player.UserId.Value, out var spawnedBotInfo))
+            {
+                var playerPawn = player.PlayerPawn.Value;
+                if (playerPawn is null)
+                {
+                    throw new Exception("Player pawn not found");
+                }
+
+                var bot = playerPawn.Bot!;
+                var movementService =
+                    new CCSPlayer_MovementServices(playerPawn.MovementServices!.Handle);
+                playerPawn.Teleport(
+                    spawnedBotInfo.Position.Position,
+                    spawnedBotInfo.Position.Angle,
+                    new Vector(0, 0, 0));
+                if (spawnedBotInfo.Crouch)
+                {
+                    playerPawn.Flags |= (uint)PlayerFlags.FL_DUCKING;
+                    _timerService.AddTimer(0.1f, () => movementService.DuckAmount = 1);
+                    _timerService.AddTimer(0.2f, () => bot.IsCrouching = true);
+                }
+            }
+        }
+
+        return HookResult.Continue;
+    }
+
+    #endregion
+
+    private readonly ThreadSaveDictionary<int, BotInfoModel> _spawnedBots = new();
+
 
     /// <summary>
     /// Following code is heavily inspired by https://github.com/shobhit-pathak/MatchZy/blob/main/PracticeMode.cs
@@ -33,7 +196,7 @@ public class BotService
     /// <param name="player">player who added the bot</param>
     /// <param name="team">team(CT/T) the bot will join. If none. The bot will join the opposite team of the player</param>
     /// <param name="crouch">option if the added bot should crouch</param>
-    public void AddBot(CCSPlayerController player, CsTeam team = CsTeam.None, bool crouch = false)
+    private void AddBot(CCSPlayerController player, CsTeam team = CsTeam.None, bool crouch = false)
     {
         // If no valid team is given,
         // use the opposite of the player team to spawn the  (CT player == T bot / T player == CT bot)
@@ -165,15 +328,12 @@ public class BotService
         }
     }
 
-    #endregion
-
-
     /// <summary>
     /// Boost player onto bot
     /// </summary>
     /// <param name="player">player called the command</param>
     /// <param name="crouch">option if the added bot should crouch</param>
-    public void Boost(CCSPlayerController player, bool crouch = false)
+    private void Boost(CCSPlayerController player, bool crouch = false)
     {
         AddBot(player, CsTeam.None, crouch);
         _timerService.AddTimer(0.2f, () => ElevatePlayer(player));
@@ -183,7 +343,7 @@ public class BotService
     /// Remove closest bot to the player
     /// </summary>
     /// <param name="player">player called the command</param>
-    public void NoBot(CCSPlayerController player)
+    private void NoBot(CCSPlayerController player)
     {
         CCSPlayerController? closestBot = null;
         float distance = 0;
@@ -270,7 +430,7 @@ public class BotService
     /// Remove all bots of the player
     /// </summary>
     /// <param name="player"></param>
-    public void ClearBots(CCSPlayerController player)
+    private void ClearBots(CCSPlayerController player)
     {
         foreach (var spawnedBotInfo in _spawnedBots.Values)
         {
@@ -298,39 +458,5 @@ public class BotService
                 playerPawn.CBodyComponent!.SceneNode!.AbsOrigin.Z + 80.0f),
             playerPawn.EyeAngles,
             new Vector(0, 0, 0));
-    }
-
-    public HookResult OnPlayerSpawn(EventPlayerSpawn @event, GameEventInfo info)
-    {
-        var player = @event.Userid;
-
-        // Respawing a bot where it was actually spawned during practice session
-        if (player.IsValid && player is { IsBot: true, UserId: not null })
-        {
-            if (_spawnedBots.Get(player.UserId.Value, out var spawnedBotInfo))
-            {
-                var playerPawn = player.PlayerPawn.Value;
-                if (playerPawn is null)
-                {
-                    throw new Exception("Player pawn not found");
-                }
-
-                var bot = playerPawn.Bot!;
-                var movementService =
-                    new CCSPlayer_MovementServices(playerPawn.MovementServices!.Handle);
-                playerPawn.Teleport(
-                    spawnedBotInfo.Position.Position,
-                    spawnedBotInfo.Position.Angle,
-                    new Vector(0, 0, 0));
-                if (spawnedBotInfo.Crouch)
-                {
-                    playerPawn.Flags |= (uint)PlayerFlags.FL_DUCKING;
-                    _timerService.AddTimer(0.1f, () => movementService.DuckAmount = 1);
-                    _timerService.AddTimer(0.2f, () => bot.IsCrouching = true);
-                }
-            }
-        }
-
-        return HookResult.Continue;
     }
 }

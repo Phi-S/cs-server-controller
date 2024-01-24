@@ -10,5 +10,4 @@ public class AppOptions
 
     [Required] public string APP_NAME { get; init; } = "cs-instance-web";
     [Required] public required string INSTANCE_API_ENDPOINT { get; init; }
-    public string? SEQ_URL { get; init; }
 }

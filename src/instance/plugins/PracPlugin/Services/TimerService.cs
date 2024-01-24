@@ -6,18 +6,18 @@ namespace PracPlugin.Services;
 
 public class TimerService : IDisposable
 {
-    public readonly List<Timer> Timers = new();
+    private readonly List<Timer> _timers = new();
     
     public Timer AddTimer(float interval, Action callback, TimerFlags? flags = null)
     {
         var timer = new Timer(interval, callback, flags ?? 0);
-        Timers.Add(timer);
+        _timers.Add(timer);
         return timer;
     }
 
     public void Dispose()
     {
-        foreach (var timer in Timers)
+        foreach (var timer in _timers)
         {
             timer.Kill();
         }

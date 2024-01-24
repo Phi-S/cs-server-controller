@@ -1,33 +1,109 @@
 ﻿using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PracPlugin.Models;
 
 namespace PracPlugin.Services;
 
-public class SpawnsService
+public class SpawnsService : BackgroundService
 {
     private readonly ILogger<SpawnsService> _logger;
+    private readonly PracPlugin _plugin;
 
-    public SpawnsService(ILogger<SpawnsService> logger)
+    public SpawnsService(ILogger<SpawnsService> logger, PracPlugin plugin)
     {
         _logger = logger;
+        _plugin = plugin;
     }
 
-    private MapSpawnsModel? _mapSpawns;
-
-    public void RegisterEventHandler(BasePlugin plugin)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        plugin.RegisterEventHandler<EventMapTransition>(OnMapChange);
-        _logger.LogInformation("Registered SpawnsService event handlers");
+        _plugin.RegisterEventHandler<EventMapTransition>(OnMapChange);
+        _logger.LogInformation("SpawnsService events registered");
+
+        _plugin.AddCommand("spawn", "Teleport to specific spawn", CommandHandlerSpawn);
+        _logger.LogInformation("SpawnsService commands registered");
+
+        return Task.CompletedTask;
     }
+
+    #region Commands
+
+    private void CommandHandlerSpawn(CCSPlayerController? player, CommandInfo commandinfo)
+    {
+        if (player is null)
+        {
+            return;
+        }
+
+        // spawn 1
+        if (commandinfo.ArgCount == 2)
+        {
+            var spawnNumberString = commandinfo.ArgByIndex(1);
+            if (int.TryParse(spawnNumberString, out var spawnNumber) == false)
+            {
+                PrintError();
+                return;
+            }
+
+            TeleportToTeamSpawn(player, spawnNumber);
+        }
+        // spawn t/ct 1
+        else if (commandinfo.ArgCount == 3)
+        {
+            var teamString = commandinfo.ArgByIndex(1);
+            var spawnNumberString = commandinfo.ArgByIndex(2);
+            if (int.TryParse(spawnNumberString, out var spawnNumber) == false)
+            {
+                PrintError();
+                return;
+            }
+
+            if (teamString.ToLower().Trim().Equals("t"))
+            {
+                TeleportToTeamSpawn(player, spawnNumber, CsTeam.Terrorist);
+            }
+            else if (teamString.ToLower().Trim().Equals("ct"))
+            {
+                TeleportToTeamSpawn(player, spawnNumber, CsTeam.CounterTerrorist);
+            }
+            else
+            {
+                PrintError();
+                return;
+            }
+        }
+        else
+        {
+            PrintError();
+            return;
+        }
+
+        return;
+
+        void PrintError()
+        {
+            player.PrintToCenter(
+                "Failed to teleport to spawn. Valid command format ([.spawn] [t/ct](optional) [spawn number]). Example: \".spawn t 1\", \".spawn 1\"");
+        }
+    }
+
+    #endregion
+
+    #region Events
 
     private HookResult OnMapChange(EventMapTransition @event, GameEventInfo info)
     {
         _mapSpawns = GetSpawnForCurrentMap();
         return HookResult.Continue;
     }
+
+    #endregion
+
+    private MapSpawnsModel? _mapSpawns;
 
     private MapSpawnsModel GetSpawnForCurrentMap()
     {
@@ -80,7 +156,7 @@ public class SpawnsService
         return result;
     }
 
-    public void TeleportToTeamSpawn(CCSPlayerController player, int spawnNumber, CsTeam team = CsTeam.None)
+    private void TeleportToTeamSpawn(CCSPlayerController player, int spawnNumber, CsTeam team = CsTeam.None)
     {
         if (player.IsValid == false)
         {
@@ -97,7 +173,7 @@ public class SpawnsService
             : team;
 
         _mapSpawns ??= GetSpawnForCurrentMap();
-        
+
         List<PositionModel> spawns;
         if (targetTeam == CsTeam.Terrorist)
         {

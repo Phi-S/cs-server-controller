@@ -1,0 +1,28 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="docker-compose.yaml" type="docker-deploy" factoryName="docker-compose.yml" server-name="Docker">
+    <deployment type="docker-compose.yml">
+      <settings>
+        <option name="envFilePath" value="" />
+        <option name="envVars">
+          <list>
+            <DockerEnvVarImpl>
+              <option name="name" value="STEAM_PASSWORD" />
+              <option name="value" value="mLb9ZsYhQyZZ7irR3KzbKL" />
+            </DockerEnvVarImpl>
+            <DockerEnvVarImpl>
+              <option name="name" value="STEAM_USERNAME" />
+              <option name="value" value="oijnz" />
+            </DockerEnvVarImpl>
+          </list>
+        </option>
+        <option name="removeOrphansOnComposeDown" value="false" />
+        <option name="commandLineOptions" value="--build" />
+        <option name="sourceFilePath" value="docker-compose.yaml" />
+        <option name="upDetach" value="false" />
+        <option name="upForceRecreate" value="true" />
+      </settings>
+    </deployment>
+    <EXTENSION ID="com.jetbrains.rider.docker.debug" isFastModeEnabled="true" isSslEnabled="false" />
+    <method v="2" />
+  </configuration>
+</component>

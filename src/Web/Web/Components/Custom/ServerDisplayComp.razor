@@ -1,7 +1,8 @@
-﻿@inherits ServerDisplayCompRazor
+﻿@using Web.Misc.Maps
+@inherits ServerDisplayCompRazor
 @rendermode InteractiveServer
 
-@if (ServerInfoService.ServerInfo == null)
+@if (ServerInfo is null)
 {
     <LoadingComp/>
 }
@@ -16,20 +17,19 @@ else
                     </div>
 
                     <div class="col-2 text-center m-0 p-0">
-                        @if (ServerInfoService.ServerInfo.ServerStarted)
+                        @if (ServerInfo.ServerStarted)
                         {
                             <span>
-
-                                @ServerInfoService.ServerInfo.CurrentPlayerCount/@(ServerInfoService.ServerInfo.MaxPlayerCount)
+                                @ServerInfo.CurrentPlayerCount/@(ServerInfo.MaxPlayerCount)
                             </span>
                         }
                     </div>
 
                     <div class="col-3 text-center m-0 p-0 text-truncate">
-                        @if (ServerInfoService.ServerInfo.ServerStarted)
+                        @if (ServerInfo.ServerStarted)
                         {
                             <span>
-                                @ServerInfoService.ServerInfo.CurrentMap
+                                @ServerInfo.CurrentMap
                             </span>
                         }
                     </div>
@@ -49,15 +49,20 @@ else
                     aria-expanded="false">
                 </button>
                 <ul class="dropdown-menu position-absolute z-3" aria-labelledby="dropdownMenuButton1">
-                    @foreach (var map in ServerInfoService.Maps)
+                    @foreach (var map in AvailableMaps.Get)
                     {
                         <li>
-                            <button class="dropdown-item" type="button" @onclick="() => ChangeMap(map)">@map</button>
+                            <button
+                                class="dropdown-item"
+                                type="button"
+                                @onclick="() => ChangeMap(map.MapName)">
+                                @map.FriendlyMapName
+                            </button>
                         </li>
                     }
                 </ul>
 
-                @if (ServerInfoService.ServerInfo.ServerStarted)
+                @if (ServerInfo.ServerStarted)
                 {
                     <button
                         class="col-4 p-0 border-0 bg-transparent bi-stop text-dark"

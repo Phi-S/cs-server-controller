@@ -1,9 +1,12 @@
 ﻿using BlazorBootstrap;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 using Shared;
+using Shared.ApiModels;
 using Throw;
 using Web.BlazorExtensions;
+using Web.Helper;
 using Web.Services;
 
 namespace Web.Components.Pages;
@@ -11,22 +14,37 @@ namespace Web.Components.Pages;
 public class HomeRazor : ComponentBase, IDisposable
 {
     [Inject] private ILogger<HomeRazor> Logger { get; set; } = default!;
+    [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
     [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] protected PreloadService PreloadService { get; set; } = default!;
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
     [Inject] private InstanceApiService InstanceApiService { get; set; } = default!;
 
+    protected ServerInfoResponse? ServerInfo => ServerInfoService.ServerInfo.Get();
+
+    protected int BrowserTimezoneOffset;
     private static Guid? _currentUpdateOrInstallId;
     protected string SendCommandBind = "";
-    private readonly object _logsLock = new();
 
     protected override void OnInitialized()
     {
-        ServerInfoService.OnServerInfoChangedEvent += OnServerInfoOrLogsChangedEvent;
-        ServerInfoService.OnAllLogsChangedEvent += OnServerInfoOrLogsChangedEvent;
+        ServerInfoService.ServerInfo.OnChange += ServerInfoOnOnChange;
+        ServerInfoService.AllLogs.OnChange += OnServerInfoOrLogsChangedEvent;
+        base.OnInitialized();
     }
 
-    private async void OnServerInfoOrLogsChangedEvent(object? o, EventArgs eventArgs)
+    private void ServerInfoOnOnChange(ServerInfoResponse obj)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        BrowserTimezoneOffset = await JsRuntime.GetBrowserTimezoneOffset();
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async void OnServerInfoOrLogsChangedEvent()
     {
         try
         {
@@ -35,15 +53,6 @@ public class HomeRazor : ComponentBase, IDisposable
         catch (Exception e)
         {
             Logger.LogError(e, "Error in OnServerInfoOrLogsChangedEvent Method");
-        }
-    }
-
-    protected List<LogEntry> GetLogs()
-    {
-        lock (_logsLock)
-        {
-            var allLogs = ServerInfoService.AllLogs.ToArray();
-            return allLogs.OrderByDescending(l => l.TimestampUtc).Take(2000).ToList();
         }
     }
 
@@ -265,7 +274,7 @@ public class HomeRazor : ComponentBase, IDisposable
 
     public void Dispose()
     {
-        ServerInfoService.OnServerInfoChangedEvent -= OnServerInfoOrLogsChangedEvent;
-        ServerInfoService.OnAllLogsChangedEvent -= OnServerInfoOrLogsChangedEvent;
+        ServerInfoService.ServerInfo.OnChange -= ServerInfoOnOnChange;
+        ServerInfoService.AllLogs.OnChange -= OnServerInfoOrLogsChangedEvent;
     }
 }

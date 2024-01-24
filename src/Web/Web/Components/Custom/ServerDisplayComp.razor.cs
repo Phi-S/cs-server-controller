@@ -3,6 +3,7 @@ using BlazorBootstrap;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Shared;
+using Shared.ApiModels;
 using Throw;
 using Web.BlazorExtensions;
 using Web.Helper;
@@ -15,30 +16,25 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
     [Inject] private ILogger<ServerDisplayCompRazor> Logger { get; set; } = default!;
     [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] protected IJSRuntime JsRuntime { get; set; } = default!;
+    [Inject] protected NavigationManager NavigationManager { get; set; } = default!;
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
     [Inject] protected InstanceApiService InstanceApiService { get; set; } = default!;
-    
-    protected string Hostname => ServerInfoService.ServerInfo?.Hostname ?? ServerInfoService.StartParameters.ServerHostname;
 
-    protected override async Task OnInitializedAsync()
+    protected ServerInfoResponse? ServerInfo => ServerInfoService.ServerInfo.Get();
+    protected StartParameters? StartParameters => ServerInfoService.StartParameters.Get();
+    protected string Hostname => (ServerInfo?.Hostname ?? StartParameters?.ServerHostname) ?? string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         try
         {
-            var getStartParametersResult = await InstanceApiService.GetStartParameters();
-            if (getStartParametersResult.IsError)
+            if (firstRender)
             {
-                Logger.LogError("Failed to get start parameters. Using default start parameter. {Error}",
-                    getStartParametersResult.ErrorMessage());
-            }
-            else
-            {
-                ServerInfoService.StartParameters = getStartParametersResult.Value;
+                ServerInfoService.ServerInfo.OnChange += ServerInfoOnOnChange;
+                ServerInfoService.StartParameters.OnChange += StartParametersOnOnChange;
             }
 
-            ServerInfoService.OnServerInfoChangedEvent += StateHasChangedOnEvent;
-            ServerInfoService.OnStartParametersChangedEvent += StateHasChangedOnEvent;
-
-            await base.OnInitializedAsync();
+            await base.OnAfterRenderAsync(firstRender);
         }
         catch (Exception e)
         {
@@ -46,7 +42,7 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
         }
     }
 
-    private async void StateHasChangedOnEvent(object? sender, EventArgs arg)
+    private async void StartParametersOnOnChange(StartParameters obj)
     {
         try
         {
@@ -54,7 +50,19 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Exception in StateHasChangedOnEvent method");
+            Logger.LogError(e, "Exception in StartParametersOnOnChange");
+        }
+    }
+
+    private async void ServerInfoOnOnChange(ServerInfoResponse response)
+    {
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Exception in ServerInfoOnOnChange");
         }
     }
 
@@ -62,23 +70,22 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
     {
         try
         {
-
-            ServerInfoService.ServerInfo.ThrowIfNull();
-
-            var dnsResolve = await Dns.GetHostEntryAsync(ServerInfoService.ServerInfo.IpOrDomain);
+            ServerInfo.ThrowIfNull();
+            var dnsResolve = await Dns.GetHostEntryAsync(ServerInfo.IpOrDomain);
             var serverIp = dnsResolve.AddressList.First().MapToIPv4().ToString();
-            if (ServerInfoService.ServerInfo.IpOrDomain.Equals("localhost"))
+            if (ServerInfo.IpOrDomain.Equals("localhost"))
             {
                 serverIp = "127.0.0.1";
             }
 
-            var connectUrl = $"steam://connect/{serverIp}:{ServerInfoService.ServerInfo.Port}";
-            if (string.IsNullOrWhiteSpace(ServerInfoService.ServerInfo.ServerPassword) == false)
+            var connectUrl = $"steam://connect/{serverIp}:{ServerInfo.Port}";
+            if (string.IsNullOrWhiteSpace(ServerInfo.ServerPassword) == false)
             {
-                connectUrl += $"/{ServerInfoService.ServerInfo.ServerPassword}";
+                connectUrl += $"/{ServerInfo.ServerPassword}";
             }
 
-            await JsRuntime.InvokeVoidAsync("open", connectUrl, "");
+            NavigationManager.NavigateTo(connectUrl, true);
+            //await JsRuntime.InvokeVoidAsync("open", connectUrl);
         }
         catch (Exception e)
         {
@@ -90,9 +97,9 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
     {
         try
         {
-            ServerInfoService.ServerInfo.ThrowIfNull();
-            var passwordString = ServerInfoService.ServerInfo.ServerPassword is null ? "" : $"; password {ServerInfoService.ServerInfo.ServerPassword}";
-            var connectionString = $"connect {ServerInfoService.ServerInfo.IpOrDomain}:{ServerInfoService.ServerInfo.Port}{passwordString}";
+            ServerInfo.ThrowIfNull();
+            var passwordString = ServerInfo.ServerPassword is null ? "" : $"; password {ServerInfo.ServerPassword}";
+            var connectionString = $"connect {ServerInfo.IpOrDomain}:{ServerInfo.Port}{passwordString}";
             Logger.LogInformation("Coping connection \"{ConnectionString}\" string to clipboard", connectionString);
             await JsRuntimeHelper.CopyToClipboard(JsRuntime, connectionString);
         }
@@ -107,7 +114,7 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
     {
         try
         {
-            return ServerInfoService.ServerInfo is { ServerStarted: true }
+            return ServerInfo is { ServerStarted: true }
                 ? "bg-success"
                 : "bg-warning";
         }
@@ -155,6 +162,7 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
             {
                 Logger.LogInformation("Server started");
                 ToastService.Info("Server started");
+                await InvokeAsync(StateHasChanged);
             }
         }
         catch (Exception e)
@@ -180,7 +188,7 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
 
     public void Dispose()
     {
-        ServerInfoService.OnServerInfoChangedEvent -= StateHasChangedOnEvent;
-        ServerInfoService.OnStartParametersChangedEvent -= StateHasChangedOnEvent;
+        ServerInfoService.ServerInfo.OnChange -= ServerInfoOnOnChange;
+        ServerInfoService.StartParameters.OnChange += StartParametersOnOnChange;
     }
 }

@@ -42,8 +42,10 @@ public class InstanceApiService
             }
 
             var errorResponseJson = await response.Content.ReadAsStringAsync();
-            return Errors.Fail(
-                $"Request failed with status code {response.StatusCode} and ErrorResponse: {errorResponseJson}");
+            var errorResponseModel = JsonSerializer.Deserialize<ErrorResponse>(errorResponseJson);
+            return Errors.Fail(errorResponseModel is null
+                ? "Request failed"
+                : $"{errorResponseModel.Message}. TraceId: {errorResponseModel.TraceId}");
         }
         catch (Exception e)
         {
@@ -59,11 +61,6 @@ public class InstanceApiService
             if (response.IsSuccessStatusCode)
             {
                 var resultJson = await response.Content.ReadAsStringAsync();
-                if (string.IsNullOrWhiteSpace(resultJson))
-                {
-                    return Errors.Fail($"Request failed. Failed to read content.");
-                }
-
                 return resultJson;
             }
 
@@ -230,13 +227,6 @@ public class InstanceApiService
         return result;
     }
 
-    public async Task<ErrorOr<List<string>>> Maps()
-    {
-        var requestMessage = GetRequestMessage("/server/maps");
-        var result = await Send<List<string>>(requestMessage);
-        return result;
-    }
-
     public async Task<ErrorOr<List<ChatCommandResponse>>> ChatCommands()
     {
         var requestMessage = GetRequestMessage("/server/chat-command/all");
@@ -290,7 +280,7 @@ public class InstanceApiService
         var result = await Send<List<SystemLogResponse>>(requestMessage);
         return result;
     }
-    
+
     public async Task<ErrorOr<List<ServerLogResponse>>> LogsServer(DateTimeOffset logsSince)
     {
         var requestMessage =

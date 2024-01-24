@@ -6,21 +6,21 @@ namespace Shared.SignalR;
 
 public static class SignalRMethods
 {
-    public const string ServerStatusMethod = "server-status";
+    public const string ServerInfoMethod = "server-info";
     public const string EventMethod = "event";
     public const string SystemLogMethod = "system-log";
     public const string ServerLogMethod = "server-log";
     public const string UpdateOrInstallLogMethod = "update-or-install-log";
 
-    public static Task SendServerStatus(this IClientProxy clientProxy, ServerInfoResponse serverInfoResponse,
+    public static Task SendServerInfo(this IClientProxy clientProxy, ServerInfoResponse serverInfoResponse,
         CancellationToken cancellationToken = default)
     {
-        return clientProxy.SendAsync(ServerStatusMethod, serverInfoResponse, cancellationToken: cancellationToken);
+        return clientProxy.SendAsync(ServerInfoMethod, serverInfoResponse, cancellationToken: cancellationToken);
     }
 
-    public static IDisposable OnServerStatus(this HubConnection hubConnection, Func<ServerInfoResponse, Task> handler)
+    public static IDisposable OnServerInfo(this HubConnection hubConnection, Func<ServerInfoResponse, Task> handler)
     {
-        return hubConnection.On(ServerStatusMethod,
+        return hubConnection.On(ServerInfoMethod,
             new[] { typeof(ServerInfoResponse) },
             args => handler((ServerInfoResponse)args[0]!));
     }

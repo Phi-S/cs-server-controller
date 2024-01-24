@@ -1,6 +1,5 @@
 using System.Text;
 using Application.EventServiceFolder;
-using Application.ServerPluginsFolder;
 using Application.StatusServiceFolder;
 using Application.SystemLogFolder;
 using CliWrap;
@@ -25,7 +24,6 @@ public class UpdateOrInstallService
     private readonly StatusService _statusService;
     private readonly EventService _eventService;
     private readonly HttpClient _httpClient;
-    private readonly ServerPluginsService _serverPluginsService;
     private readonly SystemLogService _systemLogService;
     private readonly IServiceProvider _services;
 
@@ -34,7 +32,6 @@ public class UpdateOrInstallService
         StatusService statusService,
         EventService eventService,
         HttpClient httpClient,
-        ServerPluginsService serverPluginsService,
         SystemLogService systemLogService,
         IServiceProvider services
     )
@@ -44,7 +41,6 @@ public class UpdateOrInstallService
         _statusService = statusService;
         _eventService = eventService;
         _httpClient = httpClient;
-        _serverPluginsService = serverPluginsService;
         _systemLogService = systemLogService;
         _services = services;
     }
@@ -83,7 +79,7 @@ public class UpdateOrInstallService
         try
         {
             await _updateOrInstallLock.WaitAsync();
-            _logger.LogInformation("Starting updating or install the server");
+            _logger.LogInformation("Starting server update or install");
             _systemLogService.LogHeader();
             _systemLogService.Log("Starting server update");
             var isServerReadyToUpdateOrInstall = IsServerReadyToUpdateOrInstall();
@@ -102,7 +98,7 @@ public class UpdateOrInstallService
             var updateOrInstallStart = await unitOfWork.UpdateOrInstallRepo.AddStart(DateTime.UtcNow);
             UpdateOrInstallStart = updateOrInstallStart;
 
-            _ = UpdateOrInstallServer(
+            _ = UpdateOrInstallServerTask(
                 updateOrInstallStart.Id,
                 _options.Value,
                 afterUpdateOrInstallSuccessfulAction);
@@ -138,10 +134,15 @@ public class UpdateOrInstallService
             return InstanceErrors.ServerIsBusy(InstanceErrors.ServerBusyTypes.Started);
         }
 
+        if (_statusService.ServerPluginsUpdatingOrInstalling)
+        {
+            return InstanceErrors.ServerIsBusy(InstanceErrors.ServerBusyTypes.PluginsUpdatingOrInstalling);
+        }
+
         return Result.Success;
     }
 
-    private async Task UpdateOrInstallServer(
+    private async Task UpdateOrInstallServerTask(
         Guid id,
         AppOptions options,
         Func<Task>? afterUpdateOrInstallSuccessfulAction)
@@ -160,32 +161,29 @@ public class UpdateOrInstallService
 
             _logger.LogInformation("Installing steamcmd");
             _systemLogService.Log("Installing steamcmd");
-            if (CheckIfSteamcmdIsInstalled(
-                    options.STEAMCMD_FOLDER,
-                    steamcmdShName,
-                    pythonScriptName) == false)
+            if (CheckIfSteamcmdIsInstalled(options.STEAMCMD_FOLDER) == false)
             {
-                await InstallSteamcmd(options.STEAMCMD_FOLDER,
-                    steamcmdShName,
-                    pythonScriptName);
-                _logger.LogInformation("steamcmd installed successfully");
-                _systemLogService.Log("steamcmd installed successfully");
-                ;
+                var pythonScriptSrcPath =
+                    Path.Combine(options.EXECUTING_FOLDER, "UpdateOrInstallServiceFolder", pythonScriptName);
+                var installSteamcmd = await InstallSteamcmd(options.STEAMCMD_FOLDER, pythonScriptSrcPath);
+                if (installSteamcmd.IsError)
+                {
+                    _logger.LogInformation("Failed to install steamcmd. {Error}", installSteamcmd.ErrorMessage());
+                    _systemLogService.Log($"Failed to install steamcmd. {installSteamcmd.ErrorMessage()}");
+                    _eventService.OnUpdateOrInstallFailed(id);
+                    return;
+                }
+                else
+                {
+                    _logger.LogInformation("steamcmd installed successfully");
+                    _systemLogService.Log("steamcmd installed successfully");
+                }
             }
             else
             {
                 _logger.LogInformation("steamcmd already installed");
                 _systemLogService.Log("steamcmd already installed");
             }
-
-            var pythonScriptSrcPath =
-                Path.Combine(options.EXECUTING_FOLDER, "UpdateOrInstallServiceFolder", pythonScriptName);
-            var pythonScriptDestPath = Path.Combine(options.STEAMCMD_FOLDER, pythonScriptName);
-
-            _logger.LogInformation("Linking python script {SrcFile} > {DestFile}",
-                pythonScriptSrcPath, pythonScriptDestPath);
-            File.Delete(pythonScriptDestPath);
-            File.CreateSymbolicLink(pythonScriptDestPath, pythonScriptSrcPath);
 
             #endregion
 
@@ -229,9 +227,18 @@ public class UpdateOrInstallService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to update or install server");
-            _systemLogService.Log("Failed to update server for unknown reasons");
-            _eventService.OnUpdateOrInstallFailed(id);
+            if (e is OperationCanceledException)
+            {
+                _logger.LogInformation("Server update or install cancelled");
+                _systemLogService.Log("Server update cancelled");
+                _eventService.OnUpdateOrInstallCancelled(id);
+            }
+            else
+            {
+                _logger.LogError(e, "Failed to update or install server");
+                _systemLogService.Log("Failed to update server for unknown reasons");
+                _eventService.OnUpdateOrInstallFailed(id);
+            }
         }
         finally
         {
@@ -246,12 +253,12 @@ public class UpdateOrInstallService
             _logger.LogWarning(
                 "Failed to cancel update or install. Ids dont match. IdToCancel: {CancelId} CurrentId: {CurrentId}",
                 id, UpdateOrInstallStart?.Id);
+            _systemLogService.Log("Failed to cancel server update. Update Ids do not match");
             return Errors.Fail(
                 $"Failed to cancel update or install. Ids dont match. IdToCancel: {id} CurrentId: {UpdateOrInstallStart?.Id}");
         }
 
         _cancellationTokenSource.Cancel();
-        _eventService.OnUpdateOrInstallCancelled(id);
         return Result.Success;
     }
 
@@ -326,13 +333,10 @@ public class UpdateOrInstallService
 
     #region streamcmd
 
-    private bool CheckIfSteamcmdIsInstalled(
-        string steamCmdFolder,
-        string steamcmdShName,
-        string steamcmdPythonScriptName)
+    private bool CheckIfSteamcmdIsInstalled(string steamCmdFolder)
     {
-        var steamcmdShPath = Path.Combine(steamCmdFolder, steamcmdShName);
-        var steamcmdPythonScriptPath = Path.Combine(steamCmdFolder, steamcmdPythonScriptName);
+        var steamcmdShPath = Path.Combine(steamCmdFolder, "steamcmd.sh");
+        var steamcmdPythonScriptPath = Path.Combine(steamCmdFolder, "steamcmd.py");
 
         return Directory.Exists(steamCmdFolder)
                && File.Exists(steamcmdShPath)
@@ -364,37 +368,58 @@ public class UpdateOrInstallService
     /// Will install or reinstall steamcmd. If steamcmd already exists, it will be deleted and reinstalled.
     /// </summary>
     /// <exception cref="Exception"></exception>
-    private async Task InstallSteamcmd(
+    private async Task<ErrorOr<Success>> InstallSteamcmd(
         string steamcmdFolder,
-        string steamcmdShFileName,
-        string steamcmdPythonScriptName)
+        string pythonScriptSrcPath)
     {
+        var pythonScriptSrc = new FileInfo(pythonScriptSrcPath);
+        if (pythonScriptSrc.Exists == false)
+        {
+            return Errors.Fail("Python script source file not found");
+        }
+
         if (Directory.Exists(steamcmdFolder))
         {
             Directory.Delete(steamcmdFolder, true);
         }
 
         Directory.CreateDirectory(steamcmdFolder);
-
         await DownloadAndUnpackSteamcmd(steamcmdFolder);
-        _logger.LogInformation("Steamcmd downloaded and unpacked");
 
-        if (CheckIfSteamcmdIsInstalled(steamcmdFolder, steamcmdShFileName, steamcmdPythonScriptName) == false)
+        var pythonScriptDestPath = Path.Combine(steamcmdFolder, pythonScriptSrc.Name);
+        File.Delete(pythonScriptDestPath);
+        pythonScriptSrc.CopyTo(pythonScriptDestPath);
+
+        if (CheckIfSteamcmdIsInstalled(steamcmdFolder) == false)
         {
-            throw new Exception("Failed to install steamcmd");
+            return Errors.Fail("steamcmd not installed after download");
         }
 
-        await SetLinuxPermissionRecursive(steamcmdFolder, "770");
+        var setPermissions = await SetLinuxPermissionRecursive(steamcmdFolder, "770");
+        if (setPermissions.IsError)
+        {
+            return setPermissions.FirstError;
+        }
+
+        return Result.Success;
     }
 
-    private static async Task SetLinuxPermissionRecursive(string directoryPath, string umask)
+    private static async Task<ErrorOr<string>> SetLinuxPermissionRecursive(string directoryPath, string umask)
     {
-        var result = await Cli.Wrap($"chmod").WithArguments(new[] { "-R", umask, directoryPath })
+        var result = await Cli.Wrap("chmod")
+            .WithArguments(new[] { "-R", umask, directoryPath })
             .ExecuteBufferedAsync();
         if (result.ExitCode != 0)
         {
-            throw new Exception($"Error while trying to set file permissions. Output: {result.StandardError}");
+            return Errors.Fail($"Error while trying to set file permissions. Output: {result.StandardError}");
         }
+
+        if (string.IsNullOrWhiteSpace(result.StandardError))
+        {
+            return result.StandardOutput;
+        }
+
+        return Errors.Fail($"Failed to set permissions. {result.StandardError}");
     }
 
     #endregion

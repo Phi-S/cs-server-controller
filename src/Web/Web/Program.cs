@@ -38,11 +38,6 @@ try
             .WriteTo.Console(expressionTemplate)
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning);
-
-        if (string.IsNullOrWhiteSpace(options.Value.SEQ_URL) == false)
-        {
-            configuration.WriteTo.Seq(options.Value.SEQ_URL);
-        }
     });
 
     builder.Services.AddBlazorBootstrap();
@@ -54,7 +49,7 @@ try
         .AddInteractiveServerComponents();
 
     var app = builder.Build();
-    
+
     var options = app.Services.GetRequiredService<IOptions<AppOptions>>();
     foreach (var prop in options.Value.GetType().GetProperties())
     {

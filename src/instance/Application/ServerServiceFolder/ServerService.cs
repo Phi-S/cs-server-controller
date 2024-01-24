@@ -102,7 +102,7 @@ public partial class ServerService
             // ReSharper disable once StringLiteralTypo
             var executablePath = Path.Combine(_options.Value.SERVER_FOLDER, "game", "bin", "linuxsteamrt64", "cs2");
             var startParameterString =
-                startParameters.GetAsCommandLineArgs(_options.Value.PORT, _options.Value.LOGIN_TOKEN);
+                startParameters.GetAsCommandLineArgs(_options.Value.PORT);
             var serverPluginsBaseInstalled = ServerHelper.IsServerPluginBaseInstalled(_options.Value.SERVER_FOLDER);
 
             using var scope = _services.CreateScope();
@@ -147,26 +147,6 @@ public partial class ServerService
             _logger.LogInformation("Starting0 flush output background task");
             StartOutputFlushBackgroundTask();
             _logger.LogInformation("Flush output background task started");
-
-            #endregion
-
-            #region RefreshMaps
-
-            _logger.LogInformation("Refreshing available maps");
-            _systemLogService.Log("Refreshing available maps");
-
-            var getAllMapsResult = GetAllMaps(_options.Value.SERVER_FOLDER, true);
-            if (getAllMapsResult.IsError)
-            {
-                _logger.LogError("Failed to start server. Failed to refresh available maps. {Error}",
-                    getAllMapsResult.ErrorMessage());
-                _systemLogService.Log(
-                    $"Failed to start server. Failed to refresh available maps. {getAllMapsResult.ErrorMessage()}");
-                return getAllMapsResult.FirstError;
-            }
-
-            _logger.LogInformation("Available maps refreshed");
-            _systemLogService.Log("Available maps refreshed");
 
             #endregion
 
@@ -464,7 +444,16 @@ public partial class ServerService
     {
         try
         {
-            _logger.LogInformation("Server exited");
+            if (_statusService.ServerStopping)
+            {
+                _logger.LogInformation("Server exited");
+                _systemLogService.Log("Server exited");
+            }
+            else
+            {
+                _logger.LogInformation("Server crashed");
+                _systemLogService.Log("Server crashed");
+            }
 
             lock (_processLockObject)
             {

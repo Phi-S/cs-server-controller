@@ -10,10 +10,10 @@ public static class RandomHelper
         return random.NextInt64();
     }
     
-    public static int RandomInt()
+    public static int RandomInt(int maxInt = int.MaxValue)
     {
         var random = new Random();
-        return random.Next();
+        return random.Next(maxInt);
     }
     
     public static string RandomString(int length = 20)

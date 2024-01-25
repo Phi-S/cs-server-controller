@@ -48,7 +48,7 @@ public class ChatCommandRazor : ComponentBase
 
     protected async Task SaveNew()
     {
-        var addResult = await InstanceApiService.NewChatCommand(NewChatCommand, NewServerCommand);
+        var addResult = await InstanceApiService.ChatCommandNew(NewChatCommand, NewServerCommand);
         if (addResult.IsError)
         {
             Logger.LogError("Failed to create new chat command \"{ChatCommand}\" {Error}", NewChatCommand,
@@ -74,7 +74,7 @@ public class ChatCommandRazor : ComponentBase
             return;
         }
 
-        var deleteResult = await InstanceApiService.DeleteChatCommand(chatCommand);
+        var deleteResult = await InstanceApiService.ChatCommandsDelete(chatCommand);
         if (deleteResult.IsError)
         {
             Logger.LogError("Failed to delete chat command \"{ChatCommand}\" {Error}", chatCommand,

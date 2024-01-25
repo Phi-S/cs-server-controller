@@ -62,7 +62,8 @@ public class ServerInfoService
         }
         catch (Exception e)
         {
-            return Errors.Fail($"Exception: {e.Message}");
+            _logger.LogError(e, "Exception");
+            return Errors.Fail($"Exception in StartSignalRConnection. {e}");
         }
     }
 
@@ -72,14 +73,13 @@ public class ServerInfoService
         {
             return Errors.Fail("not Hub connection");
         }
-        
+
         var serverInfo = await _instanceApiService.Info();
         if (serverInfo.IsError)
         {
             return Errors.Fail($"Failed to get server infos {serverInfo.ErrorMessage()}");
         }
-        
-        
+
         var startParameters = await _instanceApiService.GetStartParameters();
         if (startParameters.IsError)
         {
@@ -87,33 +87,33 @@ public class ServerInfoService
         }
 
         var last24Hours = DateTime.UtcNow.Subtract(TimeSpan.FromHours(24));
-        var systemLogs = await _instanceApiService.LogsSystem(last24Hours);
+        var systemLogs = await _instanceApiService.SystemLogs(last24Hours);
         if (systemLogs.IsError)
         {
             return Errors.Fail($"Failed to get system logs {systemLogs.ErrorMessage()}");
         }
 
-        var serverLogs = await _instanceApiService.LogsServer(last24Hours);
+        var serverLogs = await _instanceApiService.ServerLogs(last24Hours);
         if (serverLogs.IsError)
         {
             return Errors.Fail($"Failed to get server logs {serverLogs.ErrorMessage()}");
         }
 
-        var events = await _instanceApiService.LogsEvents(last24Hours);
+        var events = await _instanceApiService.EventsLogs(last24Hours);
         if (events.IsError)
         {
             return Errors.Fail($"Failed to get events {events.ErrorMessage()}");
         }
 
-        var updateOrInstallLogs = await _instanceApiService.LogsUpdateOrInstall(last24Hours);
+        var updateOrInstallLogs = await _instanceApiService.UpdateOrInstallLogs(last24Hours);
         if (updateOrInstallLogs.IsError)
         {
             return Errors.Fail($"Failed to get update or install logs {updateOrInstallLogs.ErrorMessage()}");
         }
-        
+
         ServerInfo.Set(serverInfo.Value);
         StartParameters.Set(startParameters.Value);
-        
+
         SystemLogs.Set(systemLogs.Value);
         EventLogs.Set(events.Value);
         ServerLogs.Set(serverLogs.Value);

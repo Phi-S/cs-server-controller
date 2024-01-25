@@ -4,24 +4,22 @@ using Shared.ApiModels;
 
 namespace Application.EventServiceFolder.CQRS;
 
-public record GetAllTriggersForEventSinceQuery(string EventName, long LongsSinceUnixMilliseconds)
-    : IRequest<List<EventLogResponse>>;
+public record GetEventsLogsSinceQuery(long LongsSinceUnixMilliseconds) : IRequest<List<EventLogResponse>>;
 
-public class
-    GetAllTriggersForEventSinceQueryHandler : IRequestHandler<GetAllTriggersForEventSinceQuery, List<EventLogResponse>>
+public class GetEventsLogsSinceQueryHandler : IRequestHandler<GetEventsLogsSinceQuery, List<EventLogResponse>>
 {
     private readonly UnitOfWork _unitOfWork;
 
-    public GetAllTriggersForEventSinceQueryHandler(UnitOfWork unitOfWork)
+    public GetEventsLogsSinceQueryHandler(UnitOfWork unitOfWork)
     {
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<List<EventLogResponse>> Handle(GetAllTriggersForEventSinceQuery request,
+    public async Task<List<EventLogResponse>> Handle(GetEventsLogsSinceQuery request,
         CancellationToken cancellationToken)
     {
         var logsSinceDateTime = DateTimeOffset.FromUnixTimeMilliseconds(request.LongsSinceUnixMilliseconds).DateTime;
-        var logs = await _unitOfWork.EventLogRepo.GetLogsSince(logsSinceDateTime, request.EventName);
+        var logs = await _unitOfWork.EventLogRepo.GetLogsSince(logsSinceDateTime);
         var response = logs.Select(
                 log => new EventLogResponse(
                     log.Name,

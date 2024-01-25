@@ -98,6 +98,10 @@ public class InstanceApiService
         return response;
     }
 
+    #endregion
+
+    #region RequestMessage
+
     private HttpRequestMessage RequestMessage(HttpMethod httpMethod, string endpoint)
     {
         var uri = new Uri(_options.Value.INSTANCE_API_ENDPOINT + endpoint);
@@ -140,6 +144,29 @@ public class InstanceApiService
         return request;
     }
 
+    private HttpRequestMessage RequestMessage<T>(
+        HttpMethod httpMethod,
+        string endpoint,
+        List<KeyValuePair<string, string>> queryParameters,
+        T jsonContent)
+    {
+        var uri = new Uri(_options.Value.INSTANCE_API_ENDPOINT + endpoint);
+        foreach (var queryParameter in queryParameters)
+        {
+            var keyUrlEncoded = HttpUtility.UrlEncode(queryParameter.Key);
+            var valueUrlEncoded = HttpUtility.UrlEncode(queryParameter.Value);
+            uri = uri.AddParameter(keyUrlEncoded, valueUrlEncoded);
+        }
+
+        var request = new HttpRequestMessage
+        {
+            Content = JsonContent.Create(jsonContent),
+            Method = httpMethod,
+            RequestUri = uri
+        };
+        return request;
+    }
+
     private HttpRequestMessage GetRequestMessage(string endpoint) => RequestMessage(HttpMethod.Get, endpoint);
 
     private HttpRequestMessage GetRequestMessage(string endpoint, string queryParameterKey, string queryParameterValue)
@@ -148,8 +175,19 @@ public class InstanceApiService
             [new KeyValuePair<string, string>(queryParameterKey, queryParameterValue)]);
     }
 
+    private HttpRequestMessage GetRequestMessage(string endpoint, List<KeyValuePair<string, string>> queryParameters)
+    {
+        return RequestMessage(HttpMethod.Get, endpoint, queryParameters);
+    }
+
     private HttpRequestMessage PostRequestMessage<T>(string endpoint, T jsonContent) =>
         RequestMessage(HttpMethod.Post, endpoint, jsonContent);
+
+    private HttpRequestMessage PostRequestMessage<T>(string endpoint,
+        List<KeyValuePair<string, string>> queryParameters, T jsonContent)
+    {
+        return RequestMessage(HttpMethod.Post, endpoint, queryParameters, jsonContent);
+    }
 
     private HttpRequestMessage PostRequestMessage(string endpoint) => RequestMessage(HttpMethod.Post, endpoint);
 
@@ -165,78 +203,20 @@ public class InstanceApiService
 
     #endregion
 
+    #region ChatCommandsEndpoint
 
-    #region Server
-
-    public async Task<ErrorOr<ServerInfoResponse>> Info()
-    {
-        var requestMessage = GetRequestMessage("/server/info");
-        var result = await Send<ServerInfoResponse>(requestMessage);
-        return result;
-    }
-
-    public async Task<ErrorOr<List<string>>> Events()
-    {
-        var requestMessage = GetRequestMessage("/server/events");
-        var result = await Send<List<string>>(requestMessage);
-        return result;
-    }
-
-    public async Task<ErrorOr<Guid>> StartUpdatingOrInstalling()
-    {
-        var requestMessage = PostRequestMessage("/server/start-updating-or-installing");
-        var response = await Send<Guid>(requestMessage);
-        return response;
-    }
-
-    public async Task<ErrorOr<Success>> CancelUpdatingOrInstalling(Guid id)
-    {
-        var requestMessage = PostRequestMessage("/server/cancel-updating-or-installing", "id", id.ToString());
-        var response = await SendWithoutResponse(requestMessage);
-        return response;
-    }
-
-    public async Task<ErrorOr<Success>> UpdateOrInstallPlugins()
-    {
-        var requestMessage = PostRequestMessage("/server/update-or-install-plugins");
-        var response = await SendWithoutResponse(requestMessage);
-        return response;
-    }
-
-    public async Task<ErrorOr<Success>> Start()
-    {
-        var requestMessage = PostRequestMessage("/server/start");
-        var response = await SendWithoutResponse(requestMessage);
-        return response;
-    }
-
-    public async Task<ErrorOr<Success>> Stop()
-    {
-        var requestMessage = PostRequestMessage("/server/stop");
-        var response = await SendWithoutResponse(requestMessage);
-        return response;
-    }
-
-    public async Task<ErrorOr<string>> SendCommand(string command)
-    {
-        var requestMessage = PostRequestMessage(
-            "/server/send-command",
-            "command",
-            command);
-        var result = await Send<string>(requestMessage);
-        return result;
-    }
+    private const string ChatCommandsEndpoint = "/chat-commands";
 
     public async Task<ErrorOr<List<ChatCommandResponse>>> ChatCommands()
     {
-        var requestMessage = GetRequestMessage("/server/chat-command/all");
+        var requestMessage = GetRequestMessage($"{ChatCommandsEndpoint}");
         var result = await Send<List<ChatCommandResponse>>(requestMessage);
         return result;
     }
 
-    public async Task<ErrorOr<Success>> NewChatCommand(string chatMessage, string serverCommand)
+    public async Task<ErrorOr<Success>> ChatCommandNew(string chatMessage, string serverCommand)
     {
-        var requestMessage = PostRequestMessage("/server/chat-command/new",
+        var requestMessage = PostRequestMessage($"{ChatCommandsEndpoint}/new",
         [
             new KeyValuePair<string, string>("chatMessage", chatMessage),
             new KeyValuePair<string, string>("serverCommand", serverCommand)
@@ -245,71 +225,205 @@ public class InstanceApiService
         return result;
     }
 
-    public async Task<ErrorOr<Success>> DeleteChatCommand(string chatMessage)
+    public async Task<ErrorOr<Success>> ChatCommandsDelete(string chatMessage)
     {
         var requestMessage = PostRequestMessage(
-            "/server/chat-command/delete",
+            $"{ChatCommandsEndpoint}/delete",
             "chatMessage",
             chatMessage);
         var result = await SendWithoutResponse(requestMessage);
         return result;
     }
 
+    #endregion
+
+    #region ConfigsEndpoint
+
+    private const string ConfigsEndpoint = "/configs";
+
+    public async Task<ErrorOr<List<string>>> Configs()
+    {
+        var requestMessage = GetRequestMessage($"{ConfigsEndpoint}");
+        var result = await Send<List<string>>(requestMessage);
+        return result;
+    }
+
+    public async Task<ErrorOr<string>> ConfigsGetContent(string configFile)
+    {
+        var requestMessage = GetRequestMessage(
+            $"{ConfigsEndpoint}/get-content",
+            "configFile",
+            configFile);
+        var result = await Send<string>(requestMessage);
+        return result;
+    }
+
+    public async Task<ErrorOr<string>> ConfigsGetContent(string configFile, string content)
+    {
+        var requestMessage = PostRequestMessage(
+            $"{ConfigsEndpoint}/set-content",
+            [new KeyValuePair<string, string>("configFile", configFile)],
+            content);
+        var result = await Send<string>(requestMessage);
+        return result;
+    }
+
+    #endregion
+
+    #region EventsEndpoint
+
+    private const string EventsEndpoint = "/events";
+
+    public async Task<ErrorOr<List<string>>> Events()
+    {
+        var requestMessage = GetRequestMessage(EventsEndpoint);
+        var result = await Send<List<string>>(requestMessage);
+        return result;
+    }
+
+    public async Task<ErrorOr<List<EventLogResponse>>> EventsLogs(DateTimeOffset logsSince)
+    {
+        var requestMessage = GetRequestMessage($"{EventsEndpoint}/logs",
+            "logsSince",
+            logsSince.ToUnixTimeMilliseconds().ToString());
+        var result = await Send<List<EventLogResponse>>(requestMessage);
+        return result;
+    }
+
+    public async Task<ErrorOr<List<EventLogResponse>>> EventsLogs(string eventName, DateTimeOffset logsSince)
+    {
+        var requestMessage = GetRequestMessage($"{EventsEndpoint}/logs",
+            [
+                new KeyValuePair<string, string>("eventName", eventName),
+                new KeyValuePair<string, string>("logsSince", logsSince.ToUnixTimeMilliseconds().ToString())
+            ]
+        );
+        var result = await Send<List<EventLogResponse>>(requestMessage);
+        return result;
+    }
+
+    #endregion
+
+    #region InfoEndpoint
+
+    private const string InfoEndpoint = "/info";
+
+    public async Task<ErrorOr<ServerInfoResponse>> Info()
+    {
+        var requestMessage = GetRequestMessage(InfoEndpoint);
+        var result = await Send<ServerInfoResponse>(requestMessage);
+        return result;
+    }
+
+    #endregion
+
+    #region ServerEndpoint
+
+    private const string ServerEndpoint = "/server";
+
+    public async Task<ErrorOr<Success>> ServerStart()
+    {
+        var requestMessage = PostRequestMessage($"{ServerEndpoint}/start");
+        var response = await SendWithoutResponse(requestMessage);
+        return response;
+    }
+
+    public async Task<ErrorOr<Success>> ServerStop()
+    {
+        var requestMessage = PostRequestMessage($"{ServerEndpoint}/stop");
+        var response = await SendWithoutResponse(requestMessage);
+        return response;
+    }
+
+    public async Task<ErrorOr<string>> ServerSendCommand(string command)
+    {
+        var requestMessage = PostRequestMessage(
+            $"{ServerEndpoint}/send-command",
+            "command",
+            command);
+        var result = await Send<string>(requestMessage);
+        return result;
+    }
+
+    public async Task<ErrorOr<List<ServerLogResponse>>> ServerLogs(DateTimeOffset logsSince)
+    {
+        var requestMessage = GetRequestMessage($"{ServerEndpoint}/logs",
+            "logsSince",
+            logsSince.ToUnixTimeMilliseconds().ToString());
+        var result = await Send<List<ServerLogResponse>>(requestMessage);
+        return result;
+    }
+
+    #endregion
+
+    #region StartParameterEndpoint
+
+    private const string StartParameterEndpoint = "/start-parameters";
+
     public async Task<ErrorOr<StartParameters>> GetStartParameters()
     {
-        var requestMessage = GetRequestMessage("/server/start-parameters/get");
+        var requestMessage = GetRequestMessage($"{StartParameterEndpoint}");
         var result = await Send<StartParameters>(requestMessage);
         return result;
     }
 
     public async Task<ErrorOr<Success>> SetStartParameters(StartParameters startParameters)
     {
-        var requestMessage = PostRequestMessage("/server/start-parameters/set", startParameters);
+        var requestMessage = PostRequestMessage($"{StartParameterEndpoint}/set", startParameters);
         var result = await SendWithoutResponse(requestMessage);
         return result;
     }
 
     #endregion
 
-    #region Logs
+    #region SystemEndpoint
 
-    public async Task<ErrorOr<List<SystemLogResponse>>> LogsSystem(DateTimeOffset logsSince)
+    private const string SystemEndpoint = "/system";
+
+    public async Task<ErrorOr<List<SystemLogResponse>>> SystemLogs(DateTimeOffset logsSince)
     {
-        var requestMessage =
-            GetRequestMessage("/logs/system", "logsSince", logsSince.ToUnixTimeMilliseconds().ToString());
+        var requestMessage = GetRequestMessage($"{SystemEndpoint}/logs",
+            "logsSince",
+            logsSince.ToUnixTimeMilliseconds().ToString());
         var result = await Send<List<SystemLogResponse>>(requestMessage);
         return result;
     }
 
-    public async Task<ErrorOr<List<ServerLogResponse>>> LogsServer(DateTimeOffset logsSince)
+    #endregion
+
+    #region UpdateOrInstallEndpoint
+
+    private const string UpdateOrInstallEndpoint = "/update-or-install";
+
+    public async Task<ErrorOr<Guid>> UpdateOrInstallStart()
     {
-        var requestMessage =
-            GetRequestMessage("/logs/server", "logsSince", logsSince.ToUnixTimeMilliseconds().ToString());
-        var result = await Send<List<ServerLogResponse>>(requestMessage);
-        return result;
+        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/start");
+        var response = await Send<Guid>(requestMessage);
+        return response;
     }
 
-    public async Task<ErrorOr<List<UpdateOrInstallLogResponse>>> LogsUpdateOrInstall(DateTimeOffset logsSince)
+    public async Task<ErrorOr<Success>> UpdateOrInstallCancel(Guid id)
     {
-        var requestMessage = GetRequestMessage("/logs/update-or-install", "logsSince",
+        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/cancel",
+            "id",
+            id.ToString());
+        var response = await SendWithoutResponse(requestMessage);
+        return response;
+    }
+
+    public async Task<ErrorOr<Success>> UpdateOrInstallPlugins()
+    {
+        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/plugins");
+        var response = await SendWithoutResponse(requestMessage);
+        return response;
+    }
+
+    public async Task<ErrorOr<List<UpdateOrInstallLogResponse>>> UpdateOrInstallLogs(DateTimeOffset logsSince)
+    {
+        var requestMessage = GetRequestMessage($"{UpdateOrInstallEndpoint}/logs",
+            "logsSince",
             logsSince.ToUnixTimeMilliseconds().ToString());
         var result = await Send<List<UpdateOrInstallLogResponse>>(requestMessage);
-        return result;
-    }
-
-    public async Task<ErrorOr<List<EventLogResponse>>> LogsEvents(DateTimeOffset logsSince)
-    {
-        var requestMessage =
-            GetRequestMessage("/logs/events", "logsSince", logsSince.ToUnixTimeMilliseconds().ToString());
-        var result = await Send<List<EventLogResponse>>(requestMessage);
-        return result;
-    }
-
-    public async Task<ErrorOr<List<EventLogResponse>>> LogsEvents(string eventName, DateTimeOffset logsSince)
-    {
-        var requestMessage = GetRequestMessage($"/logs/events/{eventName}", "logsSince",
-            logsSince.ToUnixTimeMilliseconds().ToString());
-        var result = await Send<List<EventLogResponse>>(requestMessage);
         return result;
     }
 

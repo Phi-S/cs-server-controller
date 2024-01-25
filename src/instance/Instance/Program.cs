@@ -68,9 +68,15 @@ try
     app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
     app.UseSwagger();
     app.UseSwaggerUI();
-
-    app.MapServerEndpoints();
-    app.MapLogsEndpoints();
+    
+    app.MapEndpointsInfo();
+    app.MapEndpointsSystem();
+    app.MapEndpointsServer();
+    app.MapEndpointsConfig();
+    app.MapEndpointsEvents();
+    app.MapEndpointsStartParameter();
+    app.MapEndpointsUpdateOrInstall();
+    app.MapEndpointsChatCommands();
 
     app.MapHub<SignalRHub>("/hub");
 

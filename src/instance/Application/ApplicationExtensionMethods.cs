@@ -1,4 +1,5 @@
 ﻿using Application.ChatCommandFolder;
+using Application.ConfigEditorFolder;
 using Application.EventServiceFolder;
 using Application.ServerPluginsFolder;
 using Application.ServerServiceFolder;
@@ -27,6 +28,7 @@ public static class ApplicationExtensionMethods
         serviceCollection.AddSingleton<ServerPluginsService>();
         serviceCollection.AddSingleton<StartParameterService>();
         serviceCollection.AddSingleton<SystemLogService>();
+        serviceCollection.AddSingleton<ConfigEditorService>();
 
         serviceCollection.AddHostedService<ChatCommandService>();
 

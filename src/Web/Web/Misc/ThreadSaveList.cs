@@ -3,6 +3,7 @@
 public class ThreadSaveList<T>
 {
     public event Action? OnChange;
+    public event Func<T, Task>? OnAdd;
     private readonly object _listLock = new();
     private readonly List<T> _list = [];
 
@@ -21,15 +22,7 @@ public class ThreadSaveList<T>
         {
             _list.Add(data);
             OnChange?.Invoke();
-        }
-    }
-
-    public void AddRange(IEnumerable<T> data)
-    {
-        lock (_listLock)
-        {
-            _list.AddRange(data);
-            OnChange?.Invoke();
+            OnAdd?.Invoke(data);
         }
     }
 

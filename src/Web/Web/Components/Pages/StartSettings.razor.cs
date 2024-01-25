@@ -3,7 +3,6 @@ using ErrorOr;
 using Microsoft.AspNetCore.Components;
 using Shared;
 using Shared.ApiModels;
-using Throw;
 using Web.BlazorExtensions;
 using Web.Services;
 
@@ -136,7 +135,7 @@ public class StartSettingsRazor : ComponentBase, IDisposable
 
             if (serverInfo.ServerStarted)
             {
-                var stopResult = await InstanceApiService.Stop();
+                var stopResult = await InstanceApiService.ServerStop();
                 if (stopResult.IsError)
                 {
                     ToastService.Error($"Failed to restart server. {stopResult.ErrorMessage()}");
@@ -145,7 +144,7 @@ public class StartSettingsRazor : ComponentBase, IDisposable
                 }
             }
 
-            var startResult = await InstanceApiService.Start();
+            var startResult = await InstanceApiService.ServerStart();
             if (startResult.IsError)
             {
                 ToastService.Error($"Failed to restart server. {startResult.ErrorMessage()}");

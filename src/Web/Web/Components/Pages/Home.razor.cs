@@ -60,7 +60,7 @@ public class HomeRazor : ComponentBase, IDisposable
     {
         try
         {
-            var startResult = await InstanceApiService.Start();
+            var startResult = await InstanceApiService.ServerStart();
             if (startResult.IsError)
             {
                 Logger.LogError("Failed to start server. {Error}", startResult.ErrorMessage());
@@ -83,7 +83,7 @@ public class HomeRazor : ComponentBase, IDisposable
     {
         try
         {
-            var stopResult = await InstanceApiService.Stop();
+            var stopResult = await InstanceApiService.ServerStop();
             if (stopResult.IsError)
             {
                 Logger.LogError("Failed to restart server. {Error}", stopResult.ErrorMessage());
@@ -91,7 +91,7 @@ public class HomeRazor : ComponentBase, IDisposable
                 return;
             }
 
-            var startResult = await InstanceApiService.Start();
+            var startResult = await InstanceApiService.ServerStart();
             if (startResult.IsError)
             {
                 Logger.LogError("Failed to restart server. {Error}", startResult.ErrorMessage());
@@ -114,7 +114,7 @@ public class HomeRazor : ComponentBase, IDisposable
     {
         try
         {
-            var stopResult = await InstanceApiService.Stop();
+            var stopResult = await InstanceApiService.ServerStop();
             if (stopResult.IsError)
             {
                 Logger.LogError("Failed to stop server. {Error}", stopResult.ErrorMessage());
@@ -137,7 +137,7 @@ public class HomeRazor : ComponentBase, IDisposable
     {
         try
         {
-            var startUpdateOrInstallResult = await InstanceApiService.StartUpdatingOrInstalling();
+            var startUpdateOrInstallResult = await InstanceApiService.UpdateOrInstallStart();
             if (startUpdateOrInstallResult.IsError)
             {
                 Logger.LogError("Start update or install server failed with error {Error}",
@@ -166,7 +166,7 @@ public class HomeRazor : ComponentBase, IDisposable
             _currentUpdateOrInstallId.ThrowIfNull();
 
             var cancelUpdatingOrInstalling =
-                await InstanceApiService.CancelUpdatingOrInstalling(_currentUpdateOrInstallId.Value);
+                await InstanceApiService.UpdateOrInstallCancel(_currentUpdateOrInstallId.Value);
             if (cancelUpdatingOrInstalling.IsError)
             {
                 Logger.LogError("Failed to cancel server update. {Error}",
@@ -216,7 +216,7 @@ public class HomeRazor : ComponentBase, IDisposable
     {
         try
         {
-            var mapChangeResult = await InstanceApiService.SendCommand($"changelevel {map}");
+            var mapChangeResult = await InstanceApiService.ServerSendCommand($"changelevel {map}");
             if (mapChangeResult.IsError)
             {
                 Logger.LogError("Failed to change map to {Map}. {Error}", map, mapChangeResult.ErrorMessage());
@@ -244,7 +244,7 @@ public class HomeRazor : ComponentBase, IDisposable
                 return;
             }
 
-            var sendCommand = await InstanceApiService.SendCommand(SendCommandBind);
+            var sendCommand = await InstanceApiService.ServerSendCommand(SendCommandBind);
             if (sendCommand.IsError)
             {
                 Logger.LogError("Failed to execute command \"{Command}\". {Error}", SendCommandBind,

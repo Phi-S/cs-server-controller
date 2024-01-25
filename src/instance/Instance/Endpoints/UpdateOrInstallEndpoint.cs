@@ -1,10 +1,6 @@
-﻿using System.Web;
-using Application.ChatCommandFolder.CQRS;
-using Application.EventServiceFolder.CQRS;
+﻿using Application.ConfigEditorFolder.CQRS;
 using Application.ServerPluginsFolder.CQRS;
-using Application.ServerServiceFolder.CQRS;
 using Application.StartParameterFolder.CQRS;
-using Application.StatusServiceFolder.CQRS;
 using Application.UpdateOrInstallServiceFolder.CQRS;
 using Instance.Response;
 using MediatR;
@@ -14,54 +10,48 @@ using Shared.ApiModels;
 
 namespace Instance.Endpoints;
 
-public static class ServerEndpoint
+public static class UpdateOrInstallEndpoint
 {
-    public static RouteGroupBuilder MapEndpointsServer(this IEndpointRouteBuilder endpointRouteBuilder)
+    public static void MapEndpointsUpdateOrInstall(this IEndpointRouteBuilder endpointRouteBuilder)
     {
-        const string tag = "server";
+        const string tag = "update-or-install";
         var group = endpointRouteBuilder
             .MapGroup(tag)
             .WithTags(tag)
             .WithOpenApi();
 
-
-        group.MapPost("start", async (
-            IMediator mediator,
-            [FromBody] StartParameters? startParameters = null) =>
+        group.MapPost("start", async (IMediator mediator) =>
         {
-            var command = new StartServerCommand(startParameters);
+            var command = new StartUpdateOrInstallCommand();
             var result = await mediator.Send(command);
-            return result.IsError
-                ? Results.Extensions.InternalServerError(result.ErrorMessage())
-                : Results.Ok();
-        });
-
-        group.MapPost("stop", async (IMediator mediator) =>
-        {
-            var command = new StopServerCommand();
-            var result = await mediator.Send(command);
-            return result.IsError
-                ? Results.Extensions.InternalServerError(result.ErrorMessage())
-                : Results.Ok();
-        });
-
-        group.MapPost("send-command", async (IMediator mediator, [FromQuery] string command) =>
-        {
-            var commandUrlDecoded = HttpUtility.UrlDecode(command);
-            var mediatorCommand = new SendCommandCommand(commandUrlDecoded);
-            var result = await mediator.Send(mediatorCommand);
             return result.IsError
                 ? Results.Extensions.InternalServerError(result.ErrorMessage())
                 : Results.Ok(result.Value);
         });
 
+        group.MapPost("cancel", async ([FromQuery] Guid id, IMediator mediator) =>
+        {
+            var command = new CancelUpdateOrInstallCommand(id);
+            var result = await mediator.Send(command);
+            return result.IsError
+                ? Results.Extensions.InternalServerError(result.ErrorMessage())
+                : Results.Ok();
+        });
+
+        group.MapPost("plugins", async (IMediator mediator) =>
+        {
+            var command = new UpdateOrInstallPluginsCommand();
+            var result = await mediator.Send(command);
+            return result.IsError
+                ? Results.Extensions.InternalServerError(result.ErrorMessage())
+                : Results.Ok();
+        });
+
         group.MapGet("logs", async ([FromQuery] long logsSince, IMediator mediator) =>
         {
-            var command = new GetServerLogsSinceQuery(logsSince);
+            var command = new GetUpdateOrInstallLogsSinceQuery(logsSince);
             var result = await mediator.Send(command);
             return Results.Ok(result);
         });
-
-        return group;
     }
 }

@@ -129,7 +129,7 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
     {
         try
         {
-            var stopResult = await InstanceApiService.Stop();
+            var stopResult = await InstanceApiService.ServerStop();
             if (stopResult.IsError)
             {
                 Logger.LogError("Failed to stop server. {Error}", stopResult.ErrorMessage());
@@ -152,7 +152,7 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
     {
         try
         {
-            var startResult = await InstanceApiService.Start();
+            var startResult = await InstanceApiService.ServerStart();
             if (startResult.IsError)
             {
                 Logger.LogError("Failed to start server. {Error}", startResult.ErrorMessage());
@@ -176,7 +176,7 @@ public class ServerDisplayCompRazor : ComponentBase, IDisposable
     {
         try
         {
-            await InstanceApiService.SendCommand($"changelevel {map}");
+            await InstanceApiService.ServerSendCommand($"changelevel {map}");
             Logger.LogInformation("Changing map to {Map}", map);
         }
         catch (Exception e)

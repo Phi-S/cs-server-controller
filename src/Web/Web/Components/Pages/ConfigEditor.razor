@@ -2,7 +2,7 @@
 @inherits ConfigsRazor
 @rendermode InteractiveServer
 
-<div class="input-group" style="height: 3vh">
+<div class="input-group pb-2" style="height: 3vh">
     <select class="input-group custom-select w-75" id="inputGroupSelect01">
         <option selected @onclick="() => { ConfigContent = null; }">Choose...</option>
         @foreach (var configFile in ConfigFiles)

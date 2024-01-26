@@ -14,35 +14,24 @@ public class SettingsRazor : ComponentBase, IDisposable
     [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
     [Inject] private InstanceApiService InstanceApiService { get; set; } = default!;
-    
+
     protected StartParameters LocalStartParameters = new();
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        try
+        var startParameterResult = await InstanceApiService.GetStartParameters();
+        if (startParameterResult.IsError)
         {
-            if (firstRender)
-            {
-                var startParameterResult = await InstanceApiService.GetStartParameters();
-                if (startParameterResult.IsError)
-                {
-                    throw new Exception($"Failed to get start parameters. {startParameterResult.ErrorMessage()}");
-                }
-
-                ServerInfoService.StartParameters.Set(startParameterResult.Value);
-                ServerInfoService.ServerInfo.OnChange += ServerInfoOnOnChange;
-                ServerInfoService.StartParameters.OnChange += StartParametersOnOnChange;
-                LocalStartParameters = startParameterResult.Value;
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e, "Exception in OnAfterRenderAsync");
-            throw;
+            throw new Exception($"Failed to get start parameters. {startParameterResult.ErrorMessage()}");
         }
 
-        await base.OnAfterRenderAsync(firstRender);
+        ServerInfoService.StartParameters.Set(startParameterResult.Value);
+        LocalStartParameters = startParameterResult.Value;
+        
+        ServerInfoService.ServerInfo.OnChange += ServerInfoOnOnChange;
+        ServerInfoService.StartParameters.OnChange += StartParametersOnOnChange;
+
+        await base.OnInitializedAsync();
     }
 
     private async void StartParametersOnOnChange(StartParameters obj)

@@ -1,13 +1,13 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page m-auto" style="max-width: 1200px; height: 100%">
-    <div style="height: 10%">
+<div class="page m-auto" style="max-width: 1200px; height: 100vh; max-height: 100vh">
+    <div style="max-height: 100px; height: 100px">
         <ServerDisplayComp/>
         <NavMenu/>
     </div>
 
-    <main style="height: 90%">
-        <article class="content m-0 p-0 px-2">
+    <main style="height: calc(100vh - 100px); max-height: calc(100vh - 100px)">
+        <article class="content m-0 p-0 px-2 w-100 h-100">
             @Body
         </article>
     </main>

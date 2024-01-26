@@ -5,83 +5,85 @@
 
 @if (ServerInfo is not null)
 {
-    <div class="align-items-center">
-        <div class="input-group flex-nowrap justify-content-center">
-            <button
-                class="input-group btn btn-outline-info"
-                disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted)"
-                @onclick="@Start">
-                Start
-            </button>
-            <button
-                class="input-group btn btn-outline-info"
-                disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted == false)"
-                @onclick="@Stop">
-                Stop
-            </button>
-            <button
-                class="input-group btn btn-outline-info"
-                disabled="@ServerInfoService.IsServerBusy"
-                @onclick="Restart">
-                Restart
-            </button>
-            @if (ServerInfo.ServerUpdatingOrInstalling == false)
-            {
+    <div class="m-0 p-0 pb-2" style="height: 100%">
+        <div style="height: 110px">
+            <div class="input-group flex-nowrap justify-content-center h-50">
+                <button
+                    class="input-group btn btn-outline-info"
+                    disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted)"
+                    @onclick="@Start">
+                    Start
+                </button>
+                <button
+                    class="input-group btn btn-outline-info"
+                    disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted == false)"
+                    @onclick="@Stop">
+                    Stop
+                </button>
                 <button
                     class="input-group btn btn-outline-info"
                     disabled="@ServerInfoService.IsServerBusy"
-                    @onclick="@StartUpdateOrInstall">
-                    Update Server
+                    @onclick="Restart">
+                    Restart
                 </button>
-            }
-            else
-            {
+                @if (ServerInfo.ServerUpdatingOrInstalling == false)
+                {
+                    <button
+                        class="input-group btn btn-outline-info"
+                        disabled="@ServerInfoService.IsServerBusy"
+                        @onclick="@StartUpdateOrInstall">
+                        Update Server
+                    </button>
+                }
+                else
+                {
+                    <button
+                        class="input-group btn btn-outline-info"
+                        @onclick="@CancelUpdateOrInstall">
+                        Cancel update
+                    </button>
+                }
+
                 <button
                     class="input-group btn btn-outline-info"
-                    @onclick="@CancelUpdateOrInstall">
-                    Cancel server update
+                    disabled="@(ServerInfoService.IsServerBusy)"
+                    @onclick="@UpdateOrInstallPlugins">
+                    Update plugins
                 </button>
-            }
 
-            <button
-                class="input-group btn btn-outline-info"
-                disabled="@(ServerInfoService.IsServerBusy)"
-                @onclick="@UpdateOrInstallPlugins">
-                Update plugins
-            </button>
+                <button
+                    class="input-group btn btn-outline-primary dropdown"
+                    disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted == false)"
+                    type="button"
+                    id="changeMapDropdownMenuButton"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                    Change map
+                </button>
 
-            <button
-                class="input-group btn btn-outline-primary dropdown"
-                disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted == false)"
-                type="button"
-                id="changeMapDropdownMenuButton"
-                data-bs-toggle="dropdown"
-                aria-expanded="false">
-                Change map
-            </button>
-
-            <ul class="dropdown-menu" aria-labelledby="changeMapDropdownMenuButton">
-                @foreach (var map in AvailableMaps.Get)
-                {
-                    <li>
-                        <button
-                            class="dropdown-item"
-                            disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted == false)"
-                            type="button"
-                            @onclick="() => ChangeMap(map.MapName)">
-                            @map.FriendlyMapName
-                        </button>
-                    </li>
-                }
-            </ul>
-        </div>
-        <div class="text-nowrap align-items-center d-flex justify-content-center pb-1 pt-1">
-            <div class="input-group justify-content-center d-flex w-100">
-                <input class="input-group-text" style="width: 70%" placeholder="Server command" @bind="SendCommandBind" @bind:event="oninput" @onkeydown="OnEnter"/>
-                <button class="btn btn-outline-info" disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted == false)" style="width: 30%" @onclick="SendCommand">Send</button>
+                <ul class="dropdown-menu" aria-labelledby="changeMapDropdownMenuButton">
+                    @foreach (var map in AvailableMaps.Get)
+                    {
+                        <li>
+                            <button
+                                class="dropdown-item"
+                                disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted == false)"
+                                type="button"
+                                @onclick="() => ChangeMap(map.MapName)">
+                                @map.FriendlyMapName
+                            </button>
+                        </li>
+                    }
+                </ul>
+            </div>
+            <div class="text-nowrap align-items-center d-flex justify-content-center pb-1 pt-1 h-50">
+                <div class="input-group justify-content-center d-flex w-100">
+                    <input class="input-group-text" style="width: 70%" placeholder="Server command" @bind="SendCommandBind" @bind:event="oninput" @onkeydown="OnEnter"/>
+                    <button class="btn btn-outline-info" disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted == false)" style="width: 30%" @onclick="SendCommand">Send</button>
+                </div>
             </div>
         </div>
-        <div class="overflow-scroll overflow-x-auto rounded-3 border border-2" style="height: 70vh">
+        <div class="overflow-scroll overflow-x-auto rounded-3 border border-2" style="height: calc(100% - 110px)">
             <table class="table table-sm table-striped">
                 @foreach (var e in ServerInfoService.AllLogs.GetCopy().OrderByDescending(l => l.TimestampUtc).Take(2000))
                 {

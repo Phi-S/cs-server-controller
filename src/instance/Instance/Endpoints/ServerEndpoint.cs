@@ -1,11 +1,5 @@
 ﻿using System.Web;
-using Application.ChatCommandFolder.CQRS;
-using Application.EventServiceFolder.CQRS;
-using Application.ServerPluginsFolder.CQRS;
 using Application.ServerServiceFolder.CQRS;
-using Application.StartParameterFolder.CQRS;
-using Application.StatusServiceFolder.CQRS;
-using Application.UpdateOrInstallServiceFolder.CQRS;
 using Instance.Response;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

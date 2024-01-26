@@ -1,0 +1,16 @@
+﻿@page "/configs"
+@inherits ConfigsRazor
+@rendermode InteractiveServer
+
+<div class="input-group" style="height: 3vh">
+    <select class="input-group custom-select w-75" id="inputGroupSelect01">
+        <option selected @onclick="() => { ConfigContent = null; }">Choose...</option>
+        @foreach (var configFile in ConfigFiles)
+        {
+            <option class="" @onclick="() => LoadConfigContent(configFile)">@configFile</option>
+        }
+    </select>
+    <button class="input-group btn btn-success w-25" @onclick="ApplyConfigContent">Save</button>
+</div>
+
+<textarea class="w-100" style="height: 85vh" disabled="@(ConfigContent is null)" @bind="ConfigContent"></textarea>

@@ -1,5 +1,5 @@
-﻿@page "/start-settings"
-@inherits StartSettingsRazor
+﻿@page "/settings"
+@inherits SettingsRazor
 @rendermode InteractiveServer
 
 
@@ -19,14 +19,6 @@
     <div>
         <label for="startMap" class="form-label">Start map</label>
         <input type="text" class="form-control" id="startMap" @bind:event="oninput" @bind="@LocalStartParameters.StartMap"/>
-    </div>
-    <div>
-        <label for="gameMode" class="form-label">Game mode</label>
-        <input type="number" class="form-control" id="gameMode" @bind:event="oninput" @bind="@LocalStartParameters.GameMode"/>
-    </div>
-    <div>
-        <label for="gameType" class="form-label">Game type</label>
-        <input type="number" class="form-control" id="gameType" @bind:event="oninput" @bind="@LocalStartParameters.GameType"/>
     </div>
     <div>
         <label for="loginToken" class="form-label">Login token</label>

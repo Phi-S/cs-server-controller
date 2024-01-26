@@ -13,8 +13,6 @@ public class StartParameters
         string? serverPassword,
         int maxPlayer,
         string startMap,
-        int gameMode,
-        int gameType,
         string? loginToken,
         string? additionalStartParameters)
     {
@@ -22,8 +20,6 @@ public class StartParameters
         ServerPassword = serverPassword;
         MaxPlayer = maxPlayer;
         StartMap = startMap;
-        GameMode = gameMode;
-        GameType = gameType;
         LoginToken = loginToken;
         AdditionalStartParameters = additionalStartParameters;
     }
@@ -32,8 +28,6 @@ public class StartParameters
     public string? ServerPassword { get; set; }
     public int MaxPlayer { get; set; } = 10;
     public string StartMap { get; set; } = "de_anubis";
-    public int GameMode { get; set; } = 1;
-    public int GameType { get; set; } = 0;
     public string? LoginToken { get; set; }
     public string? AdditionalStartParameters { get; set; }
 
@@ -47,11 +41,8 @@ public class StartParameters
             $"-port {port}",
             $"+hostname {ServerHostname}",
             string.IsNullOrWhiteSpace(ServerPassword) ? "" : $"+sv_password {ServerPassword}",
-            "+log on",
             $"-maxplayers {MaxPlayer}",
             $"+map {StartMap}",
-            //           $"+game_type {GameType}",
-            //           $"+game_mode {GameMode}",
             string.IsNullOrWhiteSpace(LoginToken) ? "" : LoginToken,
             $"{AdditionalStartParameters}");
 
@@ -61,6 +52,6 @@ public class StartParameters
     public override string ToString()
     {
         return
-            $"{nameof(ServerHostname)}: {ServerHostname}, {nameof(ServerPassword)}: {ServerPassword}, {nameof(MaxPlayer)}: {MaxPlayer}, {nameof(StartMap)}: {StartMap}, {nameof(GameMode)}: {GameMode}, {nameof(GameType)}: {GameType}, {nameof(AdditionalStartParameters)}: {AdditionalStartParameters}";
+            $"{nameof(ServerHostname)}: {ServerHostname}, {nameof(ServerPassword)}: {ServerPassword}, {nameof(MaxPlayer)}: {MaxPlayer}, {nameof(StartMap)}: {StartMap}, {nameof(LoginToken)}: {LoginToken}, {nameof(AdditionalStartParameters)}: {AdditionalStartParameters}";
     }
 }

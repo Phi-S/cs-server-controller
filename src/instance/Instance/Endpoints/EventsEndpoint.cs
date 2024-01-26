@@ -1,10 +1,6 @@
-﻿using Application.ConfigEditorFolder.CQRS;
-using Application.EventServiceFolder.CQRS;
-using Application.EventServiceFolder.EventArgs;
-using Instance.Response;
+﻿using Application.EventServiceFolder.CQRS;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Shared;
 
 namespace Instance.Endpoints;
 

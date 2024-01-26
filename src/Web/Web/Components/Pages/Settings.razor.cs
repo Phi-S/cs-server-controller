@@ -8,9 +8,9 @@ using Web.Services;
 
 namespace Web.Components.Pages;
 
-public class StartSettingsRazor : ComponentBase, IDisposable
+public class SettingsRazor : ComponentBase, IDisposable
 {
-    [Inject] private ILogger<StartSettingsRazor> Logger { get; set; } = default!;
+    [Inject] private ILogger<SettingsRazor> Logger { get; set; } = default!;
     [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
     [Inject] private InstanceApiService InstanceApiService { get; set; } = default!;

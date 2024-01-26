@@ -41,8 +41,8 @@ public partial class ServerService
 
     #region Const
 
-    private const int ServerStartTimeoutMs = 30_000;
-    private const int ServerStopTimeoutMs = 15_000;
+    private const int ServerStartTimeoutMs = 60_000;
+    private const int ServerStopTimeoutMs = 30_000;
 
     #endregion
 
@@ -282,9 +282,15 @@ public partial class ServerService
         process.BeginErrorReadLine();
 
         var waitForServerToStart = await WaitForServerToStart(process, checkIfServerPluginsBaseIsLoaded);
-        return waitForServerToStart.IsError
-            ? waitForServerToStart.FirstError
-            : process;
+        if (waitForServerToStart.IsError)
+        {
+            process.Kill(true);
+            process.Close();
+            process.Dispose();
+            return waitForServerToStart.FirstError;
+        }
+
+        return process;
 
         void OnProcessOnOutputDataReceived(object _, DataReceivedEventArgs args)
         {

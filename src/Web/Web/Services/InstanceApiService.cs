@@ -258,13 +258,13 @@ public class InstanceApiService
         return result;
     }
 
-    public async Task<ErrorOr<string>> ConfigsGetContent(string configFile, string content)
+    public async Task<ErrorOr<Success>> ConfigsSetContent(string configFile, string content)
     {
         var requestMessage = PostRequestMessage(
             $"{ConfigsEndpoint}/set-content",
             [new KeyValuePair<string, string>("configFile", configFile)],
             content);
-        var result = await Send<string>(requestMessage);
+        var result = await SendWithoutResponse(requestMessage);
         return result;
     }
 

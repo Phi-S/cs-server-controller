@@ -1,5 +1,4 @@
-﻿using Application.ConfigEditorFolder.CQRS;
-using Application.StartParameterFolder.CQRS;
+﻿using Application.StartParameterFolder.CQRS;
 using Instance.Response;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

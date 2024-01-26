@@ -1,6 +1,5 @@
 ﻿using System.Web;
 using Application.ChatCommandFolder.CQRS;
-using Application.ConfigEditorFolder.CQRS;
 using Instance.Response;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

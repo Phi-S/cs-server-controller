@@ -74,8 +74,6 @@ public class StartParameterServiceTests
             Guid.NewGuid().ToString(),
             RandomHelper.RandomInt(),
             Guid.NewGuid().ToString(),
-            RandomHelper.RandomInt(),
-            RandomHelper.RandomInt(),
             Guid.NewGuid().ToString(),
             Guid.NewGuid().ToString());
         var json = JsonSerializer.Serialize(newStartParameters);
@@ -101,8 +99,6 @@ public class StartParameterServiceTests
         Assert.Equal(newStartParameters.ServerPassword, startParametersFromFile.ServerPassword);
         Assert.Equal(newStartParameters.MaxPlayer, startParametersFromFile.MaxPlayer);
         Assert.Equal(newStartParameters.StartMap, startParametersFromFile.StartMap);
-        Assert.Equal(newStartParameters.GameMode, startParametersFromFile.GameMode);
-        Assert.Equal(newStartParameters.GameType, startParametersFromFile.GameType);
         Assert.Equal(newStartParameters.LoginToken, startParametersFromFile.LoginToken);
         Assert.Equal(newStartParameters.AdditionalStartParameters, startParametersFromFile.AdditionalStartParameters);
     }
@@ -128,8 +124,6 @@ public class StartParameterServiceTests
             Guid.NewGuid().ToString(),
             RandomHelper.RandomInt(),
             Guid.NewGuid().ToString(),
-            RandomHelper.RandomInt(),
-            RandomHelper.RandomInt(),
             Guid.NewGuid().ToString(),
             Guid.NewGuid().ToString());
         var startParameterService =
@@ -148,8 +142,6 @@ public class StartParameterServiceTests
         Assert.Equal(newStartParameters.ServerPassword, startParametersFromFile.ServerPassword);
         Assert.Equal(newStartParameters.MaxPlayer, startParametersFromFile.MaxPlayer);
         Assert.Equal(newStartParameters.StartMap, startParametersFromFile.StartMap);
-        Assert.Equal(newStartParameters.GameMode, startParametersFromFile.GameMode);
-        Assert.Equal(newStartParameters.GameType, startParametersFromFile.GameType);
         Assert.Equal(newStartParameters.LoginToken, startParametersFromFile.LoginToken);
         Assert.Equal(newStartParameters.AdditionalStartParameters, startParametersFromFile.AdditionalStartParameters);
     }
@@ -175,8 +167,6 @@ public class StartParameterServiceTests
             Guid.NewGuid().ToString(),
             RandomHelper.RandomInt(),
             Guid.NewGuid().ToString(),
-            RandomHelper.RandomInt(),
-            RandomHelper.RandomInt(),
             Guid.NewGuid().ToString(),
             Guid.NewGuid().ToString());
         var newStartParametersJson = JsonSerializer.Serialize(newStartParameters);
@@ -198,8 +188,6 @@ public class StartParameterServiceTests
         Assert.Equal(newStartParameters.ServerPassword, startParametersFromFile.ServerPassword);
         Assert.Equal(newStartParameters.MaxPlayer, startParametersFromFile.MaxPlayer);
         Assert.Equal(newStartParameters.StartMap, startParametersFromFile.StartMap);
-        Assert.Equal(newStartParameters.GameMode, startParametersFromFile.GameMode);
-        Assert.Equal(newStartParameters.GameType, startParametersFromFile.GameType);
         Assert.Equal(newStartParameters.LoginToken, startParametersFromFile.LoginToken);
         Assert.Equal(newStartParameters.AdditionalStartParameters, startParametersFromFile.AdditionalStartParameters);
     }

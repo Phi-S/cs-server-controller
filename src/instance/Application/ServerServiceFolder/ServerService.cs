@@ -432,11 +432,15 @@ public partial class ServerService
                 return Result.Success;
             }
 
-            return Errors.Fail(
-                $"Timout while waiting for the server to start after {ServerStartTimeoutMs} ms." +
-                $" (ServerStarted: {serverStarted} / " +
-                $"CheckIfPluginsBaseIsLoaded: {checkIfPluginsBaseIsLoaded} / " +
-                $"PluginBaseLoaded: {pluginBaseLoaded})");
+            var errorMessage = $"Timout after {ServerStartTimeoutMs} ms while waiting for the server to start. ";
+            errorMessage += $"(ServerStarted: {serverStarted}";
+            if (checkIfPluginsBaseIsLoaded)
+            {
+                errorMessage += $" / PluginBaseLoaded: {pluginBaseLoaded}";
+            }
+
+            errorMessage += ")";
+            return Errors.Fail(errorMessage);
         }
         finally
         {

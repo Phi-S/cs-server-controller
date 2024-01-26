@@ -385,7 +385,7 @@ public partial class ServerService
                         pluginBaseLoaded = true;
                     }
 
-                    if (message.StartsWith("Host activate: Loading"))
+                    if (message.StartsWith("Host activate:"))
                     {
                         hostActivated = true;
                         process.StandardInput.WriteLine($"say {serverStartedMessage}");
@@ -397,7 +397,7 @@ public partial class ServerService
                         return;
                     }
 
-                    if (message.Equals($"[All Chat][Console (0)]: {serverStartedMessage}") == false)
+                    if (message.EndsWith(serverStartedMessage) == false)
                     {
                         return;
                     }
@@ -433,7 +433,7 @@ public partial class ServerService
             }
 
             var errorMessage = $"Timout after {ServerStartTimeoutMs} ms while waiting for the server to start. ";
-            errorMessage += $"(ServerStarted: {serverStarted}";
+            errorMessage += $"(ServerStarted: {serverStarted} / HostActivated: {hostActivated}";
             if (checkIfPluginsBaseIsLoaded)
             {
                 errorMessage += $" / PluginBaseLoaded: {pluginBaseLoaded}";

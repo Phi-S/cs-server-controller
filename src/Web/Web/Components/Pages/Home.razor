@@ -3,11 +3,7 @@
 @inherits HomeRazor
 @rendermode InteractiveServer
 
-@if (ServerInfo is null)
-{
-    <LoadingComp/>
-}
-else
+@if (ServerInfo is not null)
 {
     <div class="align-items-center">
         <div class="input-group flex-nowrap justify-content-center">

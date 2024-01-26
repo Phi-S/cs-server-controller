@@ -30,18 +30,19 @@ public class HomeRazor : ComponentBase, IDisposable
     {
         ServerInfoService.ServerInfo.OnChange += ServerInfoOnOnChange;
         ServerInfoService.AllLogs.OnChange += OnServerInfoOrLogsChangedEvent;
+        _ = Load();
         base.OnInitialized();
-    }
-
-    private void ServerInfoOnOnChange(ServerInfoResponse obj)
-    {
-        InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         BrowserTimezoneOffset = await JsRuntime.GetBrowserTimezoneOffset();
         await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private void ServerInfoOnOnChange(ServerInfoResponse obj)
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     private async void OnServerInfoOrLogsChangedEvent()
@@ -54,6 +55,17 @@ public class HomeRazor : ComponentBase, IDisposable
         {
             Logger.LogError(e, "Error in OnServerInfoOrLogsChangedEvent Method");
         }
+    }
+
+    protected async Task Load()
+    {
+        PreloadService.Show();
+        while (ServerInfo is null)
+        {
+            await Task.Delay(100);
+        }
+
+        PreloadService.Hide();
     }
 
     protected async Task Start()

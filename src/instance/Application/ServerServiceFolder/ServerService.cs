@@ -174,7 +174,7 @@ public partial class ServerService
             _eventService.OnStartingServerFailed();
             _logger.LogError(e, "Server failed to start with exception");
             _systemLogService.Log("Server failed to start for unknown reasons");
-            return Errors.Fail(description: $"Server failed to start with exception: {e}");
+            return Errors.Fail("Server failed to start for unknown reasons");
         }
         finally
         {

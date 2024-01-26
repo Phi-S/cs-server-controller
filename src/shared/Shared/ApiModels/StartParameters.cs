@@ -43,7 +43,7 @@ public class StartParameters
             string.IsNullOrWhiteSpace(ServerPassword) ? "" : $"+sv_password {ServerPassword}",
             $"-maxplayers {MaxPlayer}",
             $"+map {StartMap}",
-            string.IsNullOrWhiteSpace(LoginToken) ? "" : LoginToken,
+            string.IsNullOrWhiteSpace(LoginToken) ? "" : $"+sv_setsteamaccount {LoginToken}",
             $"{AdditionalStartParameters}");
 
         return sb.ToString();

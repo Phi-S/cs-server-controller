@@ -8,26 +8,22 @@ using PracPlugin.Models;
 
 namespace PracPlugin.Services;
 
-public class SpawnsService : BackgroundService
+public class SpawnsService : IBaseService
 {
     private readonly ILogger<SpawnsService> _logger;
-    private readonly PracPlugin _plugin;
 
-    public SpawnsService(ILogger<SpawnsService> logger, PracPlugin plugin)
+    public SpawnsService(ILogger<SpawnsService> logger)
     {
         _logger = logger;
-        _plugin = plugin;
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public void Register(BasePlugin plugin)
     {
-        _plugin.RegisterEventHandler<EventMapTransition>(OnMapChange);
+        plugin.RegisterEventHandler<EventMapTransition>(OnMapChange);
         _logger.LogInformation("SpawnsService events registered");
 
-        _plugin.AddCommand("spawn", "Teleport to specific spawn", CommandHandlerSpawn);
+        plugin.AddCommand("spawn", "Teleport to specific spawn", CommandHandlerSpawn);
         _logger.LogInformation("SpawnsService commands registered");
-
-        return Task.CompletedTask;
     }
 
     #region Commands

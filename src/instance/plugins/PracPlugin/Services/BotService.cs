@@ -8,37 +8,31 @@ using PracPlugin.Models;
 
 namespace PracPlugin.Services;
 
-public class BotService : BackgroundService
+public class BotService : IBaseService
 {
     private readonly ILogger<BotService> _logger;
-    private readonly PracPlugin _plugin;
     private readonly TimerService _timerService;
 
     public BotService(
         ILogger<BotService> logger,
-        PracPlugin plugin,
         TimerService timerService)
     {
         _logger = logger;
-        _plugin = plugin;
         _timerService = timerService;
     }
 
-
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public void Register(BasePlugin plugin)
     {
-        _plugin.RegisterEventHandler<EventPlayerSpawn>(OnPlayerSpawn);
+        plugin.RegisterEventHandler<EventPlayerSpawn>(OnPlayerSpawn);
         _logger.LogInformation("BotService event handler registered");
-
-        _plugin.AddCommand("bot", "Places standing bot on calling player position", CommandHandlerBot);
-        _plugin.AddCommand("cbot", "Places crouching bot on calling player position", CommandHandlerCBot);
-        _plugin.AddCommand("boost", "Places bot beneath calling player position", CommandHandlerBoost);
-        _plugin.AddCommand("cboost", "Places crouching bot beneath calling player position", CommandHandlerCBoost);
-        _plugin.AddCommand("nobot", "Removes the closest bot from calling player", CommandHandlerNoBot);
-        _plugin.AddCommand("nobots", "Removes all bots spawn by the calling player", CommandHandlerNoBots);
+        
+        plugin.AddCommand("bot", "Places standing bot on calling player position", CommandHandlerBot);
+        plugin.AddCommand("cbot", "Places crouching bot on calling player position", CommandHandlerCBot);
+        plugin.AddCommand("boost", "Places bot beneath calling player position", CommandHandlerBoost);
+        plugin.AddCommand("cboost", "Places crouching bot beneath calling player position", CommandHandlerCBoost);
+        plugin.AddCommand("nobot", "Removes the closest bot from calling player", CommandHandlerNoBot);
+        plugin.AddCommand("nobots", "Removes all bots spawn by the calling player", CommandHandlerNoBots);
         _logger.LogInformation("BotService commands registered");
-
-        return Task.CompletedTask;
     }
 
     #region Commands
@@ -224,7 +218,7 @@ public class BotService : BackgroundService
         }
         else
         {
-            _logger.LogWarning("Bots cant be added to {Tem} team", team.ToString());
+            _logger.LogWarning("Bots can not be added to {Tem} team", team.ToString());
             return;
         }
 

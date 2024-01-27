@@ -2,34 +2,28 @@
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Commands;
 using ErrorOr;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PracPlugin.ErrorsExtension;
 using PracPlugin.Models;
 
 namespace PracPlugin.Services;
 
-public class HtmlMenuService : BackgroundService
+public class HtmlMenuService : IBaseService
 {
     private readonly ILogger<HtmlMenuService> _logger;
-    private readonly PracPlugin _plugin;
 
-    public HtmlMenuService(ILogger<HtmlMenuService> logger, PracPlugin plugin)
+    public HtmlMenuService(ILogger<HtmlMenuService> logger)
     {
         _logger = logger;
-        _plugin = plugin;
     }
 
-
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public void Register(BasePlugin plugin)
     {
-        _plugin.RegisterListener<Listeners.OnTick>(OnTick);
+        plugin.RegisterListener<Listeners.OnTick>(OnTick);
         _logger.LogInformation("HtmlMenuService event handler registered");
 
-        _plugin.AddCommand("test", "test html message", CommandHandlerTest);
+        plugin.AddCommand("test", "test html message", CommandHandlerTest);
         _logger.LogInformation("HtmlMenuService commands registered");
-
-        return Task.CompletedTask;
     }
 
 
@@ -52,7 +46,9 @@ public class HtmlMenuService : BackgroundService
 
     private void CommandHandlerTest(CCSPlayerController? player, CommandInfo commandinfo)
     {
-        ShowHtmlMessage(player, "asdf");
+        //commandinfo.ReplyToCenter("tesf lllll");
+        //commandinfo.ReplyToCommand("kdkdkdkdkdkdk");
+        //ShowHtmlMessage(player, "asdf");
     }
 
     #endregion

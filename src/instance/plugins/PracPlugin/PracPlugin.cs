@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Runtime.CompilerServices;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
@@ -8,14 +9,14 @@ using PracPlugin.Services;
 
 namespace PracPlugin;
 
-public class TestPluginServiceCollection : IPluginServiceCollection<PracPlugin>
+public class PracPluginServiceCollection : IPluginServiceCollection<PracPlugin>
 {
     public void ConfigureServices(IServiceCollection serviceCollection)
     {
-        serviceCollection.AddHostedService<BotService>();
-        serviceCollection.AddHostedService<GrenadeService>();
-        serviceCollection.AddHostedService<SpawnsService>();
-        serviceCollection.AddHostedService<HtmlMenuService>();
+        serviceCollection.AddSingleton<IBaseService, BotService>();
+        serviceCollection.AddSingleton<IBaseService, GrenadeService>();
+        serviceCollection.AddSingleton<IBaseService, HtmlMenuService>();
+        serviceCollection.AddSingleton<IBaseService, SpawnsService>();
 
         serviceCollection.AddSingleton<TimerService>();
     }
@@ -23,6 +24,13 @@ public class TestPluginServiceCollection : IPluginServiceCollection<PracPlugin>
 
 public class PracPlugin : BasePlugin
 {
+    public PracPlugin(IServiceProvider serviceProvider)
+    {
+        serviceProvider.GetServices<IBaseService>()
+            .ToList()
+            .ForEach(s => s.Register(this));
+    }
+
     public override string ModuleName => Assembly.GetExecutingAssembly().GetName().Name ??
                                          throw new NullReferenceException("AssemblyName");
 
@@ -54,7 +62,11 @@ public class PracPlugin : BasePlugin
             "cfg",
             ConfigName);
 
-        File.Copy(configSrcPath, configDestPath, true);
+        if (File.Exists(configDestPath) == false)
+        {
+            File.Copy(configSrcPath, configDestPath, true);
+        }
+
         Server.ExecuteCommand($"exec {ConfigName}");
         base.Load(hotReload);
     }

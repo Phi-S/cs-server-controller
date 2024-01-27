@@ -13,38 +13,30 @@ using PracPlugin.Models;
 
 namespace PracPlugin.Services;
 
-public class GrenadeService : BackgroundService
+public class GrenadeService : IBaseService
 {
     private readonly ILogger<GrenadeService> _logger;
-    private readonly PracPlugin _plugin;
     private readonly TimerService _timerService;
 
-    public GrenadeService(
-        ILogger<GrenadeService> logger,
-        PracPlugin plugin,
-        TimerService timerService
-    )
+    public GrenadeService(ILogger<GrenadeService> logger, TimerService timerService)
     {
         _logger = logger;
-        _plugin = plugin;
         _timerService = timerService;
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public void Register(BasePlugin plugin)
     {
-        _plugin.RegisterEventHandler<EventSmokegrenadeDetonate>(OnSmokeDetonate);
-        _plugin.RegisterEventHandler<EventPlayerHurt>(OnPlayerDamage);
-        _plugin.RegisterEventHandler<EventPlayerBlind>(OnPlayerBlind);
-        _plugin.RegisterListener<Listeners.OnEntitySpawned>(OnEntitySpawned);
-        _plugin.RegisterListener<Listeners.OnTick>(OnTick);
+        plugin.RegisterEventHandler<EventSmokegrenadeDetonate>(OnSmokeDetonate);
+        plugin.RegisterEventHandler<EventPlayerHurt>(OnPlayerDamage);
+        plugin.RegisterEventHandler<EventPlayerBlind>(OnPlayerBlind);
+        plugin.RegisterListener<Listeners.OnEntitySpawned>(OnEntitySpawned);
+        plugin.RegisterListener<Listeners.OnTick>(OnTick);
         _logger.LogInformation("GrenadeService event handler registered");
 
-        _plugin.AddCommand("rethrow", "rethrows the last grenade", CommandHandlerRethrow);
-        _plugin.AddCommand("last", "Teleports player to his last thrown grenade position", CommandHandlerLast);
-        _plugin.AddCommand("ff", "Clears all grenades", CommandHandlerFf);
+        plugin.AddCommand("rethrow", "rethrows the last grenade", CommandHandlerRethrow);
+        plugin.AddCommand("last", "Teleports player to his last thrown grenade position", CommandHandlerLast);
+        plugin.AddCommand("ff", "Clears all grenades", CommandHandlerFf);
         _logger.LogInformation("GrenadeService commands registered");
-
-        return Task.CompletedTask;
     }
 
     // used for rethrow
@@ -256,7 +248,6 @@ public class GrenadeService : BackgroundService
     }
 
     #endregion
-
 
     private bool TryGetLastThrownGrenade(CCSPlayerController player, [MaybeNullWhen(false)] out GrenadeModel position)
     {

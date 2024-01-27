@@ -226,7 +226,7 @@ public class ServerPluginsService
     {
         var downloadTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
         const string counterStrikeSharpUrl =
-            "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v144/counterstrikesharp-with-runtime-build-144-linux-bac31b9.zip";
+            "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v159/counterstrikesharp-with-runtime-build-159-linux-5695c3f.zip";
         var downloadPath = Path.Combine(downloadTempFolder, "counterstrikesharp-with-runtime.zip");
         var downLoadResult = await Download(httpClient, counterStrikeSharpUrl, Path.Combine(downloadPath));
         if (downLoadResult.IsError)

@@ -5,8 +5,8 @@
 
 @if (ServerInfo is not null)
 {
-    <div class="m-0 p-0 pb-2" style="height: 100%">
-        <div style="height: 110px">
+    <div class="m-0 p-0 pb-2 w-100 h-100">
+        <div style="height: 130px">
             <div class="input-group flex-nowrap justify-content-center h-50">
                 <button
                     class="input-group btn btn-outline-info"
@@ -83,13 +83,13 @@
                 </div>
             </div>
         </div>
-        <div class="overflow-scroll overflow-x-auto rounded-3 border border-2" style="height: calc(100% - 110px)">
-            <table class="table table-sm table-striped">
+        <div class="overflow-scroll overflow-x-auto rounded-3 border border-2" style="height: calc(100% - 130px); right: 10px">
+            <table class="table table-sm table-striped position-relative">
                 @foreach (var e in ServerInfoService.AllLogs.GetCopy().OrderByDescending(l => l.TimestampUtc).Take(2000))
                 {
-                    <tr class="border-bottom row m-0 p-0 @(e.Highlight ? "text-info" : "")" style="width: 100%;">
-                        <td class="m-0 p-0 ps-1 pe-1" style="max-width: 12rem">@e.TimestampUtc.AddHours(BrowserTimezoneOffset):</td>
-                        <td class="m-0 p-0" style="width: calc(100% - 12rem); word-wrap: break-word">@e.Message</td>
+                    <tr class="border-bottom row m-0 p-0 ps-1 pe-1 @(e.Highlight ? "text-info" : "")">
+                        <td class="m-0 p-0 text-nowrap" style="width: 12rem">@e.TimestampUtc.AddHours(BrowserTimezoneOffset):</td>
+                        <td class="m-0 p-0" style="width: calc(100% - 12rem); word-wrap: anywhere">@e.Message</td>
                     </tr>
                 }
             </table>

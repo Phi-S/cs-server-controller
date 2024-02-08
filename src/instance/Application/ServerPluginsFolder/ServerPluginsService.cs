@@ -163,7 +163,7 @@ public class ServerPluginsService
     public static async Task<ErrorOr<Success>> InstallMetamod(HttpClient httpClient, string csgoFolder)
     {
         var downloadTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
-        const string metamodUrl = "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1280-linux.tar.gz";
+        const string metamodUrl = "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1282-linux.tar.gz";
         var downloadPath = Path.Combine(downloadTempFolder, "metamod.tar.gz");
         var downLoadResult = await Download(httpClient, metamodUrl, downloadPath);
         if (downLoadResult.IsError)
@@ -226,7 +226,7 @@ public class ServerPluginsService
     {
         var downloadTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
         const string counterStrikeSharpUrl =
-            "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v159/counterstrikesharp-with-runtime-build-159-linux-5695c3f.zip";
+            "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v162/counterstrikesharp-with-runtime-build-162-linux-f2b8044.zip";
         var downloadPath = Path.Combine(downloadTempFolder, "counterstrikesharp-with-runtime.zip");
         var downLoadResult = await Download(httpClient, counterStrikeSharpUrl, Path.Combine(downloadPath));
         if (downLoadResult.IsError)

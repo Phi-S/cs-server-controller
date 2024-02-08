@@ -2,7 +2,6 @@
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PracPlugin.Models;
 

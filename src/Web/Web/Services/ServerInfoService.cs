@@ -34,7 +34,7 @@ public class ServerInfoService
             var connection = new HubConnectionBuilder()
                 .WithUrl(new Uri($"{_options.Value.INSTANCE_API_ENDPOINT}/hub"))
                 .WithKeepAliveInterval(TimeSpan.FromSeconds(1))
-                .WithAutomaticReconnect([TimeSpan.Zero, TimeSpan.Zero, TimeSpan.FromSeconds(10)])
+                .WithAutomaticReconnect()
                 .Build();
             await connection.StartAsync();
 

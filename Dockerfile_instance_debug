@@ -1,0 +1,21 @@
+﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends --no-install-suggests \
+		python3=3.11.2-1+b1 \
+		lib32z1=1:1.2.13.dfsg-1 \
+	&& rm -rf /var/lib/apt/lists/*
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY src/. .
+WORKDIR "instance/Instance"
+RUN dotnet restore "Instance.csproj"
+RUN dotnet build "Instance.csproj" -c Debug -o /app
+
+FROM base AS run
+WORKDIR /app
+COPY --from=build /app .
+RUN ls -la
+CMD ["dotnet", "Instance.dll"]

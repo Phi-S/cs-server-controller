@@ -1,13 +1,16 @@
 using Application;
+using Application.ServerServiceFolder.CQRS;
 using Domain;
 using Instance.Endpoints;
 using Instance.Middleware;
 using Instance.SignalR;
+using MediatR;
 using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
+using Shared;
 
 var expressionTemplate = new ExpressionTemplate(
     "[{@t:yyyy-MM-dd HH:mm:ss.fff zzz} | {@l:u3}]" +
@@ -68,7 +71,7 @@ try
     app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
     app.UseSwagger();
     app.UseSwaggerUI();
-    
+
     app.MapEndpointsInfo();
     app.MapEndpointsSystem();
     app.MapEndpointsServer();
@@ -83,6 +86,19 @@ try
     await app.StartAsync();
     Log.Logger.Information("Server is running under: {Addresses}", string.Join(",", app.Urls));
     Log.Logger.Information("Application started");
+
+    // Start server on startup
+    if (options.Value.START_SERVER_ON_STARTUP)
+    {
+        var mediator = app.Services.GetRequiredService<IMediator>();
+        var command = new StartServerCommand(null);
+        var result = await mediator.Send(command);
+        if (result.IsError)
+        {
+            Log.Logger.Warning("Failed to start server. {Error}", result.ErrorMessage());
+        }
+    }
+
     await app.WaitForShutdownAsync();
 }
 catch (Exception e)

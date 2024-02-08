@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
@@ -70,18 +69,11 @@ public class PracPlugin : BasePlugin
         Server.ExecuteCommand($"exec {ConfigName}");
         base.Load(hotReload);
     }
-
+    
     [GameEventHandler]
-    public HookResult OnRoundStart(EventGameStart eventGameStart, GameEventInfo info)
+    public HookResult OnGameStart(EventGameStart eventGameStart, GameEventInfo info)
     {
-        Console.WriteLine("OnRoundStart....");
-        return HookResult.Continue;
-    }
-
-    [GameEventHandler]
-    public HookResult OnTest(EventGameStart eventGameStart, GameEventInfo info)
-    {
-        Console.WriteLine("On game start....");
+        Server.ExecuteCommand($"exec {ConfigName}");
         return HookResult.Continue;
     }
 
@@ -98,7 +90,7 @@ public class PracPlugin : BasePlugin
         return HookResult.Continue;
     }
 
-    [ConsoleCommand("reload", "Executed the prac.cfg")]
+    [ConsoleCommand("r", "Executed the prac.cfg")]
     [CommandHelper(whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
     public void OnPracCommand(CCSPlayerController? player, CommandInfo command)
     {

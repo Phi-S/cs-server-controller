@@ -29,7 +29,7 @@
         <input type="text" class="form-control" id="additionalStartParameters" @bind:event="oninput" @bind="@LocalStartParameters.AdditionalStartParameters"/>
     </div>
     <div class="pt-2">
-        <button type="submit" class="btn btn-primary" @onclick="OnSaveStartParametersButton" title="A restart is required for the new start parameters to take effect">Save</button>
-        <button type="submit" class="btn btn-primary" @onclick="SaveStartParametersAndRestartServer">Save and restart</button>
+        <button type="submit" class="btn btn-outline-info" @onclick="OnSaveStartParametersButton" title="A restart is required for the new start parameters to take effect">Save</button>
+        <button type="submit" class="btn btn-outline-info" @onclick="SaveStartParametersAndRestartServer">Save and restart</button>
     </div>
 </div>

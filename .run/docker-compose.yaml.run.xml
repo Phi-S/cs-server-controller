@@ -7,11 +7,11 @@
           <list>
             <DockerEnvVarImpl>
               <option name="name" value="STEAM_PASSWORD" />
-              <option name="value" value="mLb9ZsYhQyZZ7irR3KzbKL" />
+              <option name="value" value="" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="STEAM_USERNAME" />
-              <option name="value" value="oijnz" />
+              <option name="value" value="" />
             </DockerEnvVarImpl>
           </list>
         </option>

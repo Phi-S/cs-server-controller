@@ -1,12 +1,12 @@
 ﻿using Application.ChatCommandFolder;
 using Application.ConfigEditorFolder;
+using Application.CounterStrikeSharpUpdateOrInstallFolder;
 using Application.EventServiceFolder;
-using Application.ServerPluginsFolder;
 using Application.ServerServiceFolder;
+using Application.ServerUpdateOrInstallServiceFolder;
 using Application.StartParameterFolder;
 using Application.StatusServiceFolder;
 using Application.SystemLogFolder;
-using Application.UpdateOrInstallServiceFolder;
 using Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,10 +22,10 @@ public static class ApplicationExtensionMethods
 
         serviceCollection.AddSingleton<EventService>();
         serviceCollection.AddSingleton<StatusService>();
-        serviceCollection.AddSingleton<UpdateOrInstallService>();
+        serviceCollection.AddSingleton<ServerUpdateOrInstallService>();
         serviceCollection.AddSingleton<ServerService>();
         serviceCollection.AddSingleton<ChatCommandsCache>();
-        serviceCollection.AddSingleton<ServerPluginsService>();
+        serviceCollection.AddSingleton<CounterStrikeSharpUpdateOrInstallService>();
         serviceCollection.AddSingleton<StartParameterService>();
         serviceCollection.AddSingleton<SystemLogService>();
         serviceCollection.AddSingleton<ConfigEditorService>();

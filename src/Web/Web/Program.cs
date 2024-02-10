@@ -62,7 +62,7 @@ try
         Log.Logger.Information("{Property}: {PropertyValue}",
             field.Name, field.GetValue(options.Value));
     }
-
+    
     var serverInfoService = app.Services.GetRequiredService<ServerInfoService>();
     while (true)
     {

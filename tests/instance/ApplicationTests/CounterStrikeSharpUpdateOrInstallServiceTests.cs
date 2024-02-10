@@ -1,16 +1,19 @@
-﻿using Application.ServerPluginsFolder;
+﻿using Application.CounterStrikeSharpUpdateOrInstallFolder;
+using Domain;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Shared;
 using TestHelper.TestSetup;
 using TestHelper.UnitTestFolderFolder;
 using Xunit.Abstractions;
 
 namespace ApplicationTests;
 
-public class ServerPluginsServiceTests
+public class CounterStrikeSharpUpdateOrInstallServiceTests
 {
     private readonly ITestOutputHelper _outputHelper;
 
-    public ServerPluginsServiceTests(ITestOutputHelper outputHelper)
+    public CounterStrikeSharpUpdateOrInstallServiceTests(ITestOutputHelper outputHelper)
     {
         _outputHelper = outputHelper;
     }
@@ -23,7 +26,7 @@ public class ServerPluginsServiceTests
         var testFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
 
         // Act
-        var downloadMetamod = await ServerPluginsService.InstallMetamod(httpClient, testFolder);
+        var downloadMetamod = await CounterStrikeSharpUpdateOrInstallService.InstallMetamod(httpClient, testFolder);
 
         // Assert
         if (downloadMetamod.IsError)
@@ -48,8 +51,8 @@ public class ServerPluginsServiceTests
         var testFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
 
         // Act
-        var downloadCounterStrikeSharp = await ServerPluginsService.InstallCounterStrikeSharp(httpClient, testFolder);
-        var downloadMetamod = await ServerPluginsService.InstallMetamod(httpClient, testFolder);
+        var downloadCounterStrikeSharp = await CounterStrikeSharpUpdateOrInstallService.InstallCounterStrikeSharp(httpClient, testFolder);
+        var downloadMetamod = await CounterStrikeSharpUpdateOrInstallService.InstallMetamod(httpClient, testFolder);
 
         // Assert
         if (downloadCounterStrikeSharp.IsError)
@@ -87,7 +90,7 @@ public class ServerPluginsServiceTests
         var testFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
 
         // Act
-        var downloadCounterStrikeSharp = await ServerPluginsService.InstallCounterStrikeSharp(httpClient, testFolder);
+        var downloadCounterStrikeSharp = await CounterStrikeSharpUpdateOrInstallService.InstallCounterStrikeSharp(httpClient, testFolder);
 
         // Assert
         if (downloadCounterStrikeSharp.IsError)
@@ -106,70 +109,48 @@ public class ServerPluginsServiceTests
     }
 
     [Fact]
-    public async Task TestInstallPlugins()
-    {
-        // Arrange
-        var (serviceCollection, testFolder) = ServicesSetup.GetApplication(_outputHelper);
-        await using var provider = serviceCollection.BuildServiceProvider();
-        var serverPluginsService = provider.GetRequiredService<ServerPluginsService>();
-        var pluginsFolder = Path.Combine(testFolder, "server", "game", "csgo", "addons", "counterstrikesharp",
-            "plugins", "disabled");
-        Directory.CreateDirectory(pluginsFolder);
-
-        // Act
-        var installPlugins = serverPluginsService.UpdateOrInstallPlugins();
-
-        // Assert
-        if (installPlugins.IsError)
-        {
-            _outputHelper.WriteLine($"Failed to install plugins. {installPlugins}");
-            Assert.Fail();
-        }
-    }
-    
-    [Fact]
-    public async Task TestInstallPlugins_UpdateExistingPlugins()
-    {
-        // Arrange
-        var (serviceCollection, testFolder) = ServicesSetup.GetApplication(_outputHelper);
-        await using var provider = serviceCollection.BuildServiceProvider();
-        var serverPluginsService = provider.GetRequiredService<ServerPluginsService>();
-        var pluginsFolder = Path.Combine(testFolder, "server", "game", "csgo", "addons", "counterstrikesharp",
-            "plugins", "disabled");
-        Directory.CreateDirectory(pluginsFolder);
-
-        // Act
-        var installPlugins = serverPluginsService.UpdateOrInstallPlugins();
-        _outputHelper.WriteLine("==========================================");
-        var updatePlugins = serverPluginsService.UpdateOrInstallPlugins();
-        
-        // Assert
-        if (installPlugins.IsError)
-        {
-            _outputHelper.WriteLine($"Failed to install plugins. {installPlugins}");
-            Assert.Fail();
-        }
-        
-        if (updatePlugins.IsError)
-        {
-            _outputHelper.WriteLine($"Failed to update plugins. {updatePlugins}");
-            Assert.Fail();
-        }
-    }
-
-    [Fact]
     public async Task CreateCoreCfgTest()
     {
         // Arrange
         var testFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
 
         // Act
-        ServerPluginsService.CreateCoreCfg(testFolder);
+        CounterStrikeSharpUpdateOrInstallService.CreateCoreCfg(testFolder);
 
         // Assert
         var filePath = Path.Combine(testFolder, "core.json");
         Assert.True(File.Exists(filePath));
         var fileContent = await File.ReadAllTextAsync(filePath);
-        Assert.Contains(@"""PublicChatTrigger"": [ ""."" ],", fileContent);
+        Assert.Contains(@"""PublicChatTrigger"": [ ""."", ""!"" ],", fileContent);
+    }
+
+    [Fact]
+    public async Task TestFullUpdateOrInstall()
+    {
+        // Arrange
+        var (applicationServices, unitTestFolder) = ServicesSetup.GetApplication(_outputHelper);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var serverPluginsService = provider.GetRequiredService<CounterStrikeSharpUpdateOrInstallService>();
+        var options = provider.GetRequiredService<IOptions<AppOptions>>();
+
+        // Creates sample gameinfo.gi path
+        var csgoFolder = Path.Combine(
+            options.Value.SERVER_FOLDER,
+            "game",
+            "csgo");
+        Directory.CreateDirectory(csgoFolder);
+        await File.WriteAllTextAsync(Path.Combine(csgoFolder, "gameinfo.gi"),
+            "\t\t\tGame_LowViolence\tcsgo_lv // Perfect World content override");
+
+        // Act
+        var updateOrInstall = await serverPluginsService.StartUpdateOrInstall();
+
+        // Assert
+        if (updateOrInstall.IsError)
+        {
+            Assert.Fail(updateOrInstall.ErrorMessage());
+        }
+
+        Assert.False(updateOrInstall.IsError);
     }
 }

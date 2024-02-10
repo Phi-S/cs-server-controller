@@ -11,7 +11,7 @@
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:IP_OR_DOMAIN" />
-              <option name="value" value="10.10.10.10" />
+              <option name="value" value="localhost" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:PORT" />

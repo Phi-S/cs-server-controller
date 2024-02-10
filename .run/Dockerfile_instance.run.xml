@@ -12,7 +12,7 @@
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:IP_OR_DOMAIN" />
-              <option name="value" value="10.10.10.10" />
+              <option name="value" value="localhost" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:PORT" />
@@ -24,11 +24,11 @@
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:STEAM_PASSWORD" />
-              <option name="value" value="mLb9ZsYhQyZZ7irR3KzbKL" />
+              <option name="value" value="" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:STEAM_USERNAME" />
-              <option name="value" value="oijnz" />
+              <option name="value" value="" />
             </DockerEnvVarImpl>
           </list>
         </option>
@@ -50,8 +50,6 @@
       </settings>
     </deployment>
     <EXTENSION ID="com.jetbrains.rider.docker.debug" isFastModeEnabled="true" isSslEnabled="false" />
-    <method v="2">
-      <option name="RunConfigurationTask" enabled="true" run_configuration_name="build-plugins" run_configuration_type="PythonConfigurationType" />
-    </method>
+    <method v="2" />
   </configuration>
 </component>

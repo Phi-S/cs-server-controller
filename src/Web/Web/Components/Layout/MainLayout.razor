@@ -1,4 +1,7 @@
-﻿@inherits LayoutComponentBase
+﻿@using Web.Services
+@inherits LayoutComponentBase
+@inject ServerInfoService ServerInfoService
+@inject PreloadService PreloadService
 
 <div class="page m-auto" style="max-width: 1200px; height: 100vh; max-height: 100vh">
     <div style="max-height: 100px; height: 100px">
@@ -12,5 +15,28 @@
         </article>
     </main>
     <Toasts class="p-3" AutoHide="true" Delay="8000" Placement="ToastsPlacement.BottomRight"/>
-    <Preload LoadingText="Loading..."/>
+    <Preload LoadingText="Reconnecting..."/>
 </div>
+
+@code
+{
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            ServerInfoService.OnSignalRConnectionStateChanged += async () =>
+            {
+                if (await ServerInfoService.IsSignalRConnected())
+                {
+                    await InvokeAsync(() => PreloadService.Hide());
+                }
+                else
+                {
+                    await InvokeAsync(() => PreloadService.Show());
+                }
+            };
+        }
+
+        return base.OnAfterRenderAsync(firstRender);
+    }
+}

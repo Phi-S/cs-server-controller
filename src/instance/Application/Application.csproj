@@ -19,12 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="UpdateOrInstallServiceFolder\steamcmd.py">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </None>
-
-        <None Include="ServerPluginsFolder\plugins\**">
-            <ExcludeFromSingleFile>True</ExcludeFromSingleFile>
+        <None Include="ServerUpdateOrInstallServiceFolder\steamcmd.py">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>

@@ -11,7 +11,7 @@
                 <option @onclick="() => LoadConfigContent(configFile)">@configFile</option>
             }
         </select>
-        <button class="input-group btn btn-success w-25" @onclick="ApplyConfigContent">Save</button>
+        <button class="input-group btn btn-outline-info w-25" @onclick="ApplyConfigContent">Save</button>
     </div>
 
     <textarea class="w-100" style="height: calc(100% - 50px)" disabled="@(ConfigContent is null)" @bind="ConfigContent"></textarea>

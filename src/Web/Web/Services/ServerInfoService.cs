@@ -27,27 +27,77 @@ public class ServerInfoService
         _instanceApiService = instanceApiService;
     }
 
+    private readonly SemaphoreSlim _signalRConnectionLock = new(1, 1);
+    private HubConnection? _signalRConnection;
+    public event Action? OnSignalRConnectionStateChanged;
+
+    public async Task<bool> IsSignalRConnected()
+    {
+        try
+        {
+            await _signalRConnectionLock.WaitAsync();
+            return _signalRConnection?.State == HubConnectionState.Connected;
+        }
+        finally
+        {
+            _signalRConnectionLock.Release();
+        }
+    }
+
+    private class RetryPolicyLoop : IRetryPolicy
+    {
+        private const int ReconnectionWaitSeconds = 1;
+
+        public TimeSpan? NextRetryDelay(RetryContext retryContext)
+        {
+            return TimeSpan.FromSeconds(ReconnectionWaitSeconds);
+        }
+    }
+
     public async Task<ErrorOr<Success>> StartSignalRConnection()
     {
         try
         {
-            var connection = new HubConnectionBuilder()
+            await _signalRConnectionLock.WaitAsync();
+            if (_signalRConnection is not null)
+            {
+                await _signalRConnection.StopAsync();
+                await _signalRConnection.DisposeAsync();
+            }
+
+            _signalRConnection = new HubConnectionBuilder()
                 .WithUrl(new Uri($"{_options.Value.INSTANCE_API_ENDPOINT}/hub"))
                 .WithKeepAliveInterval(TimeSpan.FromSeconds(1))
-                .WithAutomaticReconnect()
+                .WithAutomaticReconnect(new RetryPolicyLoop())
                 .Build();
-            await connection.StartAsync();
 
-            var addSignalrRHandler = await AddSignalrRHandler(connection);
+            await _signalRConnection.StartAsync();
+
+            var addSignalrRHandler = await AddSignalrRHandler(_signalRConnection);
             if (addSignalrRHandler.IsError)
             {
                 return addSignalrRHandler.FirstError;
             }
 
-            connection.Reconnected += async _ =>
+            _signalRConnection.Reconnecting += exception =>
             {
+                OnSignalRConnectionStateChanged?.Invoke();
+                _logger.LogError(exception, "SignalR connection Reconnecting");
+                return Task.CompletedTask;
+            };
+
+            _signalRConnection.Closed += exception =>
+            {
+                OnSignalRConnectionStateChanged?.Invoke();
+                _logger.LogError(exception, "SignalR connection closed");
+                return Task.CompletedTask;
+            };
+
+            _signalRConnection.Reconnected += async _ =>
+            {
+                OnSignalRConnectionStateChanged?.Invoke();
                 _logger.LogInformation("Reconnected to signalr hub");
-                var addSignalrRHandlerReconnected = await AddSignalrRHandler(connection);
+                var addSignalrRHandlerReconnected = await AddSignalrRHandler(_signalRConnection);
                 if (addSignalrRHandlerReconnected.IsError)
                 {
                     _logger.LogError("Failed to add signalRHandlers after reconnect. {Error}",
@@ -64,6 +114,10 @@ public class ServerInfoService
         {
             _logger.LogError(e, "Exception");
             return Errors.Fail($"Exception in StartSignalRConnection. {e}");
+        }
+        finally
+        {
+            _signalRConnectionLock.Release();
         }
     }
 
@@ -105,7 +159,7 @@ public class ServerInfoService
             return Errors.Fail($"Failed to get events {events.ErrorMessage()}");
         }
 
-        var updateOrInstallLogs = await _instanceApiService.UpdateOrInstallLogs(last24Hours);
+        var updateOrInstallLogs = await _instanceApiService.ServerUpdateOrInstallLogs(last24Hours);
         if (updateOrInstallLogs.IsError)
         {
             return Errors.Fail($"Failed to get update or install logs {updateOrInstallLogs.ErrorMessage()}");

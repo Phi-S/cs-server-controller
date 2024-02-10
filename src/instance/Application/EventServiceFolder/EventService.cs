@@ -53,7 +53,7 @@ public sealed class EventService
 
     public event EventHandler<CustomEventArg>? OnEvent;
 
-    public void AddHandlerToAllCommonEvents(EventHandler<CustomEventArg> handler)
+    private void AddHandlerToAllCommonEvents(EventHandler<CustomEventArg> handler)
     {
         StartingServer += handler;
         StartingServerDone += (sender, eventArg) => { handler(sender, eventArg); };

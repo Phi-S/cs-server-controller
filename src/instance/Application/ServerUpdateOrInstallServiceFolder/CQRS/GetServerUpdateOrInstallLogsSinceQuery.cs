@@ -2,23 +2,22 @@
 using MediatR;
 using Shared.ApiModels;
 
-namespace Application.UpdateOrInstallServiceFolder.CQRS;
+namespace Application.ServerUpdateOrInstallServiceFolder.CQRS;
 
-public record GetUpdateOrInstallLogsSinceQuery(long LongsSinceUnixMilliseconds)
+public record GetServerUpdateOrInstallLogsSinceQuery(long LongsSinceUnixMilliseconds)
     : IRequest<List<UpdateOrInstallLogResponse>>;
 
-public class
-    GetUpdateOrInstallLogsSinceQueryHandle : IRequestHandler<GetUpdateOrInstallLogsSinceQuery,
+public class GetServerUpdateOrInstallLogsSinceQueryHandle : IRequestHandler<GetServerUpdateOrInstallLogsSinceQuery,
     List<UpdateOrInstallLogResponse>>
 {
     private readonly UnitOfWork _unitOfWork;
 
-    public GetUpdateOrInstallLogsSinceQueryHandle(UnitOfWork unitOfWork)
+    public GetServerUpdateOrInstallLogsSinceQueryHandle(UnitOfWork unitOfWork)
     {
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<List<UpdateOrInstallLogResponse>> Handle(GetUpdateOrInstallLogsSinceQuery request,
+    public async Task<List<UpdateOrInstallLogResponse>> Handle(GetServerUpdateOrInstallLogsSinceQuery request,
         CancellationToken cancellationToken)
     {
         var logsSinceDateTime = DateTimeOffset.FromUnixTimeMilliseconds(request.LongsSinceUnixMilliseconds).DateTime;

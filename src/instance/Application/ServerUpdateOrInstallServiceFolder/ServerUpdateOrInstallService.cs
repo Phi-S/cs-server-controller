@@ -15,11 +15,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shared;
 
-namespace Application.UpdateOrInstallServiceFolder;
+namespace Application.ServerUpdateOrInstallServiceFolder;
 
-public class UpdateOrInstallService
+public class ServerUpdateOrInstallService
 {
-    private readonly ILogger<UpdateOrInstallService> _logger;
+    private readonly ILogger<ServerUpdateOrInstallService> _logger;
     private readonly IOptions<AppOptions> _options;
     private readonly StatusService _statusService;
     private readonly EventService _eventService;
@@ -27,14 +27,13 @@ public class UpdateOrInstallService
     private readonly SystemLogService _systemLogService;
     private readonly IServiceProvider _services;
 
-    public UpdateOrInstallService(ILogger<UpdateOrInstallService> logger,
+    public ServerUpdateOrInstallService(ILogger<ServerUpdateOrInstallService> logger,
         IOptions<AppOptions> options,
         StatusService statusService,
         EventService eventService,
         HttpClient httpClient,
         SystemLogService systemLogService,
-        IServiceProvider services
-    )
+        IServiceProvider services)
     {
         _logger = logger;
         _options = options;
@@ -47,7 +46,7 @@ public class UpdateOrInstallService
 
     #region Properties
 
-    public event EventHandler<UpdateOrInstallOutputEventArg>? UpdateOrInstallOutput;
+    public event EventHandler<ServerUpdateOrInstallOutputEventArg>? UpdateOrInstallOutput;
     private volatile CancellationTokenSource _cancellationTokenSource = new();
     private readonly SemaphoreSlim _updateOrInstallLock = new(1);
     private readonly object _idLock = new();
@@ -74,7 +73,7 @@ public class UpdateOrInstallService
     #endregion
 
 
-    public async Task<ErrorOr<Guid>> StartUpdateOrInstall(Func<Task>? afterUpdateOrInstallSuccessfulAction = null)
+    public async Task<ErrorOr<Guid>> StartUpdateOrInstall()
     {
         try
         {
@@ -88,7 +87,7 @@ public class UpdateOrInstallService
                 _logger.LogError("Failed to start server update or install. {Error}",
                     isServerReadyToUpdateOrInstall.ErrorMessage());
                 _systemLogService.Log(
-                    $"Failed to start server update. Server is not ready to update.");
+                    $"Failed to start server update. Server is not ready to update");
                 return Errors.Fail(
                     $"Failed to start server update or install. {isServerReadyToUpdateOrInstall.ErrorMessage()}");
             }
@@ -100,8 +99,7 @@ public class UpdateOrInstallService
 
             _ = UpdateOrInstallServerTask(
                 updateOrInstallStart.Id,
-                _options.Value,
-                afterUpdateOrInstallSuccessfulAction);
+                _options.Value);
 
             await unitOfWork.Save();
             return updateOrInstallStart.Id;
@@ -142,10 +140,7 @@ public class UpdateOrInstallService
         return Result.Success;
     }
 
-    private async Task UpdateOrInstallServerTask(
-        Guid id,
-        AppOptions options,
-        Func<Task>? afterUpdateOrInstallSuccessfulAction)
+    private async Task UpdateOrInstallServerTask(Guid id, AppOptions options)
     {
         try
         {
@@ -160,29 +155,29 @@ public class UpdateOrInstallService
             const string pythonScriptName = "steamcmd.py";
 
             _logger.LogInformation("Installing steamcmd");
-            _systemLogService.Log("Installing steamcmd");
+            _systemLogService.Log("Updating steamcmd");
             if (CheckIfSteamcmdIsInstalled(options.STEAMCMD_FOLDER) == false)
             {
                 var pythonScriptSrcPath =
-                    Path.Combine(options.EXECUTING_FOLDER, "UpdateOrInstallServiceFolder", pythonScriptName);
+                    Path.Combine(options.EXECUTING_FOLDER, "ServerUpdateOrInstallServiceFolder", pythonScriptName);
                 var installSteamcmd = await InstallSteamcmd(options.STEAMCMD_FOLDER, pythonScriptSrcPath);
                 if (installSteamcmd.IsError)
                 {
                     _logger.LogInformation("Failed to install steamcmd. {Error}", installSteamcmd.ErrorMessage());
-                    _systemLogService.Log($"Failed to install steamcmd. {installSteamcmd.ErrorMessage()}");
+                    _systemLogService.Log($"Failed to update steamcmd. {installSteamcmd.ErrorMessage()}");
                     _eventService.OnUpdateOrInstallFailed(id);
                     return;
                 }
                 else
                 {
                     _logger.LogInformation("steamcmd installed successfully");
-                    _systemLogService.Log("steamcmd installed successfully");
+                    _systemLogService.Log("steamcmd updated successfully");
                 }
             }
             else
             {
                 _logger.LogInformation("steamcmd already installed");
-                _systemLogService.Log("steamcmd already installed");
+                _systemLogService.Log("steamcmd already updated");
             }
 
             #endregion
@@ -190,7 +185,6 @@ public class UpdateOrInstallService
             #region executing update or install process
 
             _logger.LogInformation("Starting the update or install process");
-            _systemLogService.Log("Starting update process");
             var executeUpdateOrInstallProcess = await ExecuteUpdateOrInstallProcess(
                 id,
                 options.STEAMCMD_FOLDER,
@@ -205,25 +199,16 @@ public class UpdateOrInstallService
                 _logger.LogError("Failed to update or install server. {Error}",
                     executeUpdateOrInstallProcess.ErrorMessage());
                 _systemLogService.Log(
-                    $"Failed to start update process. {executeUpdateOrInstallProcess.ErrorMessage()}");
+                    $"Failed to update server. {executeUpdateOrInstallProcess.ErrorMessage()}");
                 _eventService.OnUpdateOrInstallFailed(id);
                 return;
             }
 
             #endregion
 
-            _systemLogService.Log("Server updated finished");
             _logger.LogInformation("Done updating or installing server");
+            _systemLogService.Log("Server updated finished");
             _eventService.OnUpdateOrInstallDone(id);
-
-            if (afterUpdateOrInstallSuccessfulAction != null)
-            {
-                _logger.LogInformation("Invoking after update or install action");
-                _systemLogService.Log("After update action started");
-                await afterUpdateOrInstallSuccessfulAction.Invoke();
-                _logger.LogInformation("After update or install action finished");
-                _systemLogService.Log("After update action finished");
-            }
         }
         catch (Exception e)
         {
@@ -297,7 +282,8 @@ public class UpdateOrInstallService
                 .WithArguments(command)
                 .WithStandardOutputPipe(PipeTarget.ToDelegate(output =>
                 {
-                    UpdateOrInstallOutput?.Invoke(this, new UpdateOrInstallOutputEventArg(updateOrInstallId, output));
+                    UpdateOrInstallOutput?.Invoke(this,
+                        new ServerUpdateOrInstallOutputEventArg(updateOrInstallId, output));
                     if (string.IsNullOrWhiteSpace(output) || output.Trim().Equals(successMessage) == false)
                     {
                         return;
@@ -308,7 +294,7 @@ public class UpdateOrInstallService
                 .WithStandardErrorPipe(PipeTarget.ToDelegate(output =>
                 {
                     UpdateOrInstallOutput?.Invoke(this,
-                        new UpdateOrInstallOutputEventArg(updateOrInstallId, output));
+                        new ServerUpdateOrInstallOutputEventArg(updateOrInstallId, output));
                 }))
                 .ExecuteAsync(_cancellationTokenSource.Token);
 
@@ -424,7 +410,7 @@ public class UpdateOrInstallService
 
     #endregion
 
-    private void OnUpdateOrInstallOutputLog(object? _, UpdateOrInstallOutputEventArg arg)
+    private void OnUpdateOrInstallOutputLog(object? _, ServerUpdateOrInstallOutputEventArg arg)
     {
         try
         {
@@ -439,7 +425,7 @@ public class UpdateOrInstallService
         }
     }
 
-    private async void OnUpdateOrInstallOutputToDatabase(object? _, UpdateOrInstallOutputEventArg arg)
+    private async void OnUpdateOrInstallOutputToDatabase(object? _, ServerUpdateOrInstallOutputEventArg arg)
     {
         try
         {

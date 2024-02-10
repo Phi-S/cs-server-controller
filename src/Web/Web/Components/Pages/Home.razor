@@ -31,7 +31,7 @@
                     <button
                         class="input-group btn btn-outline-info"
                         disabled="@ServerInfoService.IsServerBusy"
-                        @onclick="@StartUpdateOrInstall">
+                        @onclick="@StartServerUpdateOrInstall">
                         Update Server
                     </button>
                 }
@@ -39,20 +39,13 @@
                 {
                     <button
                         class="input-group btn btn-outline-info"
-                        @onclick="@CancelUpdateOrInstall">
+                        @onclick="@CancelServerUpdateOrInstall">
                         Cancel update
                     </button>
                 }
 
                 <button
-                    class="input-group btn btn-outline-info"
-                    disabled="@(ServerInfoService.IsServerBusy)"
-                    @onclick="@UpdateOrInstallPlugins">
-                    Update plugins
-                </button>
-
-                <button
-                    class="input-group btn btn-outline-primary dropdown"
+                    class="input-group btn btn-outline-info dropdown"
                     disabled="@(ServerInfoService.IsServerBusy || ServerInfo.ServerStarted == false)"
                     type="button"
                     id="changeMapDropdownMenuButton"

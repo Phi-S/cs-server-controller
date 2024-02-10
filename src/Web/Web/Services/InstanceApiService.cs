@@ -395,36 +395,36 @@ public class InstanceApiService
 
     private const string UpdateOrInstallEndpoint = "/update-or-install";
 
-    public async Task<ErrorOr<Guid>> UpdateOrInstallStart()
+    public async Task<ErrorOr<Guid>> ServerUpdateOrInstallStart()
     {
-        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/start");
+        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/server/start");
         var response = await Send<Guid>(requestMessage);
         return response;
     }
 
-    public async Task<ErrorOr<Success>> UpdateOrInstallCancel(Guid id)
+    public async Task<ErrorOr<Success>> ServerUpdateOrInstallCancel(Guid id)
     {
-        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/cancel",
+        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/server/cancel",
             "id",
             id.ToString());
         var response = await SendWithoutResponse(requestMessage);
         return response;
     }
-
-    public async Task<ErrorOr<Success>> UpdateOrInstallPlugins()
+    
+    public async Task<ErrorOr<List<UpdateOrInstallLogResponse>>> ServerUpdateOrInstallLogs(DateTimeOffset logsSince)
     {
-        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/plugins");
-        var response = await SendWithoutResponse(requestMessage);
-        return response;
-    }
-
-    public async Task<ErrorOr<List<UpdateOrInstallLogResponse>>> UpdateOrInstallLogs(DateTimeOffset logsSince)
-    {
-        var requestMessage = GetRequestMessage($"{UpdateOrInstallEndpoint}/logs",
+        var requestMessage = GetRequestMessage($"{UpdateOrInstallEndpoint}/server/logs",
             "logsSince",
             logsSince.ToUnixTimeMilliseconds().ToString());
         var result = await Send<List<UpdateOrInstallLogResponse>>(requestMessage);
         return result;
+    }
+
+    public async Task<ErrorOr<Success>> CounterstrikeSharpUpdateOrInstall()
+    {
+        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/counter-strike-sharp");
+        var response = await SendWithoutResponse(requestMessage);
+        return response;
     }
 
     #endregion

@@ -2,9 +2,9 @@
 using Application.EventServiceFolder;
 using Application.EventServiceFolder.EventArgs;
 using Application.ServerServiceFolder;
+using Application.ServerUpdateOrInstallServiceFolder;
 using Application.StatusServiceFolder;
 using Application.SystemLogFolder;
-using Application.UpdateOrInstallServiceFolder;
 using Microsoft.AspNetCore.SignalR;
 using Shared.ApiModels;
 using Shared.SignalR;
@@ -15,7 +15,7 @@ public class SignalRUserService
 {
     private readonly IHubContext<SignalRHub> _hubContext;
     private readonly ServerService _serverService;
-    private readonly UpdateOrInstallService _updateOrInstallService;
+    private readonly ServerUpdateOrInstallService _serverUpdateOrInstallService;
     private readonly EventService _eventService;
     private readonly StatusService _statusService;
     private readonly SystemLogService _systemLogService;
@@ -23,21 +23,21 @@ public class SignalRUserService
     public SignalRUserService(
         IHubContext<SignalRHub> hubContext,
         ServerService serverService,
-        UpdateOrInstallService updateOrInstallService,
+        ServerUpdateOrInstallService serverUpdateOrInstallService,
         EventService eventService,
         StatusService statusService,
         SystemLogService systemLogService)
     {
         _hubContext = hubContext;
         _serverService = serverService;
-        _updateOrInstallService = updateOrInstallService;
+        _serverUpdateOrInstallService = serverUpdateOrInstallService;
         _eventService = eventService;
         _statusService = statusService;
         _systemLogService = systemLogService;
 
         _systemLogService.OnSystemLogEvent += SystemLogServiceOnOnSystemLogEvent;
         _serverService.ServerOutputEvent += OnServerServiceOnServerOutputEvent;
-        _updateOrInstallService.UpdateOrInstallOutput += OnUpdateOrInstallServiceOnUpdateOrInstallOutput;
+        _serverUpdateOrInstallService.UpdateOrInstallOutput += OnServerUpdateOrInstallServiceOnServerUpdateOrInstallOutput;
         _eventService.OnEvent += EventServiceOnOnEvent;
         _statusService.ServerStatusChanged += StatusServiceOnServerStatusChanged;
     }
@@ -65,7 +65,7 @@ public class SignalRUserService
         await _hubContext.Clients.All.SendServerLog(serverLog);
     }
 
-    private async void OnUpdateOrInstallServiceOnUpdateOrInstallOutput(object? _, UpdateOrInstallOutputEventArg arg)
+    private async void OnServerUpdateOrInstallServiceOnServerUpdateOrInstallOutput(object? _, ServerUpdateOrInstallOutputEventArg arg)
     {
         var response = new UpdateOrInstallLogResponse(arg.UpdateOrInstallId, arg.Message, DateTime.UtcNow);
         await _hubContext.Clients.All.SendUpdateOrInstallLog(response);

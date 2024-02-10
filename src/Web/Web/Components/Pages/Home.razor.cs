@@ -57,7 +57,7 @@ public class HomeRazor : ComponentBase, IDisposable
         }
     }
 
-    protected async Task Load()
+    private async Task Load()
     {
         PreloadService.Show();
         while (ServerInfo is null)
@@ -145,11 +145,11 @@ public class HomeRazor : ComponentBase, IDisposable
         }
     }
 
-    protected async Task StartUpdateOrInstall()
+    protected async Task StartServerUpdateOrInstall()
     {
         try
         {
-            var startUpdateOrInstallResult = await InstanceApiService.UpdateOrInstallStart();
+            var startUpdateOrInstallResult = await InstanceApiService.ServerUpdateOrInstallStart();
             if (startUpdateOrInstallResult.IsError)
             {
                 Logger.LogError("Start update or install server failed with error {Error}",
@@ -171,14 +171,14 @@ public class HomeRazor : ComponentBase, IDisposable
         }
     }
 
-    protected async Task CancelUpdateOrInstall()
+    protected async Task CancelServerUpdateOrInstall()
     {
         try
         {
             _currentUpdateOrInstallId.ThrowIfNull();
 
             var cancelUpdatingOrInstalling =
-                await InstanceApiService.UpdateOrInstallCancel(_currentUpdateOrInstallId.Value);
+                await InstanceApiService.ServerUpdateOrInstallCancel(_currentUpdateOrInstallId.Value);
             if (cancelUpdatingOrInstalling.IsError)
             {
                 Logger.LogError("Failed to cancel server update. {Error}",
@@ -196,31 +196,6 @@ public class HomeRazor : ComponentBase, IDisposable
         {
             Logger.LogError(e, "Failed to cancel server update");
             ToastService.Error("Failed to cancel server update");
-        }
-    }
-
-    protected async Task UpdateOrInstallPlugins()
-    {
-        try
-        {
-            var updateOrInstallPlugins = await InstanceApiService.UpdateOrInstallPlugins();
-            if (updateOrInstallPlugins.IsError)
-            {
-                Logger.LogError("Start update plugins failed with error {Error}",
-                    updateOrInstallPlugins.ErrorMessage());
-                ToastService.Error(
-                    $"Failed to update plugins. {updateOrInstallPlugins.ErrorMessage()}");
-            }
-            else
-            {
-                Logger.LogInformation("Plugins updated");
-                ToastService.Info("Plugins updated");
-            }
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e, "Failed to update plugins");
-            ToastService.Error("Failed to update plugins");
         }
     }
 

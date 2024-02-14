@@ -1,6 +1,7 @@
 ﻿using BlazorBootstrap;
 using Microsoft.AspNetCore.Components;
 using Shared;
+using Shared.ApiModels;
 using Web.BlazorExtensions;
 using Web.Services;
 
@@ -12,6 +13,30 @@ public class PluginsRazor : ComponentBase
     [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] protected ServerInfoService ServerInfoService { get; set; } = default!;
     [Inject] private InstanceApiService InstanceApiService { get; set; } = default!;
+
+
+    protected List<InstalledVersionsModel>? InstalledVersions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var installedVersions = await InstanceApiService.InstalledVersions();
+        if (installedVersions.IsError)
+        {
+            Logger.LogWarning("Failed to get installed versions. {Error}", installedVersions.ErrorMessage());
+        }
+        else
+        {
+            InstalledVersions = installedVersions.Value;
+        }
+
+        await base.OnInitializedAsync();
+    }
+
+    protected string GetCounterStrikeSharpVersion()
+    {
+        var counterStrikeSharpVersion = InstalledVersions?.FirstOrDefault(v => v.Name.Equals("counterstrikesharp"));
+        return counterStrikeSharpVersion is null ? "" : $"current version: {counterStrikeSharpVersion.Version}";
+    }
 
     protected string CounterStrikeSharpUpdateOrInstall()
     {

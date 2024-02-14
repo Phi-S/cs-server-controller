@@ -2,6 +2,7 @@
 using Application.ConfigEditorFolder;
 using Application.CounterStrikeSharpUpdateOrInstallFolder;
 using Application.EventServiceFolder;
+using Application.InstalledVersionsFolder;
 using Application.ServerServiceFolder;
 using Application.ServerUpdateOrInstallServiceFolder;
 using Application.StartParameterFolder;
@@ -29,6 +30,7 @@ public static class ApplicationExtensionMethods
         serviceCollection.AddSingleton<StartParameterService>();
         serviceCollection.AddSingleton<SystemLogService>();
         serviceCollection.AddSingleton<ConfigEditorService>();
+        serviceCollection.AddSingleton<InstalledVersionsService>();
 
         serviceCollection.AddHostedService<ChatCommandService>();
 

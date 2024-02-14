@@ -2,6 +2,7 @@
 using System.IO.Compression;
 using Application.EventServiceFolder;
 using Application.Helpers;
+using Application.InstalledVersionsFolder;
 using Application.ServerHelperFolder;
 using Application.StatusServiceFolder;
 using Application.SystemLogFolder;
@@ -21,6 +22,7 @@ public class CounterStrikeSharpUpdateOrInstallService
     private readonly StatusService _statusService;
     private readonly EventService _eventService;
     private readonly SystemLogService _systemLogService;
+    private readonly InstalledVersionsService _installedVersionsService;
 
     public CounterStrikeSharpUpdateOrInstallService(
         ILogger<CounterStrikeSharpUpdateOrInstallService> logger,
@@ -28,7 +30,8 @@ public class CounterStrikeSharpUpdateOrInstallService
         HttpClient httpClient,
         StatusService statusService,
         EventService eventService,
-        SystemLogService systemLogService)
+        SystemLogService systemLogService,
+        InstalledVersionsService installedVersionsService)
     {
         _logger = logger;
         _options = options;
@@ -36,12 +39,24 @@ public class CounterStrikeSharpUpdateOrInstallService
         _statusService = statusService;
         _eventService = eventService;
         _systemLogService = systemLogService;
+        _installedVersionsService = installedVersionsService;
     }
 
     private string CsgoFolder => Path.Combine(
         _options.Value.SERVER_FOLDER,
         "game",
         "csgo");
+
+    private readonly (string Name, string Version, string DownloadLink)
+        _metamod = ("Metamod:Source",
+            "2.0.0-git1282",
+            "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1282-linux.tar.gz");
+
+
+    private readonly (string Name, string Version, string DownloadLink)
+        _counterStrikeSharp = ("CounterStrikeSharp",
+            "v166",
+            "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v166/counterstrikesharp-with-runtime-build-166-linux-f336dec.zip");
 
     private ErrorOr<Success> IsServerReadyToUpdateOrInstall()
     {
@@ -171,8 +186,22 @@ public class CounterStrikeSharpUpdateOrInstallService
 
         #endregion
 
+        #region CoreConfig
+
         var configsFolder = Path.Combine(addonsFolder, "counterstrikesharp", "configs");
         CreateCoreCfg(configsFolder);
+
+        #endregion
+
+        #region InstalledVersionsJson
+
+        var entryToInstalledVersions = await AddEntryToInstalledVersions();
+        if (entryToInstalledVersions.IsError)
+        {
+            return entryToInstalledVersions.FirstError;
+        }
+
+        #endregion
 
         _eventService.OnPluginUpdateOrInstallDone();
         _logger.LogInformation("Metamod and CounterStrikeSharp {UpdateOrInstall} completed", updateOrInstallString);
@@ -180,14 +209,13 @@ public class CounterStrikeSharpUpdateOrInstallService
         return Result.Success;
     }
 
-    #region Base
+    #region Install
 
-    public static async Task<ErrorOr<Success>> InstallMetamod(HttpClient httpClient, string csgoFolder)
+    public async Task<ErrorOr<Success>> InstallMetamod(HttpClient httpClient, string csgoFolder)
     {
         var downloadTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
-        const string metamodUrl = "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1282-linux.tar.gz";
         var downloadPath = Path.Combine(downloadTempFolder, "metamod.tar.gz");
-        var downLoadResult = await Download(httpClient, metamodUrl, downloadPath);
+        var downLoadResult = await Download(httpClient, _metamod.DownloadLink, downloadPath);
         if (downLoadResult.IsError)
         {
             return downLoadResult.FirstError;
@@ -244,13 +272,11 @@ public class CounterStrikeSharpUpdateOrInstallService
         return Result.Success;
     }
 
-    public static async Task<ErrorOr<Success>> InstallCounterStrikeSharp(HttpClient httpClient, string csgoFolder)
+    public async Task<ErrorOr<Success>> InstallCounterStrikeSharp(HttpClient httpClient, string csgoFolder)
     {
         var downloadTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
-        const string counterStrikeSharpUrl =
-            "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v164/counterstrikesharp-with-runtime-build-164-linux-8967c40.zip";
         var downloadPath = Path.Combine(downloadTempFolder, "counterstrikesharp-with-runtime.zip");
-        var downLoadResult = await Download(httpClient, counterStrikeSharpUrl, Path.Combine(downloadPath));
+        var downLoadResult = await Download(httpClient, _counterStrikeSharp.DownloadLink, Path.Combine(downloadPath));
         if (downLoadResult.IsError)
         {
             return downLoadResult.FirstError;
@@ -291,7 +317,7 @@ public class CounterStrikeSharpUpdateOrInstallService
         return Result.Success;
     }
 
-    public static async Task<ErrorOr<Success>> Download(HttpClient httpClient, string downloadUrl, string downloadPath)
+    private static async Task<ErrorOr<Success>> Download(HttpClient httpClient, string downloadUrl, string downloadPath)
     {
         await using var downloadStream = await httpClient.GetStreamAsync(downloadUrl);
         await using var fileStream = new FileStream(downloadPath, FileMode.OpenOrCreate);
@@ -350,6 +376,28 @@ public class CounterStrikeSharpUpdateOrInstallService
             """;
 
         File.WriteAllText(coreCfgJsonPath, json);
+    }
+
+    private async Task<ErrorOr<Success>> AddEntryToInstalledVersions()
+    {
+        var addMetamodEntryToInstalledVersion =
+            await _installedVersionsService.UpdateOrInstall(_metamod.Name, _metamod.Version);
+
+        if (addMetamodEntryToInstalledVersion.IsError)
+        {
+            return addMetamodEntryToInstalledVersion.FirstError;
+        }
+
+        var addCounterStrikeSharpEntryToInstalledVersion = await _installedVersionsService.UpdateOrInstall(
+            _counterStrikeSharp.Name,
+            _counterStrikeSharp.Version);
+
+        if (addCounterStrikeSharpEntryToInstalledVersion.IsError)
+        {
+            return addCounterStrikeSharpEntryToInstalledVersion.FirstError;
+        }
+
+        return Result.Success;
     }
 
     #endregion

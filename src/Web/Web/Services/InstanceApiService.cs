@@ -315,6 +315,13 @@ public class InstanceApiService
         return result;
     }
 
+    public async Task<ErrorOr<List<InstalledVersionsModel>>> InstalledVersions()
+    {
+        var requestMessage = GetRequestMessage($"{InfoEndpoint}/installed-versions");
+        var result = await Send<List<InstalledVersionsModel>>(requestMessage);
+        return result;
+    }
+
     #endregion
 
     #region ServerEndpoint
@@ -410,7 +417,7 @@ public class InstanceApiService
         var response = await SendWithoutResponse(requestMessage);
         return response;
     }
-    
+
     public async Task<ErrorOr<List<UpdateOrInstallLogResponse>>> ServerUpdateOrInstallLogs(DateTimeOffset logsSince)
     {
         var requestMessage = GetRequestMessage($"{UpdateOrInstallEndpoint}/server/logs",

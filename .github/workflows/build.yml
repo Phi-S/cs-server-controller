@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: build docker images
 
 on:
   push:
@@ -13,4 +13,4 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
-      run: docker build . --file Dockerfile_instance --tag cs-controller-instance:3.{{ github.run_attempt }}
+      run: docker build . --file Dockerfile_instance --tag cs-controller-instance:3.$GITHUB_RUN_ATTEMPT

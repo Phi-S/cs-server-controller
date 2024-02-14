@@ -1,0 +1,24 @@
+name: build docker images
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: get version
+      uses: reecetech/version-increment@2023.9.3
+      id: version
+      with:
+        scheme: semver
+        increment: patch
+      
+    - name: build cs-controller-instance docker image
+      run: docker build . --file Dockerfile_instance --tag cs-controller-instance:${{ steps.version.outputs.version }}
+      
+    - name: build cs-controller-web docker image
+      run: docker build . --file Dockerfile_web --tag cs-controller-web:${{ steps.version.outputs.version }}

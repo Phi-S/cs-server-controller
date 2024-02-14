@@ -5,12 +5,14 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
+    env:
+      Version: "3.${{ GITHUB_RUN_ATTEMPT }}"
 
     steps:
     - uses: actions/checkout@v3
+    - name: Output version
+      run: echo "${{ env.Version }}"
     - name: Build the Docker image
-      run: docker build . --file Dockerfile_instance --tag cs-controller-instance:3.$GITHUB_RUN_ATTEMPT
+      run: docker build . --file Dockerfile_instance --tag cs-controller-instance:${{ env.Version }}

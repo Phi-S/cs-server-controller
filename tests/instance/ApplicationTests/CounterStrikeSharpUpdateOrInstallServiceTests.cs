@@ -22,11 +22,14 @@ public class CounterStrikeSharpUpdateOrInstallServiceTests
     public async Task TestMetamodInstall()
     {
         // Arrange
-        var httpClient = new HttpClient();
-        var testFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
+        var (applicationServices, unitTestFolder) = ServicesSetup.GetApplication(_outputHelper);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var counterStrikeSharpUpdateOrInstallService =
+            provider.GetRequiredService<CounterStrikeSharpUpdateOrInstallService>();
+        var options = provider.GetRequiredService<IOptions<AppOptions>>();
 
         // Act
-        var downloadMetamod = await CounterStrikeSharpUpdateOrInstallService.InstallMetamod(httpClient, testFolder);
+        var downloadMetamod = await counterStrikeSharpUpdateOrInstallService.InstallMetamod();
 
         // Assert
         if (downloadMetamod.IsError)
@@ -35,7 +38,7 @@ public class CounterStrikeSharpUpdateOrInstallServiceTests
             Assert.Fail();
         }
 
-        var addonsFolder = Path.Combine(testFolder, "addons");
+        var addonsFolder = Path.Combine(options.Value.SERVER_FOLDER, "game", "csgo", "addons");
         Assert.True(File.Exists(Path.Combine(addonsFolder, "metamod.vdf")));
         Assert.True(File.Exists(Path.Combine(addonsFolder, "metamod_x64.vdf")));
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "metamod")));
@@ -47,12 +50,15 @@ public class CounterStrikeSharpUpdateOrInstallServiceTests
     public async Task TestCounterStrikeSharpInstall()
     {
         // Arrange
-        var httpClient = new HttpClient();
-        var testFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
+        var (applicationServices, unitTestFolder) = ServicesSetup.GetApplication(_outputHelper);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var counterStrikeSharpUpdateOrInstallService =
+            provider.GetRequiredService<CounterStrikeSharpUpdateOrInstallService>();
+        var options = provider.GetRequiredService<IOptions<AppOptions>>();
 
         // Act
-        var downloadCounterStrikeSharp = await CounterStrikeSharpUpdateOrInstallService.InstallCounterStrikeSharp(httpClient, testFolder);
-        var downloadMetamod = await CounterStrikeSharpUpdateOrInstallService.InstallMetamod(httpClient, testFolder);
+        var downloadMetamod = await counterStrikeSharpUpdateOrInstallService.InstallMetamod();
+        var downloadCounterStrikeSharp = await counterStrikeSharpUpdateOrInstallService.InstallCounterStrikeSharp();
 
         // Assert
         if (downloadCounterStrikeSharp.IsError)
@@ -67,7 +73,7 @@ public class CounterStrikeSharpUpdateOrInstallServiceTests
             Assert.Fail();
         }
 
-        var addonsFolder = Path.Combine(testFolder, "addons");
+        var addonsFolder = Path.Combine(options.Value.SERVER_FOLDER, "game", "csgo", "addons");
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "metamod")));
         Assert.True(File.Exists(Path.Combine(addonsFolder, "metamod", "counterstrikesharp.vdf")));
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "counterstrikesharp")));
@@ -86,11 +92,14 @@ public class CounterStrikeSharpUpdateOrInstallServiceTests
     public async Task TestMetamodAndCounterStrikeSharpInstall()
     {
         // Arrange
-        var httpClient = new HttpClient();
-        var testFolder = UnitTestFolderHelper.GetNewUnitTestFolder(_outputHelper);
+        var (applicationServices, unitTestFolder) = ServicesSetup.GetApplication(_outputHelper);
+        await using var provider = applicationServices.BuildServiceProvider();
+        var counterStrikeSharpUpdateOrInstallService =
+            provider.GetRequiredService<CounterStrikeSharpUpdateOrInstallService>();
+        var options = provider.GetRequiredService<IOptions<AppOptions>>();
 
         // Act
-        var downloadCounterStrikeSharp = await CounterStrikeSharpUpdateOrInstallService.InstallCounterStrikeSharp(httpClient, testFolder);
+        var downloadCounterStrikeSharp = await counterStrikeSharpUpdateOrInstallService.InstallCounterStrikeSharp();
 
         // Assert
         if (downloadCounterStrikeSharp.IsError)
@@ -99,7 +108,7 @@ public class CounterStrikeSharpUpdateOrInstallServiceTests
             Assert.Fail();
         }
 
-        var addonsFolder = Path.Combine(testFolder, "addons");
+        var addonsFolder = Path.Combine(options.Value.SERVER_FOLDER, "game", "csgo", "addons");
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "metamod")));
         Assert.True(File.Exists(Path.Combine(addonsFolder, "metamod", "counterstrikesharp.vdf")));
         Assert.True(Directory.Exists(Path.Combine(addonsFolder, "counterstrikesharp")));

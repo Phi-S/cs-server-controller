@@ -1,6 +1,7 @@
 ﻿using Application.ConfigEditorFolder.CQRS;
 using Instance.Response;
 using MediatR;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Shared;
 
@@ -16,30 +17,31 @@ public static class ConfigEndpoint
             .WithTags(tag)
             .WithOpenApi();
 
-        group.MapGet("", async (IMediator mediator) =>
+        group.MapGet("", async Task<Results<ErrorResult, Ok<List<string>>>> (IMediator mediator) =>
         {
             var command = new GetConfigsQuery();
             var result = await mediator.Send(command);
             return result.IsError
                 ? Results.Extensions.InternalServerError(result.ErrorMessage())
-                : Results.Ok(result.Value);
+                : TypedResults.Ok(result.Value);
         });
 
-        group.MapGet("get-content", async ([FromQuery] string configFile, IMediator mediator) =>
+        group.MapGet("get-content", async Task<Results<ErrorResult, Ok<string>>>
+            ([FromQuery] string configFile, IMediator mediator) =>
         {
             var command = new GetConfigQuery(configFile);
             var result = await mediator.Send(command);
             return result.IsError
                 ? Results.Extensions.InternalServerError(result.ErrorMessage())
-                : Results.Ok(result.Value);
+                : TypedResults.Ok(result.Value);
         });
 
-        group.MapPost("set-content",
-            async ([FromQuery] string configFile, [FromBody] string content, IMediator mediator) =>
-            {
-                var command = new SetConfigCommand(configFile, content);
-                await mediator.Send(command);
-                return Results.Ok();
-            });
+        group.MapPost("set-content", async Task<Ok>
+            ([FromQuery] string configFile, [FromBody] string content, IMediator mediator) =>
+        {
+            var command = new SetConfigCommand(configFile, content);
+            await mediator.Send(command);
+            return TypedResults.Ok();
+        });
     }
 }

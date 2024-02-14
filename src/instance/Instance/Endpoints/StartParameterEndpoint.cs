@@ -1,6 +1,7 @@
 ﻿using Application.StartParameterFolder.CQRS;
 using Instance.Response;
 using MediatR;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Shared;
 using Shared.ApiModels;
@@ -17,20 +18,21 @@ public static class StartParameterEndpoint
             .WithTags(tag)
             .WithOpenApi();
 
-        group.MapGet("", async (IMediator mediator) =>
+        group.MapGet("", async Task<Results<ErrorResult, Ok<StartParameters>>> (IMediator mediator) =>
         {
             var command = new GetStartParametersQuery();
             var result = await mediator.Send(command);
             return result.IsError
                 ? Results.Extensions.InternalServerError(result.ErrorMessage())
-                : Results.Ok(result.Value);
+                : TypedResults.Ok(result.Value);
         });
 
-        group.MapPost("set", async ([FromBody] StartParameters startParameters, IMediator mediator) =>
+        group.MapPost("set", async Task<Ok>
+            ([FromBody] StartParameters startParameters, IMediator mediator) =>
         {
             var command = new SetStartParametersCommand(startParameters);
             await mediator.Send(command);
-            return Results.Ok();
+            return TypedResults.Ok();
         });
     }
 }

@@ -147,7 +147,7 @@ public class CounterStrikeSharpUpdateOrInstallService
 
         _logger.LogInformation("{UpdatingOrInstalling} Metamod", updatingOrInstallingString);
         _systemLogService.Log($"{updatingOrInstallingString} Metamod");
-        var installMetamod = await InstallMetamod(_httpClient, CsgoFolder);
+        var installMetamod = await InstallMetamod();
         if (installMetamod.IsError)
         {
             return Errors.Fail($"Metamod {updateOrInstallString} failed. {installMetamod.ErrorMessage()}");
@@ -162,7 +162,7 @@ public class CounterStrikeSharpUpdateOrInstallService
 
         _logger.LogInformation("{UpdatingOrInstalling} CounterStrikeSharp", updatingOrInstallingString);
         _systemLogService.Log($"{updatingOrInstallingString} CounterStrikeSharp");
-        var installCounterStrikeSharp = await InstallCounterStrikeSharp(_httpClient, CsgoFolder);
+        var installCounterStrikeSharp = await InstallCounterStrikeSharp();
         if (installCounterStrikeSharp.IsError)
         {
             return Errors.Fail(
@@ -211,17 +211,17 @@ public class CounterStrikeSharpUpdateOrInstallService
 
     #region Install
 
-    public async Task<ErrorOr<Success>> InstallMetamod(HttpClient httpClient, string csgoFolder)
+    public async Task<ErrorOr<Success>> InstallMetamod()
     {
-        var downloadTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
+        var downloadTempFolder = FolderHelper.CreateNewTempFolder(CsgoFolder);
         var downloadPath = Path.Combine(downloadTempFolder, "metamod.tar.gz");
-        var downLoadResult = await Download(httpClient, _metamod.DownloadLink, downloadPath);
+        var downLoadResult = await Download(_httpClient, _metamod.DownloadLink, downloadPath);
         if (downLoadResult.IsError)
         {
             return downLoadResult.FirstError;
         }
 
-        var extractionTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
+        var extractionTempFolder = FolderHelper.CreateNewTempFolder(CsgoFolder);
         await using (var gzip = new GZipStream(File.OpenRead(downloadPath), CompressionMode.Decompress))
         {
             using var unzippedStream = new MemoryStream();
@@ -254,7 +254,7 @@ public class CounterStrikeSharpUpdateOrInstallService
         }
 
         Directory.Delete(downloadTempFolder, true);
-        var csgoAddonsFolder = Path.Combine(csgoFolder, "addons");
+        var csgoAddonsFolder = Path.Combine(CsgoFolder, "addons");
         var copyDirectory = FolderHelper.CopyDirectory(extractedAddonsFolder, csgoAddonsFolder);
         if (copyDirectory.IsError)
         {
@@ -272,17 +272,17 @@ public class CounterStrikeSharpUpdateOrInstallService
         return Result.Success;
     }
 
-    public async Task<ErrorOr<Success>> InstallCounterStrikeSharp(HttpClient httpClient, string csgoFolder)
+    public async Task<ErrorOr<Success>> InstallCounterStrikeSharp()
     {
-        var downloadTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
+        var downloadTempFolder = FolderHelper.CreateNewTempFolder(CsgoFolder);
         var downloadPath = Path.Combine(downloadTempFolder, "counterstrikesharp-with-runtime.zip");
-        var downLoadResult = await Download(httpClient, _counterStrikeSharp.DownloadLink, Path.Combine(downloadPath));
+        var downLoadResult = await Download(_httpClient, _counterStrikeSharp.DownloadLink, Path.Combine(downloadPath));
         if (downLoadResult.IsError)
         {
             return downLoadResult.FirstError;
         }
 
-        var extractionTempFolder = FolderHelper.CreateNewTempFolder(csgoFolder);
+        var extractionTempFolder = FolderHelper.CreateNewTempFolder(CsgoFolder);
         await using (var fileStream = File.OpenRead(downloadPath))
         {
             ZipFile.ExtractToDirectory(fileStream, extractionTempFolder);
@@ -299,7 +299,7 @@ public class CounterStrikeSharpUpdateOrInstallService
 
         Directory.Delete(downloadTempFolder, true);
 
-        var csgoAddonsFolder = Path.Combine(csgoFolder, "addons");
+        var csgoAddonsFolder = Path.Combine(CsgoFolder, "addons");
         var copyDirectory = FolderHelper.CopyDirectory(extractedAddonsFolder, csgoAddonsFolder);
         if (copyDirectory.IsError)
         {

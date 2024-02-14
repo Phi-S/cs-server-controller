@@ -2,8 +2,10 @@
 using Application.ServerUpdateOrInstallServiceFolder.CQRS;
 using Instance.Response;
 using MediatR;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Shared;
+using Shared.ApiModels;
 
 namespace Instance.Endpoints;
 
@@ -17,38 +19,41 @@ public static class UpdateOrInstallEndpoint
             .WithTags(tag)
             .WithOpenApi();
 
-        group.MapPost("server/start", async (IMediator mediator) =>
+        group.MapPost("server/start", async Task<Results<ErrorResult, Ok<Guid>>>
+            (IMediator mediator) =>
         {
             var command = new ServerStartUpdateOrInstallCommand();
             var result = await mediator.Send(command);
             return result.IsError
                 ? Results.Extensions.InternalServerError(result.ErrorMessage())
-                : Results.Ok(result.Value);
+                : TypedResults.Ok(result.Value);
         });
 
-        group.MapPost("server/cancel", async ([FromQuery] Guid id, IMediator mediator) =>
+        group.MapPost("server/cancel", async Task<Results<ErrorResult, Ok>>
+            ([FromQuery] Guid id, IMediator mediator) =>
         {
             var command = new ServerCancelUpdateOrInstallCommand(id);
             var result = await mediator.Send(command);
             return result.IsError
                 ? Results.Extensions.InternalServerError(result.ErrorMessage())
-                : Results.Ok();
+                : TypedResults.Ok();
         });
 
-        group.MapGet("server/logs", async ([FromQuery] long logsSince, IMediator mediator) =>
+        group.MapGet("server/logs", async Task<Ok<List<UpdateOrInstallLogResponse>>>
+            ([FromQuery] long logsSince, IMediator mediator) =>
         {
             var command = new GetServerUpdateOrInstallLogsSinceQuery(logsSince);
             var result = await mediator.Send(command);
-            return Results.Ok(result);
+            return TypedResults.Ok(result);
         });
 
-        group.MapPost("counter-strike-sharp", async (IMediator mediator) =>
+        group.MapPost("counter-strike-sharp", async Task<Results<ErrorResult, Ok>> (IMediator mediator) =>
         {
             var command = new CounterStrikeSharpUpdateOrInstallCommand();
             var result = await mediator.Send(command);
             return result.IsError
                 ? Results.Extensions.InternalServerError(result.ErrorMessage())
-                : Results.Ok();
+                : TypedResults.Ok();
         });
     }
 }

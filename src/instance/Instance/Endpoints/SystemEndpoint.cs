@@ -1,6 +1,8 @@
 ﻿using Application.SystemLogFolder.CQRS;
 using MediatR;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Shared.ApiModels;
 
 namespace Instance.Endpoints;
 
@@ -13,12 +15,13 @@ public static class SystemEndpoint
             .MapGroup(tag)
             .WithTags(tag)
             .WithOpenApi();
-        
-        group.MapGet("logs", async (IMediator mediator, [FromQuery] long logsSince) =>
+
+        group.MapGet("logs", async Task<Ok<List<SystemLogResponse>>>
+            (IMediator mediator, [FromQuery] long logsSince) =>
         {
             var command = new GetSystemLogsSinceQuery(logsSince);
             var result = await mediator.Send(command);
-            return Results.Ok(result);
+            return TypedResults.Ok(result);
         });
 
         return group;

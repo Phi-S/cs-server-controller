@@ -7,14 +7,21 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      Version: "3.${{ github.run_attempt }}"
 
     steps:
     - uses: actions/checkout@v3
+    - name: Get version
+      uses: reecetech/version-increment@2023.9.3
+      id: version
+      with:
+        scheme: semver
+        increment: patch
+        
     - name: Output version
-      run: echo "${{ env.Version }}"
+      run: echo "${{ steps.version.outputs.version }}"
+      
     - name: Build cs-controller-instance Docker image
-      run: docker build . --file Dockerfile_instance --tag cs-controller-instance:${{ env.Version }}
+      run: docker build . --file Dockerfile_instance --tag cs-controller-instance:${{ steps.version.outputs.version }}
+      
     - name: Build cs-controller-web Docker image
-      run: docker build . --file Dockerfile_web --tag cs-controller-web:${{ env.Version }}
+      run: docker build . --file Dockerfile_web --tag cs-controller-web:${{ steps.version.outputs.version }}

@@ -6,6 +6,7 @@ WORKDIR /src
 COPY src/. .
 
 WORKDIR /src/web/Web
+RUN ls -lah
 RUN dotnet restore -r linux-musl-x64
 RUN dotnet publish \
     -c Release \

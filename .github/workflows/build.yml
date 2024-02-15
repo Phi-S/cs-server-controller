@@ -45,7 +45,7 @@ jobs:
     - name: push cs-controller-instance images
       run: docker image push ${{ steps.cs-controller-instance.env.TAG }}
     - name: push cs-controller-web images
-      run: docker image push ${{ cs-controller-web.env.TAG }}
+      run: docker image push ${{ steps.cs-controller-web.env.TAG }}
     - name: push git tag
       run: |
         git config user.name "GitHub Actions"

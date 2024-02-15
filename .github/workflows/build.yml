@@ -5,10 +5,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-instance:
+  build:
     runs-on: ubuntu-latest
-    env:
-      instance-image-name: ${{ secrets.DOCKER_REGISTRY }}/cs-controller-instance:${{ steps.version.outputs.version }}
     steps:
     - name: checkout
       uses: actions/checkout@v3
@@ -18,63 +16,32 @@ jobs:
       with:
         scheme: semver
         increment: patch
-    - name: build
+    - name: set up docker buildx
+      uses: docker/setup-buildx-action@v1
+    - name: build cs-controller-instance
       uses: docker/build-push-action@v2
+      env:
+        INSTANCE_TAG: ${{ secrets.DOCKER_REGISTRY }}/cs-controller-instance:${{ steps.version.outputs.version }}
       with:
         context: .
         file: ./Dockerfile_instance
-        tags: ${{ instance-image-name }}
-        outputs: type=docker,dest=/tmp/instance.tar
-      
-  build-web:
-    runs-on: ubuntu-latest
-    env:
-      web-image-name: ${{ secrets.DOCKER_REGISTRY }}/cs-controller-web:${{ steps.version.outputs.version }}
-    steps:
-    - name: checkout
-      uses: actions/checkout@v3
-    - name: get version
-      uses: reecetech/version-increment@2023.9.3
-      id: version
-      with:
-        scheme: semver
-        increment: patch
-    - name: build
+        tags: ${{ env.INSTANCE_TAG }}
+    - name: build cs-controller-web
       uses: docker/build-push-action@v2
+      env:
+        WEB_TAG: ${{ secrets.DOCKER_REGISTRY }}/cs-controller-web:${{ steps.version.outputs.version }}
       with:
         context: .
         file: ./Dockerfile_web
-        tags: ${{ web-image-name }}
-        outputs: type=docker,dest=/tmp/web.tar
-
-  publish:
-    runs-on: ubuntu-latest
-    needs: [build-instance, build-web]
-    steps:
+        tags: ${{ env.WEB_TAG }}
     - name: docker login
       uses: docker/login-action@v3
       with:
         registry: ${{ secrets.DOCKER_REGISTRY }}
         username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
         password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
-    - name: download instance docker image
-      uses: actions/download-artifact@v2
-      with:
-        name: instance
-        path: /tmp
-    - name: download web docker image
-      uses: actions/download-artifact@v2
-      with:
-        name: web
-        path: /tmp
-    - name: load instance docker image
-      run: |
-          docker load --input /tmp/instance.tar
-          docker image ls -a
-    - name: load web docker image
-      run: |
-          docker load --input /tmp/web.tar
-          docker image ls -a
+    - name: push cs-controller-instance images
+      run: docker image push ${{ env.INSTANCE_TAG }}
+    - name: push cs-controller-web images
+      run: docker image push ${{ env.WEB_TAG }}
         

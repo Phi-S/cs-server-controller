@@ -8,10 +8,19 @@
           <list>
             <DockerEnvVarImpl>
               <option name="name" value="APP_OPTIONS:INSTANCE_API_ENDPOINT" />
-              <option name="value" value="http://localhost:11111" />
+              <option name="value" value="http://cs-controller-instance-dev:11111" />
             </DockerEnvVarImpl>
           </list>
         </option>
+        <option name="portBindings">
+          <list>
+            <DockerPortBindingImpl>
+              <option name="containerPort" value="80" />
+              <option name="hostPort" value="80" />
+            </DockerPortBindingImpl>
+          </list>
+        </option>
+        <option name="commandLineOptions" value="--link cs-controller-instance-dev" />
         <option name="sourceFilePath" value="Dockerfile_web" />
       </settings>
     </deployment>

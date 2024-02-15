@@ -29,5 +29,5 @@ RUN mkdir /data \
     && chmod -R 770 /data
     
 USER appuser
-ENV HTTP_PORTS=11111
+ENV URLS="http://0.0.0.0:11111"
 CMD ["./Instance"]

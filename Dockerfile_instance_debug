@@ -17,5 +17,6 @@ RUN dotnet build "Instance.csproj" -c Debug -o /app
 FROM base AS run
 WORKDIR /app
 COPY --from=build /app .
-RUN ls -la
+
+ENV URLS="http://0.0.0.0:11111"
 CMD ["dotnet", "Instance.dll"]

@@ -40,6 +40,8 @@ jobs:
       run: docker image push ${{ steps.cs-controller-web.outputs.tag }}
     - name: push git tag
       run: | 
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "926151+Phi-S@users.noreply.github.com"
         git tag -a ${{ steps.version.outputs.version }} -m ${{ steps.version.outputs.version }}
         git push --tags
 

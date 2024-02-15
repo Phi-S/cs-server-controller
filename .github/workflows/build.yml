@@ -39,9 +39,8 @@ jobs:
     - name: push cs-controller-web image
       run: docker image push ${{ steps.cs-controller-web.outputs.tag }}
     - name: push git tag
-      run: |
-        git config user.name "GitHub Actions"
-        git config user.email "github-actions@users.noreply.github.com"
-        git tag ${{ steps.version.outputs.version }}
-        git push origin ${{ steps.version.outputs.version }}
-        
+      uses: actions-ecosystem/action-push-tag@v1
+      with:
+        tag: ${{ steps.version.outputs.version }}
+        message: ${{ steps.version.outputs.version }}
+

@@ -502,22 +502,11 @@ public partial class ServerService
 
         _logger.LogWarning("Force stopping the server because it failed to stop normally");
         _systemLogService.Log("Force stopping the server because it failed to stop normally");
-        var stopForce = await StopForce();
-        if (stopForce)
-        {
-            _logger.LogWarning("Server stopped forcefully");
-            _systemLogService.Log("Server stopped forcefully");
-            if (_statusService.ServerStarted)
-            {
-                _eventService.OnServerExited();
-            }
+        await StopForce();
+        _logger.LogWarning("Server stopped forcefully");
+        _systemLogService.Log("Server stopped forcefully");
 
-            return Result.Success;
-        }
-
-        _logger.LogError("Server failed to stop normally in time and failed to force stop");
-        _systemLogService.Log("Server failed to stop normally in time and failed to force stop");
-        return Errors.Fail(description: "Server failed to stop normally in time and failed to force stop");
+        return Result.Success;
     }
 
     private async Task<bool> StopNormal()
@@ -544,47 +533,56 @@ public partial class ServerService
         }
     }
 
-    private async Task<bool> StopForce()
+    private async Task StopForce()
     {
-        if (IsServerStopped())
+        try
         {
-            return true;
-        }
-
-        lock (_processLockObject)
-        {
-            _process?.Kill(true);
-            _process?.Close();
-        }
-
-        var waitForServerToStopTimeout = 5000;
-        var sw = Stopwatch.StartNew();
-        while (sw.ElapsedMilliseconds <= waitForServerToStopTimeout)
-        {
-            await Task.Delay(50);
             if (IsServerStopped())
             {
-                return true;
+                return;
             }
-        }
 
-        lock (_processLockObject)
-        {
-            if (_process is not null)
+            lock (_processLockObject)
             {
-                if (_process.HasExited)
+                _process?.Kill(true);
+                _process?.Close();
+            }
+
+            var waitForServerToStopTimeout = 5000;
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds <= waitForServerToStopTimeout)
+            {
+                await Task.Delay(50);
+                if (IsServerStopped())
                 {
-                    _process = null;
-                    return true;
+                    return;
                 }
             }
-            else
+
+            lock (_processLockObject)
             {
-                return true;
+                if (_process is not null)
+                {
+                    if (_process.HasExited)
+                    {
+                        _process = null;
+                    }
+                }
             }
         }
-
-        return false;
+        finally
+        {
+            lock (_processLockObject)
+            {
+                _process?.Close();
+                _process?.Dispose();
+                _process = null;
+                if (_statusService.ServerStarted)
+                {
+                    _eventService.OnServerExited();
+                }
+            }
+        }
     }
 
     private bool IsServerStopped()

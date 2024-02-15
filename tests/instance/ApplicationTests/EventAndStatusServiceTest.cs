@@ -292,7 +292,7 @@ public class EventAndStatusServiceTest
 
         // Act
         Assert.True(statusService.CurrentPlayerCount == 0);
-        eventService.OnPlayerConnected("test", "test", "test");
+        eventService.OnPlayerConnected("test", "test", "test", "test");
 
         // Assert
         Assert.True(statusService.CurrentPlayerCount == 1);
@@ -308,7 +308,7 @@ public class EventAndStatusServiceTest
         var statusService = provider.GetRequiredService<StatusService>();
 
         // Act
-        eventService.OnPlayerConnected("test", "test", "test");
+        eventService.OnPlayerConnected("test", "test", "test", "test");
         Assert.True(statusService.CurrentPlayerCount == 1);
         eventService.OnPlayerDisconnected("test", "test", "test", "test", "test");
 

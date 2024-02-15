@@ -68,32 +68,32 @@ public partial class ServerService
         }
     }
 
-    [GeneratedRegex(
-        @"Accepting Steam Net connection #(\d+) UDP steamid:(\d+)@((?:\d{1,3}[.|:]){4}(?:[\d]{5}))"
+    [GeneratedRegex(@"(?:Client #(\d+) \"")(.+)(?:\"" connected @ )(.*):(.*)"
     )]
     private static partial Regex PlayerConnectRegex();
 
-    // Accepting Steam Net connection #3000669907 UDP steamid:76561198044941665@172.17.0.1:54196
     public void NewOutputPlayerConnectDetection(object? _, ServerOutputEventArg output)
     {
         try
         {
-            if (output.Output.StartsWith("Accepting Steam Net connection") == false)
+            var outputString = output.Output.Trim();
+            if (outputString.StartsWith("Client") == false)
             {
                 return;
             }
 
-            var match = PlayerConnectRegex().Match(output.Output);
-            if (match.Groups.Count != 4)
+            var match = PlayerConnectRegex().Match(outputString);
+            if (match.Groups.Count != 5)
             {
                 return;
             }
 
             var connectionId = match.Groups[1].Value;
-            var stemId = match.Groups[2].Value;
-            var ipPort = match.Groups[3].Value;
+            var username = match.Groups[2].Value;
+            var ip = match.Groups[3].Value;
+            var port = match.Groups[4].Value;
 
-            _eventService.OnPlayerConnected(connectionId, stemId, ipPort);
+            _eventService.OnPlayerConnected(connectionId, username, ip, port);
         }
         catch (Exception e)
         {
@@ -105,11 +105,6 @@ public partial class ServerService
         @"\[#(\d+) UDP steamid:(\d+)@((?:\d{1,3}[.|:]){4}(?:[\d]{0,5}))\] closed by (?:app|peer)(?:, entering linger state)? \((\d+)\):? (.+)"
     )]
     private static partial Regex PlayerDisconnectRegex();
-
-    // [#3000669907 UDP steamid:76561198044941665@172.17.0.1:54196] closed by app, entering linger state (2158) NETWORK_DISCONNECT_KICKED_IDLE
-    // [#2292360458 UDP steamid:76561198044941665@172.17.0.1:33160] closed by app, entering linger state (2039) NETWORK_DISCONNECT_KICKED
-    // [#2330728174 UDP steamid:76561198154417260@10.10.20.10:50819] closed by peer (1059): NETWORK_DISCONNECT_EXITING
-    // [#1570318589 UDP steamid:76561198158337634@95.91.227.226:1103] closed by peer (1002): NETWORK_DISCONNECT_DISCONNECT_BY_USER
 
     public void NewOutputPlayerDisconnectDetection(object? _, ServerOutputEventArg output)
     {
@@ -140,61 +135,32 @@ public partial class ServerService
         }
     }
 
-    [GeneratedRegex("""
-                    "(.+)<(\d)><\[(.+)\]><(.+)>" (say_team|say) "(.+)"
-                    """)]
+    [GeneratedRegex(@"(\[All Chat\]|\[Allies Chat\])(?:\[(.+) \((\d+)\)\]:) (.+)")]
     private static partial Regex ChatRegex();
 
-    // L 01/08/2024 - 19:31:36: "PhiS :)<2><[U:1:84675937]><TERRORIST>" say "jasdkfjaskdj"
-    // L 01/08/2024 - 19:32:46: "PhiS :)<2><[U:1:84675937]><CT>" say ".fasdfa"
-    // L 01/08/2024 - 19:32:48: "PhiS :)<2><[U:1:84675937]><CT>" say_team "gfggrr"
-    // L 01/08/2024 - 19:36:59: "PhiS > :) < --L<2><[U:1:84675937]><TERRORIST>" say_team "kjkoo"
-    // L 01/08/2024 - 19:36:57: "PhiS > :) < --L<2><[U:1:84675937]><TERRORIST>" say "iklikdf"
-    // L 01/08/2024 - 19:36:45: "PhiS > :) < --L<2><[U:1:84675937]><CT>" say "1fgg"
-    // L 01/08/2024 - 19:36:48: "PhiS > :) < --L<2><[U:1:84675937]><CT>" say_team "ll"
     public void NewOutputAllChatDetection(object? _, ServerOutputEventArg output)
     {
         try
         {
-            if (output.Output.StartsWith("L") == false)
+            var outputString = output.Output.Trim();
+            if (outputString.StartsWith("[All") == false)
             {
                 return;
             }
 
-            var match = ChatRegex().Match(output.Output);
-            if (match.Groups.Count != 7)
+            var match = ChatRegex().Match(outputString);
+            if (match.Groups.Count != 5)
             {
                 return;
             }
 
-            var playerName = match.Groups[1].Value;
-            var userIdString = match.Groups[2].Value;
-            var userId = int.Parse(userIdString);
-
-            var steamId = match.Groups[3].Value;
-            var teamString = match.Groups[4].Value;
-            Team team;
-            if (teamString.Equals("TERRORIST"))
-            {
-                team = Team.T;
-            }
-            else if (teamString.Equals("CT"))
-            {
-                team = Team.CT;
-            }
-            else
-            {
-                throw new Exception($"\"{teamString}\" is not a valid team");
-            }
-
-
-            var chatString = match.Groups[5].Value;
+            var chatString = match.Groups[1].Value;
             Chat chat;
-            if (chatString.Equals("say_team"))
+            if (chatString.Equals("[Allies Chat]"))
             {
                 chat = Chat.Team;
             }
-            else if (chatString.Equals("say"))
+            else if (chatString.Equals("[All Chat]"))
             {
                 chat = Chat.All;
             }
@@ -203,9 +169,11 @@ public partial class ServerService
                 throw new Exception($"\"{chatString}\" is not a valid chat");
             }
 
-            var message = match.Groups[6].Value;
+            var username = match.Groups[2].Value;
+            var steamId = match.Groups[3].Value;
+            var message = match.Groups[4].Value;
 
-            _eventService.OnChatMessage(playerName, userId, steamId, team, chat, message);
+            _eventService.OnChatMessage(chat, username, steamId, message);
         }
         catch (Exception e)
         {

@@ -21,25 +21,31 @@ public class PlayerConnectDetectionTests
 
     [Theory]
     [InlineData(
-        "Accepting Steam Net connection #3000669907 UDP steamid:76561198044941665@172.17.0.1:54196",
-        "3000669907",
-        "76561198044941665",
-        "172.17.0.1:54196"
+        """ 	Client #2 "PhiS > :) < --L" connected @ 172.17.0.1:53668""",
+        "2",
+        "PhiS > :) < --L",
+        "172.17.0.1",
+        "53668"
     )]
     [InlineData(
-        "Accepting Steam Net connection #2413188280 UDP steamid:76561198044941665@172.17.0.1:45632",
-        "2413188280",
-        "76561198044941665",
-        "172.17.0.1:45632"
+        """ 	Client #2 ""PhiS > :) < --L" connected @ 172.117.0.1:111""",
+        "2",
+        "\"PhiS > :) < --L",
+        "172.117.0.1",
+        "111"
     )]
     [InlineData(
-        "Accepting Steam Net connection #1674795556 UDP steamid:76561198044941665@172.17.0.1:40588",
-        "1674795556",
-        "76561198044941665",
-        "172.17.0.1:40588"
+        """ 	Client #2 "#4"PhiS > :) < --L" connected @ 172.17.0.150:55""",
+        "2",
+        "#4\"PhiS > :) < --L",
+        "172.17.0.150",
+        "55"
     )]
-    public async Task PlayerConnectDetectionTest(string log, string shouldBeConnectionId, string shouldBeStemId,
-        string shouldBeIpPort)
+    public async Task PlayerConnectDetectionTest(string log,
+        string shouldBeClientId,
+        string shouldBeUsername,
+        string shouldBeIp,
+        string shouldBePort)
     {
         // Arrange
         var applicationServices = await ServicesSetup.GetApplicationCollection(_output);
@@ -70,8 +76,9 @@ public class PlayerConnectDetectionTests
         Assert.True(waitResult.IsError == false, waitResult.IsError ? waitResult.ErrorMessage() : "");
         Assert.True(arg is not null);
         Assert.True(arg.EventName == Events.PlayerConnected);
-        Assert.Equal(shouldBeConnectionId, arg.ConnectionId);
-        Assert.Equal(shouldBeStemId, arg.SteamId);
-        Assert.Equal(shouldBeIpPort, arg.IpPort);
+        Assert.Equal(shouldBeClientId, arg.ConnectionId);
+        Assert.Equal(shouldBeUsername, arg.Username);
+        Assert.Equal(shouldBeIp, arg.Ip);
+        Assert.Equal(shouldBePort, arg.Port);
     }
 }

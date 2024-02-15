@@ -320,10 +320,10 @@ public sealed class EventService
 
     public event EventHandler<CustomEventArgPlayerConnected>? PlayerConnected;
 
-    public void OnPlayerConnected(string connectionId, string steamId, string ipPort)
+    public void OnPlayerConnected(string connectionId, string username, string ip, string port)
     {
         PlayerConnected?.Invoke(this,
-            new CustomEventArgPlayerConnected(Events.PlayerConnected, connectionId, steamId, ipPort));
+            new CustomEventArgPlayerConnected(Events.PlayerConnected, connectionId, username, ip, port));
     }
 
     #endregion PlayerConnected
@@ -370,15 +370,13 @@ public sealed class EventService
     public event EventHandler<CustomEventArgChatMessage>? ChatMessage;
 
     public void OnChatMessage(
-        string playerName,
-        int userId,
-        string steamId,
-        Team team,
         Chat chat,
+        string username,
+        string steamId,
         string message)
     {
         ChatMessage?.Invoke(this,
-            new CustomEventArgChatMessage(Events.ChatMessage, playerName, userId, steamId, team, chat, message));
+            new CustomEventArgChatMessage(Events.ChatMessage, chat,username, steamId, message));
     }
 
     #endregion

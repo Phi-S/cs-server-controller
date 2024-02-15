@@ -34,14 +34,14 @@ jobs:
         registry: ${{ secrets.DOCKER_REGISTRY }}
         username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
         password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
-    - name: push cs-controller-instance images
+    - name: push cs-controller-instance image
       run: docker image push ${{ steps.cs-controller-instance.outputs.tag }}
-    - name: push cs-controller-web images
+    - name: push cs-controller-web image
       run: docker image push ${{ steps.cs-controller-web.outputs.tag }}
     - name: push git tag
       run: |
         git config user.name "GitHub Actions"
         git config user.email "github-actions@users.noreply.github.com"
-        git tag $steps.version.outputs.version
-        git push origin $steps.version.outputs.version
+        git tag ${{ steps.version.outputs.version }}
+        git push origin ${{ steps.version.outputs.version }}
         

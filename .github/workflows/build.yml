@@ -39,8 +39,7 @@ jobs:
     - name: push cs-controller-web image
       run: docker image push ${{ steps.cs-controller-web.outputs.tag }}
     - name: push git tag
-      uses: actions-ecosystem/action-push-tag@v1
-      with:
-        tag: ${{ steps.version.outputs.version }}
-        message: ${{ steps.version.outputs.version }}
+      run: | 
+        git tag -a ${{ steps.cs-controller-web.outputs.tag }} -m ${{ steps.cs-controller-web.outputs.tag }}
+        git push --tags
 

@@ -16,8 +16,6 @@ jobs:
       with:
         scheme: semver
         increment: patch
-    - name: set up docker buildx
-      uses: docker/setup-buildx-action@v1
     - name: create cs-controller-instance tag
       id : cs-controller-instance
       run: echo "tag=${{ secrets.DOCKER_REGISTRY }}/cs-controller-instance:${{ steps.version.outputs.version }}" >> $GITHUB_OUTPUT

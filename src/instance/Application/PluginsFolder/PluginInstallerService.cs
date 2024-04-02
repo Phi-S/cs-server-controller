@@ -43,11 +43,6 @@ public class PluginInstallerService
         var counterStrikeSharp =
             new PluginModel("CounterStrikeSharp", "https://github.com/roflmuffin/CounterStrikeSharp",
                 [
-                    new PluginVersion("v202",
-                        "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v202/counterstrikesharp-with-runtime-build-202-linux-696ecad.zip",
-                        "",
-                        [new PluginDependency(metamod, "2.0.0-git1282")]
-                    ),
                     new PluginVersion("v203",
                         "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v203/counterstrikesharp-with-runtime-build-203-linux-211516c.zip",
                         "",
@@ -57,13 +52,8 @@ public class PluginInstallerService
 
         var cs2PracticeMode = new PluginModel("Cs2PracticeMode", "https://github.com/Phi-S/cs2-practice-mode",
             [
-                new PluginVersion("0.0.1",
-                    "https://github.com/Phi-S/cs2-practice-mode/releases/download/0.0.1/cs2-practice-mode-linux-0.0.1.tar.gz",
-                    "/addons/counterstrikesharp/plugins",
-                    [new PluginDependency(counterStrikeSharp, "v202")]
-                ),
-                new PluginVersion("0.0.2",
-                    "https://github.com/Phi-S/cs2-practice-mode/releases/download/0.0.2/cs2-practice-mode-linux-0.0.2.tar.gz",
+                new PluginVersion("0.0.3",
+                    "https://github.com/Phi-S/cs2-practice-mode/releases/download/0.0.3/cs2-practice-mode-linux-0.0.3.tar.gz",
                     "/addons/counterstrikesharp/plugins",
                     [new PluginDependency(counterStrikeSharp, "v202")])
             ]

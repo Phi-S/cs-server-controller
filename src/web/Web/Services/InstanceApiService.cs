@@ -315,13 +315,6 @@ public class InstanceApiService
         return result;
     }
 
-    public async Task<ErrorOr<List<InstalledVersionsModel>>> InstalledVersions()
-    {
-        var requestMessage = GetRequestMessage($"{InfoEndpoint}/installed-versions");
-        var result = await Send<List<InstalledVersionsModel>>(requestMessage);
-        return result;
-    }
-
     #endregion
 
     #region ServerEndpoint
@@ -404,14 +397,14 @@ public class InstanceApiService
 
     public async Task<ErrorOr<Guid>> ServerUpdateOrInstallStart()
     {
-        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/server/start");
+        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/start");
         var response = await Send<Guid>(requestMessage);
         return response;
     }
 
     public async Task<ErrorOr<Success>> ServerUpdateOrInstallCancel(Guid id)
     {
-        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/server/cancel",
+        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/cancel",
             "id",
             id.ToString());
         var response = await SendWithoutResponse(requestMessage);
@@ -420,16 +413,35 @@ public class InstanceApiService
 
     public async Task<ErrorOr<List<UpdateOrInstallLogResponse>>> ServerUpdateOrInstallLogs(DateTimeOffset logsSince)
     {
-        var requestMessage = GetRequestMessage($"{UpdateOrInstallEndpoint}/server/logs",
+        var requestMessage = GetRequestMessage($"{UpdateOrInstallEndpoint}/logs",
             "logsSince",
             logsSince.ToUnixTimeMilliseconds().ToString());
         var result = await Send<List<UpdateOrInstallLogResponse>>(requestMessage);
         return result;
     }
 
-    public async Task<ErrorOr<Success>> CounterstrikeSharpUpdateOrInstall()
+    #endregion
+
+    #region Plugins
+
+    private const string PluginsEndpoint = "/plugins";
+
+    public async Task<ErrorOr<List<PluginsResponseModel>>> Plugins()
     {
-        var requestMessage = PostRequestMessage($"{UpdateOrInstallEndpoint}/counter-strike-sharp");
+        var requestMessage = GetRequestMessage($"{PluginsEndpoint}");
+        var result = await Send<List<PluginsResponseModel>>(requestMessage);
+        return result;
+    }
+
+    public async Task<ErrorOr<Success>> PluginUpdateOrInstall(string name, string version)
+    {
+        var requestMessage = PostRequestMessage($"{PluginsEndpoint}/update-or-install",
+        [
+            new KeyValuePair<string, string>("name", name),
+            new KeyValuePair<string, string>("version", version)
+        ]);
+
+        Console.WriteLine(requestMessage.RequestUri);
         var response = await SendWithoutResponse(requestMessage);
         return response;
     }

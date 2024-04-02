@@ -1,5 +1,4 @@
-﻿using Application.CounterStrikeSharpUpdateOrInstallFolder.CQRS;
-using Application.ServerUpdateOrInstallServiceFolder.CQRS;
+﻿using Application.ServerUpdateOrInstallServiceFolder.CQRS;
 using Instance.Response;
 using MediatR;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -19,7 +18,7 @@ public static class UpdateOrInstallEndpoint
             .WithTags(tag)
             .WithOpenApi();
 
-        group.MapPost("server/start", async Task<Results<ErrorResult, Ok<Guid>>>
+        group.MapPost("start", async Task<Results<ErrorResult, Ok<Guid>>>
             (IMediator mediator) =>
         {
             var command = new ServerStartUpdateOrInstallCommand();
@@ -29,7 +28,7 @@ public static class UpdateOrInstallEndpoint
                 : TypedResults.Ok(result.Value);
         });
 
-        group.MapPost("server/cancel", async Task<Results<ErrorResult, Ok>>
+        group.MapPost("cancel", async Task<Results<ErrorResult, Ok>>
             ([FromQuery] Guid id, IMediator mediator) =>
         {
             var command = new ServerCancelUpdateOrInstallCommand(id);
@@ -39,21 +38,12 @@ public static class UpdateOrInstallEndpoint
                 : TypedResults.Ok();
         });
 
-        group.MapGet("server/logs", async Task<Ok<List<UpdateOrInstallLogResponse>>>
+        group.MapGet("logs", async Task<Ok<List<UpdateOrInstallLogResponse>>>
             ([FromQuery] long logsSince, IMediator mediator) =>
         {
             var command = new GetServerUpdateOrInstallLogsSinceQuery(logsSince);
             var result = await mediator.Send(command);
             return TypedResults.Ok(result);
-        });
-
-        group.MapPost("counter-strike-sharp", async Task<Results<ErrorResult, Ok>> (IMediator mediator) =>
-        {
-            var command = new CounterStrikeSharpUpdateOrInstallCommand();
-            var result = await mediator.Send(command);
-            return result.IsError
-                ? Results.Extensions.InternalServerError(result.ErrorMessage())
-                : TypedResults.Ok();
         });
     }
 }

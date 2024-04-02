@@ -1,8 +1,7 @@
 ﻿using Application.ChatCommandFolder;
 using Application.ConfigEditorFolder;
-using Application.CounterStrikeSharpUpdateOrInstallFolder;
 using Application.EventServiceFolder;
-using Application.InstalledVersionsFolder;
+using Application.PluginsFolder;
 using Application.ServerServiceFolder;
 using Application.ServerUpdateOrInstallServiceFolder;
 using Application.StartParameterFolder;
@@ -26,12 +25,13 @@ public static class ApplicationExtensionMethods
         serviceCollection.AddSingleton<ServerUpdateOrInstallService>();
         serviceCollection.AddSingleton<ServerService>();
         serviceCollection.AddSingleton<ChatCommandsCache>();
-        serviceCollection.AddSingleton<CounterStrikeSharpUpdateOrInstallService>();
         serviceCollection.AddSingleton<StartParameterService>();
         serviceCollection.AddSingleton<SystemLogService>();
         serviceCollection.AddSingleton<ConfigEditorService>();
-        serviceCollection.AddSingleton<InstalledVersionsService>();
-
+        
+        serviceCollection.AddSingleton<InstalledPluginsService>();
+        serviceCollection.AddTransient<PluginInstallerService>();
+        
         serviceCollection.AddHostedService<ChatCommandService>();
 
         serviceCollection.AddApplicationMediatR();

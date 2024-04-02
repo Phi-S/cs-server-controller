@@ -1,7 +1,6 @@
-﻿using Application.CounterStrikeSharpUpdateOrInstallFolder;
-using Application.EventServiceFolder;
+﻿using Application.EventServiceFolder;
 using Application.EventServiceFolder.EventArgs;
-using Application.StatusServiceFolder;
+using Application.PluginsFolder;
 using Domain;
 using ErrorOr;
 using MediatR;
@@ -16,31 +15,42 @@ public record ServerStartUpdateOrInstallCommand : IRequest<ErrorOr<Guid>>;
 public class
     ServerStartUpdateOrInstallCommandHandler : IRequestHandler<ServerStartUpdateOrInstallCommand, ErrorOr<Guid>>
 {
+    private readonly IOptions<AppOptions> _options;
     private readonly ILogger<ServerStartUpdateOrInstallCommandHandler> _logger;
     private readonly ServerUpdateOrInstallService _serverUpdateOrInstallService;
-    private readonly StatusService _statusService;
-    private readonly IOptions<AppOptions> _options;
     private readonly EventService _eventService;
+    private readonly InstalledPluginsService _installedPluginsService;
 
     public ServerStartUpdateOrInstallCommandHandler(
+        IOptions<AppOptions> options,
         ILogger<ServerStartUpdateOrInstallCommandHandler> logger,
         ServerUpdateOrInstallService serverUpdateOrInstallService,
-        StatusService statusService,
-        IOptions<AppOptions> options,
-        EventService eventService)
+        EventService eventService,
+        InstalledPluginsService installedPluginsService)
     {
+        _options = options;
         _logger = logger;
         _serverUpdateOrInstallService = serverUpdateOrInstallService;
-        _statusService = statusService;
-        _options = options;
         _eventService = eventService;
+        _installedPluginsService = installedPluginsService;
     }
 
     public async Task<ErrorOr<Guid>> Handle(ServerStartUpdateOrInstallCommand request,
         CancellationToken cancellationToken)
     {
         var updateOrInstallResult = await _serverUpdateOrInstallService.StartUpdateOrInstall();
-        if (updateOrInstallResult.IsError == false && _statusService.CounterStrikeSharpInstalled)
+        if (updateOrInstallResult.IsError)
+        {
+            return updateOrInstallResult.Errors;
+        }
+
+        var isMetamodInstalled = await _installedPluginsService.IsInstalled("Metamod:Source");
+        if (isMetamodInstalled.IsError)
+        {
+            return isMetamodInstalled.Errors;
+        }
+
+        if (isMetamodInstalled.Value)
         {
             _eventService.UpdateOrInstallDone += EventServiceOnUpdateOrInstallDone;
             _eventService.UpdateOrInstallFailed += EventServiceOnUpdateOrInstallFailedOrCancelled;
@@ -65,15 +75,10 @@ public class
 
     private async void EventServiceOnUpdateOrInstallDone(object? _, CustomEventArgUpdateOrInstall __)
     {
-        var csgoFolder = Path.Combine(
-            _options.Value.SERVER_FOLDER,
-            "game",
-            "csgo");
-
         try
         {
             var addMetamodEntryToGameinfoGi =
-                await CounterStrikeSharpUpdateOrInstallService.AddMetamodEntryToGameinfoGi(csgoFolder);
+                await MetaModAdditionalAction.AddMetamodEntryToGameinfoGi(_options.Value.CSGO_FOLDER);
             if (addMetamodEntryToGameinfoGi.IsError)
             {
                 _logger.LogError(

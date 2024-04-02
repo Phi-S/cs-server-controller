@@ -1,6 +1,5 @@
 ﻿using System.Web;
 using Application.ServerServiceFolder.CQRS;
-using ErrorOr;
 using Instance.Response;
 using MediatR;
 using Microsoft.AspNetCore.Http.HttpResults;

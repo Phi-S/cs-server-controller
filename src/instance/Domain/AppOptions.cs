@@ -21,6 +21,7 @@ public class AppOptions
 
     public string DATABASE_PATH => Path.Combine(DATA_FOLDER, "instance.db");
     public string SERVER_FOLDER => Path.Combine(DATA_FOLDER, "server");
+    public string CSGO_FOLDER => Path.Combine(SERVER_FOLDER, "game", "csgo");
     public string STEAMCMD_FOLDER => Path.Combine(DATA_FOLDER, "steamcmd");
 
     public readonly string EXECUTING_FOLDER = Environment.CurrentDirectory;

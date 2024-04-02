@@ -17,7 +17,6 @@ public sealed class StatusService
         _eventService = eventService;
         RegisterEventServiceHandler();
         ServerInstalled = ServerHelper.IsServerInstalled(options.Value.SERVER_FOLDER);
-        CounterStrikeSharpInstalled = ServerHelper.IsServerPluginBaseInstalled(options.Value.SERVER_FOLDER);
     }
 
     public event EventHandler? ServerStatusChanged;
@@ -26,7 +25,6 @@ public sealed class StatusService
     {
         var statusResponse = new ServerInfoResponse(
             ServerInstalled,
-            CounterStrikeSharpInstalled,
             ServerStartParameters?.ServerHostname,
             ServerStartParameters?.ServerPassword,
             CurrentMap,
@@ -91,17 +89,14 @@ public sealed class StatusService
         _eventService.PluginUpdateOrInstallStarted += (_, _) =>
         {
             ServerPluginsUpdatingOrInstalling = true;
-            CounterStrikeSharpInstalled = ServerHelper.IsServerPluginBaseInstalled(_options.Value.SERVER_FOLDER);
         };
         _eventService.PluginUpdateOrInstallDone += (_, _) =>
         {
-            ServerPluginsUpdatingOrInstalling = false; 
-            CounterStrikeSharpInstalled = ServerHelper.IsServerPluginBaseInstalled(_options.Value.SERVER_FOLDER);
+            ServerPluginsUpdatingOrInstalling = false;
         };
         _eventService.PluginUpdateOrInstallFailed += (_, _) =>
         {
             ServerPluginsUpdatingOrInstalling = false;
-            CounterStrikeSharpInstalled = ServerHelper.IsServerPluginBaseInstalled(_options.Value.SERVER_FOLDER);
         };
 
         _eventService.UploadDemoStarted += (_, _) => { DemoUploading = true; };
@@ -138,33 +133,6 @@ public sealed class StatusService
             lock (_serverInstalledLock)
             {
                 _serverInstalled = value;
-            }
-
-            OnServerStatusChanged();
-        }
-    }
-
-    #endregion
-    
-    #region CounterStrikeSharpInstalled
-
-    private volatile bool _counterStrikeSharpInstalled;
-    private readonly object _counterStrikeSharpInstalledLock = new();
-
-    public bool CounterStrikeSharpInstalled
-    {
-        get
-        {
-            lock (_counterStrikeSharpInstalledLock)
-            {
-                return _counterStrikeSharpInstalled;
-            }
-        }
-        private set
-        {
-            lock (_counterStrikeSharpInstalledLock)
-            {
-                _counterStrikeSharpInstalled = value;
             }
 
             OnServerStatusChanged();

@@ -2,16 +2,36 @@
 @inherits PluginsRazor
 @rendermode InteractiveServer
 
-<div class="container-fluid m-0 p-0">
-    <div class="row justify-content-center text-center px-2 pb-2 flex-nowrap border-bottom border-2">
-        <div class="col-9 row">
-            <img class="col-4" style="width: 5rem;" src="https://docs.cssharp.dev/images/cssharp.svg" alt=""/>
-            <div class="col-8">
-                <a class="h4 text-decoration-underline">CounterStrikeSharp</a>
-                <div class="d-block end-0" style="font-size: small">@GetCounterStrikeSharpVersion()</div>
-                <a href="https://github.com/roflmuffin/CounterStrikeSharp">by roflmuffin on Github</a>
+@if (Plugins is not null)
+{
+    <div class="container-fluid m-0 p-0">
+        @foreach (var plugin in Plugins)
+        {
+            <div class="row justify-content-center text-center p-2 flex-nowrap border-bottom border-2">
+                <div class="col-10">
+                    <a class="h4 text-decoration-underline" href="@plugin.Url">@plugin.Name</a>
+                    @if (string.IsNullOrWhiteSpace(@plugin.InstalledVersion))
+                    {
+                        <div class="d-block end-0" style="font-size: small">not installed</div>
+                    }
+                    else
+                    {
+                        <div class="d-block end-0" style="font-size: small">installed version: @plugin.InstalledVersion</div>
+                    }
+                </div>
+
+                <div class="col-2">
+                    <select @bind="SelectedVersion[plugin.Name]">
+                        @foreach (var version in plugin.Versions.Reverse())
+                        {
+                            <option value="@version">@version</option>
+                        }
+                    </select>
+                    <br/>
+                    <button class="btn btn-outline-info" disabled="@(SelectedVersion[plugin.Name] == plugin.InstalledVersion)" @onclick="() => UpdateOrInstall(plugin.Name)">@GetUpdateOrInstallString(plugin)</button>
+
+                </div>
             </div>
-        </div>
-        <button class="col-3 btn btn-outline-info" @onclick="UpdateOrInstallCounterStrikeSharp">@CounterStrikeSharpUpdateOrInstall()</button>
+        }
     </div>
-</div>
+}

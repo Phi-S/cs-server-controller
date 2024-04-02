@@ -149,6 +149,15 @@ public class HomeRazor : ComponentBase, IDisposable
     {
         try
         {
+            var stopServer = await InstanceApiService.ServerStop();
+            if (stopServer.IsError)
+            {
+                Logger.LogError("Start update or install server failed with error {Error}",
+                    stopServer.ErrorMessage());
+                ToastService.Error(
+                    $"Failed to update server. {stopServer.ErrorMessage()}");
+            }
+            
             var startUpdateOrInstallResult = await InstanceApiService.ServerUpdateOrInstallStart();
             if (startUpdateOrInstallResult.IsError)
             {

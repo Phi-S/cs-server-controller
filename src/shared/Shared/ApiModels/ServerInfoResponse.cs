@@ -2,7 +2,6 @@
 
 public record ServerInfoResponse(
     bool ServerInstalled,
-    bool CounterStrikeSharpInstalled,
     string? Hostname,
     string? ServerPassword,
     string? CurrentMap,

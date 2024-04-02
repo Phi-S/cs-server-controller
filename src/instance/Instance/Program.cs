@@ -79,6 +79,7 @@ try
     app.MapEndpointsEvents();
     app.MapEndpointsStartParameter();
     app.MapEndpointsUpdateOrInstall();
+    app.MapEndpointsPlugins();
     app.MapEndpointsChatCommands();
 
     app.MapHub<SignalRHub>("/hub");

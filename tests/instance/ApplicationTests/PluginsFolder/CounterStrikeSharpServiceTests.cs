@@ -36,7 +36,7 @@ public class CounterStrikeSharpServiceTests
             "\t\t\tGame_LowViolence\tcsgo_lv // Perfect World content override");
 
         // Act
-        var updateOrInstall = await pluginService.UpdateOrInstall("CounterStrikeSharp", "v202");
+        var updateOrInstall = await pluginService.UpdateOrInstall("CounterStrikeSharp", "v203");
 
         // Assert
         updateOrInstall.IsError.Should().BeFalse(updateOrInstall.ErrorMessage());
@@ -55,7 +55,7 @@ public class CounterStrikeSharpServiceTests
         Directory.Exists(Path.Combine(addonsFolder, "metamod", "bin")).Should().BeTrue();
 
         var counterStrikeSharpIsInstalled =
-            await installedPluginVersionsService.IsInstalled("CounterStrikeSharp", "v202");
+            await installedPluginVersionsService.IsInstalled("CounterStrikeSharp", "v203");
         counterStrikeSharpIsInstalled.IsError.Should().BeFalse(counterStrikeSharpIsInstalled.ErrorMessage());
         counterStrikeSharpIsInstalled.Value.Should().BeTrue();
     }

@@ -55,7 +55,7 @@ public class PluginInstallerService
                 new PluginVersion("0.0.3",
                     "https://github.com/Phi-S/cs2-practice-mode/releases/download/0.0.3/cs2-practice-mode-linux-0.0.3.tar.gz",
                     "/addons/counterstrikesharp/plugins",
-                    [new PluginDependency(counterStrikeSharp, "v202")])
+                    [new PluginDependency(counterStrikeSharp, "v203")])
             ]
         );
 

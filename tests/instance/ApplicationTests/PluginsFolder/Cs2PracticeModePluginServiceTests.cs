@@ -36,7 +36,7 @@ public class Cs2PracticeModePluginServiceTests
             "\t\t\tGame_LowViolence\tcsgo_lv // Perfect World content override");
         
         // Act
-        var updateOrInstall = await pluginService.UpdateOrInstall("Cs2PracticeMode", "0.0.1");
+        var updateOrInstall = await pluginService.UpdateOrInstall("Cs2PracticeMode", "0.0.3");
 
         // Assert
         updateOrInstall.IsError.Should().BeFalse(updateOrInstall.ErrorMessage());
@@ -55,7 +55,7 @@ public class Cs2PracticeModePluginServiceTests
         Directory.Exists(Path.Combine(addonsFolder, "metamod", "bin")).Should().BeTrue();
         
         var counterStrikeSharpIsInstalled =
-            await installedPluginVersionsService.IsInstalled("Cs2PracticeMode", "0.0.1");
+            await installedPluginVersionsService.IsInstalled("Cs2PracticeMode", "0.0.3");
         counterStrikeSharpIsInstalled.IsError.Should().BeFalse(counterStrikeSharpIsInstalled.ErrorMessage());
         counterStrikeSharpIsInstalled.Value.Should().BeTrue();
     }

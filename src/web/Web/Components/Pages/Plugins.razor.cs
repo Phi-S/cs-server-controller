@@ -86,6 +86,8 @@ public class PluginsRazor : ComponentBase
             return;
         }
 
+        ToastService.Info($"Installing plugin {name}({selectedVersion})");
+
         var updateOrInstall = await InstanceApiService.PluginUpdateOrInstall(name, selectedVersion);
         if (updateOrInstall.IsError)
         {

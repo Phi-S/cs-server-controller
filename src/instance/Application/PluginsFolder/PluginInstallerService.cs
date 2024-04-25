@@ -1,6 +1,7 @@
 ﻿using System.Formats.Tar;
 using System.IO.Compression;
 using Application.EventServiceFolder;
+using Application.SystemLogFolder;
 using Domain;
 using ErrorOr;
 using Microsoft.Extensions.Options;
@@ -15,6 +16,7 @@ public class PluginInstallerService
     private readonly EventService _eventService;
     private readonly InstalledPluginsService _installedPluginsService;
     private readonly HttpClient _httpClient;
+    private readonly SystemLogService _systemLogService;
 
     private readonly List<PluginModel> _plugins;
     private readonly SemaphoreSlim _lock = new(1);
@@ -22,12 +24,14 @@ public class PluginInstallerService
     public PluginInstallerService(IOptions<AppOptions> options,
         EventService eventService,
         InstalledPluginsService installedPluginsService,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        SystemLogService systemLogService)
     {
         _options = options;
         _eventService = eventService;
         _installedPluginsService = installedPluginsService;
         _httpClient = httpClient;
+        _systemLogService = systemLogService;
 
         var metamod =
             new PluginModel("Metamod:Source", "https://www.sourcemm.net",
@@ -37,7 +41,13 @@ public class PluginInstallerService
                     "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1282-linux.tar.gz",
                     "",
                     null,
-                    async () => await MetaModAdditionalAction.AddMetamodEntryToGameinfoGi(_options.Value.CSGO_FOLDER))
+                    async () => await MetaModAdditionalAction.AddMetamodEntryToGameinfoGi(_options.Value.CSGO_FOLDER)),
+                new PluginVersion(
+                    "2.0.0-git1289",
+                    "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1289-linux.tar.gz",
+                    "",
+                    null,
+                    async () => await MetaModAdditionalAction.AddMetamodEntryToGameinfoGi(_options.Value.CSGO_FOLDER)),
             ]);
 
         var counterStrikeSharp =
@@ -46,7 +56,14 @@ public class PluginInstallerService
                     new PluginVersion("v203",
                         "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v203/counterstrikesharp-with-runtime-build-203-linux-211516c.zip",
                         "",
-                        [new PluginDependency(metamod, "2.0.0-git1282")])
+                        [new PluginDependency(metamod, "2.0.0-git1282")]),
+                    new PluginVersion("v213",
+                        "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v213/counterstrikesharp-with-runtime-build-213-linux-dfc9859.zip",
+                        "",
+                        [new PluginDependency(metamod, "2.0.0-git1289")],
+                        async () =>
+                            await CounterStrokeSharpAdditionalAction.AddDefaultCoreConfig(_options.Value.CSGO_FOLDER)
+                    )
                 ]
             );
 
@@ -55,7 +72,11 @@ public class PluginInstallerService
                 new PluginVersion("0.0.3",
                     "https://github.com/Phi-S/cs2-practice-mode/releases/download/0.0.3/cs2-practice-mode-linux-0.0.3.tar.gz",
                     "/addons/counterstrikesharp/plugins",
-                    [new PluginDependency(counterStrikeSharp, "v203")])
+                    [new PluginDependency(counterStrikeSharp, "v203")]),
+                new PluginVersion("0.0.9",
+                    "https://github.com/Phi-S/cs2-practice-mode/releases/download/0.0.9/cs2-practice-mode-linux-0.0.9.tar.gz",
+                    "/addons/counterstrikesharp/plugins",
+                    [new PluginDependency(counterStrikeSharp, "v213")])
             ]
         );
 
@@ -132,18 +153,21 @@ public class PluginInstallerService
             return Result.Success;
         }
 
+        _systemLogService.Log($"Starting to install plugin {pluginModel.Name}({versionToInstallOrUpdate})");
 
         var version = pluginModel.Versions.FirstOrDefault(v =>
             v.Version.Equals(versionToInstallOrUpdate, StringComparison.InvariantCultureIgnoreCase));
 
         if (version is null)
         {
+            _systemLogService.Log($"Failed to install {pluginModel.Name}({versionToInstallOrUpdate}). Version not found");
             return Errors.Fail($"Version {versionToInstallOrUpdate} is not available");
         }
 
         // Install all dependencies
         if (version.PluginDependencies is not null)
         {
+            _systemLogService.Log($"Installing dependencies for plugin {pluginModel.Name}({versionToInstallOrUpdate})");
             foreach (var pluginDependency in version.PluginDependencies)
             {
                 var updateOrInstallDependency =
@@ -158,6 +182,7 @@ public class PluginInstallerService
         try
         {
             await _lock.WaitAsync();
+            _systemLogService.Log($"Installing plugin {pluginModel.Name}({versionToInstallOrUpdate})");
             _eventService.OnPluginUpdateOrInstallStarted();
             var tempFolder = Directory.CreateTempSubdirectory();
 
@@ -246,6 +271,7 @@ public class PluginInstallerService
             }
 
             _eventService.OnPluginUpdateOrInstallDone();
+            _systemLogService.Log($"Plugin {pluginModel.Name}({versionToInstallOrUpdate}) installed");
             return Result.Success;
         }
         finally

@@ -1,5 +1,7 @@
-﻿using ErrorOr;
+﻿using Application.SystemLogFolder;
+using ErrorOr;
 using MediatR;
+using Shared.ApiModels;
 
 namespace Application.PluginsFolder.CQRS;
 
@@ -9,7 +11,8 @@ public class UpdateOrInstallPluginCommandHandler : IRequestHandler<UpdateOrInsta
 {
     private readonly PluginInstallerService _pluginInstallerService;
 
-    public UpdateOrInstallPluginCommandHandler(PluginInstallerService pluginInstallerService)
+
+    public UpdateOrInstallPluginCommandHandler(PluginInstallerService pluginInstallerService, SystemLogService systemLogService)
     {
         _pluginInstallerService = pluginInstallerService;
     }

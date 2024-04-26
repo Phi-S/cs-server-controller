@@ -87,6 +87,13 @@ public class PluginsRazor : ComponentBase
         }
 
         ToastService.Info($"Installing plugin {name}({selectedVersion})");
+        var stop = await InstanceApiService.ServerStop();
+        if (stop.IsError)
+        {
+            Logger.LogError("Failed to install plugin. {Error}", stop.ErrorMessage());
+            ToastService.Error($"Failed to install plugin.{stop.ErrorMessage()}");
+            return;
+        }
 
         var updateOrInstall = await InstanceApiService.PluginUpdateOrInstall(name, selectedVersion);
         if (updateOrInstall.IsError)

@@ -63,6 +63,13 @@ public class PluginInstallerService
                         [new PluginDependency(metamod, "2.0.0-git1289")],
                         async () =>
                             await CounterStrokeSharpAdditionalAction.AddDefaultCoreConfig(_options.Value.CSGO_FOLDER)
+                    ),
+                    new PluginVersion("v215",
+                        "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v215/counterstrikesharp-with-runtime-build-215-linux-7cae4be.zip",
+                        "",
+                        [new PluginDependency(metamod, "2.0.0-git1289")],
+                        async () =>
+                            await CounterStrokeSharpAdditionalAction.AddDefaultCoreConfig(_options.Value.CSGO_FOLDER)
                     )
                 ]
             );
@@ -76,7 +83,11 @@ public class PluginInstallerService
                 new PluginVersion("0.0.9",
                     "https://github.com/Phi-S/cs2-practice-mode/releases/download/0.0.9/cs2-practice-mode-linux-0.0.9.tar.gz",
                     "/addons/counterstrikesharp/plugins",
-                    [new PluginDependency(counterStrikeSharp, "v213")])
+                    [new PluginDependency(counterStrikeSharp, "v213")]),
+                new PluginVersion("0.0.10",
+                    "https://github.com/Phi-S/cs2-practice-mode/releases/download/0.0.10/cs2-practice-mode-linux-0.0.10.tar.gz",
+                    "/addons/counterstrikesharp/plugins",
+                    [new PluginDependency(counterStrikeSharp, "v215")])
             ]
         );
 
@@ -160,7 +171,8 @@ public class PluginInstallerService
 
         if (version is null)
         {
-            _systemLogService.Log($"Failed to install {pluginModel.Name}({versionToInstallOrUpdate}). Version not found");
+            _systemLogService.Log(
+                $"Failed to install {pluginModel.Name}({versionToInstallOrUpdate}). Version not found");
             return Errors.Fail($"Version {versionToInstallOrUpdate} is not available");
         }
 

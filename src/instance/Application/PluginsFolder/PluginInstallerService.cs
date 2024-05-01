@@ -48,6 +48,11 @@ public class PluginInstallerService
                     "",
                     null,
                     async () => await MetaModAdditionalAction.AddMetamodEntryToGameinfoGi(_options.Value.CSGO_FOLDER)),
+                new PluginVersion("2.0.0-git1290",
+                    "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1290-linux.tar.gz",
+                    "",
+                    null,
+                    async () => await MetaModAdditionalAction.AddMetamodEntryToGameinfoGi(_options.Value.CSGO_FOLDER))
             ]);
 
         var counterStrikeSharp =
@@ -62,15 +67,19 @@ public class PluginInstallerService
                         "",
                         [new PluginDependency(metamod, "2.0.0-git1289")],
                         async () =>
-                            await CounterStrokeSharpAdditionalAction.AddDefaultCoreConfig(_options.Value.CSGO_FOLDER)
-                    ),
+                            await CounterStrokeSharpAdditionalAction.AddDefaultCoreConfig(_options.Value.CSGO_FOLDER)),
                     new PluginVersion("v215",
                         "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v215/counterstrikesharp-with-runtime-build-215-linux-7cae4be.zip",
                         "",
                         [new PluginDependency(metamod, "2.0.0-git1289")],
                         async () =>
-                            await CounterStrokeSharpAdditionalAction.AddDefaultCoreConfig(_options.Value.CSGO_FOLDER)
-                    )
+                            await CounterStrokeSharpAdditionalAction.AddDefaultCoreConfig(_options.Value.CSGO_FOLDER)),
+                    new PluginVersion("v228",
+                        "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v228/counterstrikesharp-with-runtime-build-228-linux-11e5e99.zip",
+                        "",
+                        [new PluginDependency(metamod, "2.0.0-git1290")],
+                        async () =>
+                            await CounterStrokeSharpAdditionalAction.AddDefaultCoreConfig(_options.Value.CSGO_FOLDER))
                 ]
             );
 
@@ -87,7 +96,11 @@ public class PluginInstallerService
                 new PluginVersion("0.0.10",
                     "https://github.com/Phi-S/cs2-practice-mode/releases/download/0.0.10/cs2-practice-mode-linux-0.0.10.tar.gz",
                     "/addons/counterstrikesharp/plugins",
-                    [new PluginDependency(counterStrikeSharp, "v215")])
+                    [new PluginDependency(counterStrikeSharp, "v215")]),
+                new PluginVersion("0.0.12",
+                    "https://github.com/Phi-S/cs2-practice-mode/releases/download/0.0.12/cs2-practice-mode-linux-0.0.12.tar.gz",
+                    "/addons/counterstrikesharp/plugins",
+                    [new PluginDependency(counterStrikeSharp, "v228")])
             ]
         );
 

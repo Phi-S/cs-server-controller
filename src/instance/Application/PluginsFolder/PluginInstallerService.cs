@@ -52,6 +52,11 @@ public class PluginInstallerService
                     "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1290-linux.tar.gz",
                     "",
                     null,
+                    async () => await MetaModAdditionalAction.AddMetamodEntryToGameinfoGi(_options.Value.CSGO_FOLDER)),
+                new PluginVersion("2.0.0-git1293",
+                    "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1293-linux.tar.gz",
+                    "",
+                    null,
                     async () => await MetaModAdditionalAction.AddMetamodEntryToGameinfoGi(_options.Value.CSGO_FOLDER))
             ]);
 
@@ -79,6 +84,12 @@ public class PluginInstallerService
                         "",
                         [new PluginDependency(metamod, "2.0.0-git1290")],
                         async () =>
+                            await CounterStrokeSharpAdditionalAction.AddDefaultCoreConfig(_options.Value.CSGO_FOLDER)),
+                    new PluginVersion("v234",
+                        "https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v234/counterstrikesharp-with-runtime-build-234-linux-cafc4e2.zip",
+                        "",
+                        [new PluginDependency(metamod, "2.0.0-git1293")],
+                        async () =>
                             await CounterStrokeSharpAdditionalAction.AddDefaultCoreConfig(_options.Value.CSGO_FOLDER))
                 ]
             );
@@ -100,7 +111,11 @@ public class PluginInstallerService
                 new PluginVersion("0.0.12",
                     "https://github.com/Phi-S/cs2-practice-mode/releases/download/0.0.12/cs2-practice-mode-linux-0.0.12.tar.gz",
                     "/addons/counterstrikesharp/plugins",
-                    [new PluginDependency(counterStrikeSharp, "v228")])
+                    [new PluginDependency(counterStrikeSharp, "v228")]),
+                new PluginVersion("0.0.13",
+                    "https://github.com/Phi-S/cs2-practice-mode/releases/download/0.0.13/cs2-practice-mode-linux-0.0.13.tar.gz",
+                    "/addons/counterstrikesharp/plugins",
+                    [new PluginDependency(counterStrikeSharp, "v234")])
             ]
         );
 

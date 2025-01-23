@@ -1,3 +1,5 @@
+Replaced by [cs-server-manager](https://github.com/Phi-S/cs-server-manager)
+
 # cs-server-controller
 ```
 dotnet watch run --project .\src\web\Web\Web.csproj
